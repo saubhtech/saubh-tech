@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
+/* =============================
+   THEME TOKENS
+============================= */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b132b;   /* base dark blue */
+  --foreground: #e0e8ff;   /* light foreground */
 }
 
 @theme inline {
@@ -14,83 +17,67 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0b132b;
+    --foreground: #e0e8ff;
   }
 }
 
+/* =============================
+   BODY & TYPOGRAPHY
+============================= */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* =============================
+   PAGE WRAPPER (grid only here)
+============================= */
+.page-wrapper {
+  background: #0B132B;
+  position: relative;
+}
+
+.page-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+/* =============================
+   GLOBAL GRID (light overlay)
+============================= */
 .bg-grid {
   background-image:
     linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
   background-size: 22px 22px;
+  pointer-events: none;
 }
 
+/* =============================
+   HERO GRADIENT
+============================= */
 .bg-hero-gradient {
   background: radial-gradient(
-    circle at 30% 30%,
-    rgba(56,189,248,0.28),
-    rgba(28,119,195,0.20),
-    rgba(11,19,43,1)
-  );
-}
-
-.glow-text {
-  text-shadow:
-    0 0 8px rgba(56,189,248,0.4),
-    0 0 16px rgba(56,189,248,0.3),
-    0 0 32px rgba(56,189,248,0.2);
-}
-
-.glow-icon {
-  filter: drop-shadow(0 0 12px rgba(56,189,248,0.6));
-}
-
-.neon-card {
-  background: linear-gradient(
-    to bottom right,
-    rgba(255,255,255,0.03),
-    rgba(255,255,255,0.05)
-  );
-  border: 1px solid rgba(255,255,255,0.07);
-  backdrop-filter: blur(6px);
-}
-
-.neon-card:hover {
-  border-color: rgba(56,189,248,0.3);
-  background: rgba(56,189,248,0.07);
-}
-
-.neon-outline-btn {
-  border: 1px solid rgba(56,189,248,0.4);
-}
-
-.neon-outline-btn:hover {
-  background: rgba(56,189,248,0.1);
-}
-/* GRID BACKGROUND */
-.bg-grid {
-  background-image:
-    linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
-  background-size: 22px 22px;
-}
-
-/* HERO GRADIENT */
-.bg-hero-gradient {
-  background: radial-gradient(circle at 20% 20%,
+    circle at 20% 20%,
     rgba(56,189,248,0.30),
     rgba(28,119,195,0.25),
     rgba(11,19,43,1)
   );
 }
 
-/* TEXT GLOW */
+/* =============================
+   GLOW EFFECTS
+============================= */
 .glow-text {
   text-shadow:
     0 0 6px rgba(56,189,248,0.6),
@@ -98,12 +85,13 @@ body {
     0 0 20px rgba(56,189,248,0.3);
 }
 
-/* ICON GLOW */
 .glow-icon {
   filter: drop-shadow(0 0 12px rgba(56,189,248,0.7));
 }
 
-/* CARD WITH GLOW */
+/* =============================
+   NEON CARD
+============================= */
 .neon-card {
   background: linear-gradient(
     to bottom right,
@@ -120,7 +108,9 @@ body {
   background: rgba(56,189,248,0.08);
 }
 
-/* OUTLINE BUTTON */
+/* =============================
+   OUTLINE BUTTON
+============================= */
 .neon-outline-btn {
   border: 1px solid rgba(56,189,248,0.4);
 }
@@ -129,7 +119,9 @@ body {
   background: rgba(56,189,248,0.1);
 }
 
-/* BULLET STYLE (▸) */
+/* =============================
+   BULLET LIST
+============================= */
 .bullet-item::before {
   content: "▸ ";
   color: #58e2ff;

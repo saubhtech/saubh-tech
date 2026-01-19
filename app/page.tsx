@@ -289,7 +289,10 @@ export default function Home() {
 
 
 
-      <Footer />
+    <div className="page-wrapper">
+   <Footer />
+</div>
+
     </div>
   );
 }
