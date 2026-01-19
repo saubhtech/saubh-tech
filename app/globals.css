@@ -24,3 +24,114 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.bg-hero-gradient {
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(56,189,248,0.28),
+    rgba(28,119,195,0.20),
+    rgba(11,19,43,1)
+  );
+}
+
+.glow-text {
+  text-shadow:
+    0 0 8px rgba(56,189,248,0.4),
+    0 0 16px rgba(56,189,248,0.3),
+    0 0 32px rgba(56,189,248,0.2);
+}
+
+.glow-icon {
+  filter: drop-shadow(0 0 12px rgba(56,189,248,0.6));
+}
+
+.neon-card {
+  background: linear-gradient(
+    to bottom right,
+    rgba(255,255,255,0.03),
+    rgba(255,255,255,0.05)
+  );
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(6px);
+}
+
+.neon-card:hover {
+  border-color: rgba(56,189,248,0.3);
+  background: rgba(56,189,248,0.07);
+}
+
+.neon-outline-btn {
+  border: 1px solid rgba(56,189,248,0.4);
+}
+
+.neon-outline-btn:hover {
+  background: rgba(56,189,248,0.1);
+}
+/* GRID BACKGROUND */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* HERO GRADIENT */
+.bg-hero-gradient {
+  background: radial-gradient(circle at 20% 20%,
+    rgba(56,189,248,0.30),
+    rgba(28,119,195,0.25),
+    rgba(11,19,43,1)
+  );
+}
+
+/* TEXT GLOW */
+.glow-text {
+  text-shadow:
+    0 0 6px rgba(56,189,248,0.6),
+    0 0 12px rgba(56,189,248,0.4),
+    0 0 20px rgba(56,189,248,0.3);
+}
+
+/* ICON GLOW */
+.glow-icon {
+  filter: drop-shadow(0 0 12px rgba(56,189,248,0.7));
+}
+
+/* CARD WITH GLOW */
+.neon-card {
+  background: linear-gradient(
+    to bottom right,
+    rgba(255,255,255,0.04),
+    rgba(255,255,255,0.02)
+  );
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(6px);
+  transition: 0.25s ease;
+}
+
+.neon-card:hover {
+  border-color: rgba(56,189,248,0.35);
+  background: rgba(56,189,248,0.08);
+}
+
+/* OUTLINE BUTTON */
+.neon-outline-btn {
+  border: 1px solid rgba(56,189,248,0.4);
+}
+
+.neon-outline-btn:hover {
+  background: rgba(56,189,248,0.1);
+}
+
+/* BULLET STYLE (▸) */
+.bullet-item::before {
+  content: "▸ ";
+  color: #58e2ff;
+  margin-right: 6px;
+}
