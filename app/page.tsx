@@ -30,9 +30,7 @@ export default function Home() {
           className="relative max-w-6xl mx-auto px-6 pt-32 pb-40 space-y-6"
         >
           <h1 className="text-6xl font-bold leading-tight tracking-tight text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.15)]">
-            Community-Verified Marketplace for
-            <br />
-            Work, Learning & Opportunity.
+            Community-Verified Marketplace 
           </h1>
 
           <p className="text-lg text-gray-200 max-w-2xl">
