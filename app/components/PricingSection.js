@@ -2,72 +2,85 @@ export default function PricingSection() {
   return (
     <section className="pricing-section" id="branding">
       <div className="container">
-        
-        <div className="section-header" style={{ marginBottom: "2rem" }}>
-          <h2 style={{ fontSize: "1.75rem", fontWeight: 700 }}>
-            2. Branding & Leads
-          </h2>
-          <p style={{ color: "#6b7280", fontSize: "1rem", marginTop: "0.5rem" }}>
-            Hybrid digital branding leveraging UGC & SMA for organic lead generation
-          </p>
+        <div className="section-header">
+          <h2>Business Operating System</h2>
+          <p>Integrate the Power of People + Intelligence of Technology</p>
         </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: "1.5rem",
-            flexWrap: "wrap",
-            marginTop: "1.5rem",
-          }}
-        >
-          <div
-            style={{
-              flex: "1 1 280px",
-              borderRadius: "12px",
-              border: "1px solid #e5e7eb",
-              background: "var(--white)",
-              padding: "1.5rem",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-            }}
-          >
-            <h3
-              style={{
-                fontSize: "1.1rem",
-                fontWeight: 600,
-                marginBottom: "0.5rem",
-                color: "var(--dark)",
-              }}
-            >
-              UGC — User Generated Content
-            </h3>
-            <p style={{ color: "#6b7280", lineHeight: 1.6 }}>
-              Content produced by communities, creators & associates that build trust and authenticity for brands.
-            </p>
+        <div className="pricing-grid">
+          <div className="pricing-card">
+            <div className="plan-name">Basic</div>
+            <div className="plan-price">
+              ₹9,999<span>/month</span>
+            </div>
+            <div className="plan-features">
+              <div className="plan-feature">
+                <strong>UGC</strong>
+                <span>5 contents</span>
+              </div>
+              <div className="plan-feature">
+                <strong>SMA</strong>
+                <span>5 Nodes</span>
+              </div>
+              <div className="plan-feature">
+                <strong>Leads</strong>
+                <span>50 Organic Leads</span>
+              </div>
+              <div className="plan-feature">
+                <strong>Support</strong>
+                <span>Email</span>
+              </div>
+            </div>
+            <button className="btn-plan">Get Started</button>
           </div>
-
-          <div
-            style={{
-              flex: "1 1 280px",
-              borderRadius: "12px",
-              border: "1px solid #e5e7eb",
-              background: "var(--white)",
-              padding: "1.5rem",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-            }}
-          >
-            <h3
-              style={{
-                fontSize: "1.1rem",
-                fontWeight: 600,
-                marginBottom: "0.5rem",
-                color: "var(--dark)",
-              }}
-            >
-              SMA — Social Media Amplification
-            </h3>
-            <p style={{ color: "#6b7280", lineHeight: 1.6 }}>
-              Amplifying brand content through distributed user networks to drive reach, engagement & organic leads.
-            </p>
+          <div className="pricing-card featured">
+            <div className="plan-name">Growth</div>
+            <div className="plan-price">
+              ₹24,999<span>/month</span>
+            </div>
+            <div className="plan-features">
+              <div className="plan-feature">
+                <strong>UGC</strong>
+                <span>10 contents</span>
+              </div>
+              <div className="plan-feature">
+                <strong>SMA</strong>
+                <span>10 Nodes</span>
+              </div>
+              <div className="plan-feature">
+                <strong>Leads</strong>
+                <span>200 Organic Leads</span>
+              </div>
+              <div className="plan-feature">
+                <strong>Support</strong>
+                <span>Email + WhatsApp</span>
+              </div>
+            </div>
+            <button className="btn-plan">Get Started</button>
+          </div>
+          <div className="pricing-card">
+            <div className="plan-name">Premium</div>
+            <div className="plan-price">
+              ₹49,999<span>/month</span>
+            </div>
+            <div className="plan-features">
+              <div className="plan-feature">
+                <strong>UGC</strong>
+                <span>24 contents</span>
+              </div>
+              <div className="plan-feature">
+                <strong>SMA</strong>
+                <span>25 Nodes</span>
+              </div>
+              <div className="plan-feature">
+                <strong>Leads</strong>
+                <span>500+ Organic Leads</span>
+              </div>
+              <div className="plan-feature">
+                <strong>Support</strong>
+                <span>Email + WhatsApp + Call</span>
+              </div>
+            </div>
+            <button className="btn-plan">Get Started</button>
           </div>
         </div>
       </div>

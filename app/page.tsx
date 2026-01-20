@@ -27,9 +27,9 @@ export default function Home() {
       <GigWorkSteps />
       <PhygitalSection />
       <TrainingSection />
-      {/* <PricingSection /> */}
+      <PricingSection />
       <BlogsSection />
-      <FAQSection />
+      {/* <FAQSection /> */}
       <Testimonials />
       <SupportSection />
       <FinalCTA />

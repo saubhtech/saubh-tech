@@ -3,12 +3,25 @@ export default function SupportSection() {
     <section className="pricing-section" id="support">
       <div className="container">
 
-        <div className="section-header" style={{ marginBottom: "2rem" }}>
-          <h2>5. Team Support</h2>
-          <p style={{ color: "#6b7280", fontSize: "1rem" }}>
-            Multi-layer support structure for associates, businesses and users
-          </p>
-        </div>
+        <div className="section-header" style={{ 
+  marginBottom: "2rem", 
+  display: "flex", 
+  flexDirection: "column", 
+  alignItems: "center", 
+  gap: "0.5rem"
+}}>
+  
+  {/* ICON + TITLE */}
+  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+    <span style={{ fontSize: "1.8rem" }}>🤝</span>
+    <h2 style={{ margin: 0 }}>Team Support</h2>
+  </div>
+
+  <p style={{ color: "#6b7280", fontSize: "1rem" }}>
+    Multi-layer support structure for associates, businesses and users
+  </p>
+</div>
+
 
         <div
           style={{
