@@ -32,12 +32,49 @@ export function HeroSection() {
       {/* Content */}
       <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-28 w-full text-center">
         {/* Community-Verified Marketplace Badge */}
-        <div className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-amber-500/20 border border-amber-500/40 backdrop-blur-md mb-10 shadow-lg">
-          <ShieldCheck className="h-5 w-5 text-amber-400" />
-          <span className="text-sm font-bold text-amber-300 tracking-wide uppercase">
-            Community-Verified Marketplace
-          </span>
-        </div>
+        {/* Community-Verified Marketplace Badge */}
+{/* Community-Verified Marketplace – HERO EMPHASIS */}
+<div className="relative mb-14 flex justify-center">
+  {/* halo beam */}
+  <div className="absolute -top-6 h-24 w-[420px] rounded-full bg-primary/20 blur-3xl opacity-70" />
+
+  {/* badge */}
+  <div
+    className="
+      relative z-10
+      inline-flex items-center gap-3
+      px-8 py-3.5 rounded-full
+
+      bg-gradient-to-r from-primary via-primary/90 to-primary
+      text-primary-foreground
+
+      shadow-[0_0_40px_rgba(16,185,129,0.45)]
+      ring-2 ring-primary/50
+
+      animate-in fade-in slide-in-from-top-6 duration-700
+    "
+  >
+    {/* shimmer overlay */}
+    <span
+      className="
+        absolute inset-0 rounded-full
+        bg-gradient-to-r
+        from-transparent via-white/25 to-transparent
+        opacity-40
+        animate-[shimmer_2.8s_linear_infinite]
+      "
+    />
+
+    <ShieldCheck className="relative h-5 w-5 text-white" />
+
+    <span className="relative text-sm font-bold tracking-widest uppercase">
+      Community-Verified Marketplace
+    </span>
+  </div>
+</div>
+
+
+
 
         {/* Headline */}
         <h1 className="font-bold tracking-tight text-foreground mb-8">

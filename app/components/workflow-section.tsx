@@ -62,12 +62,16 @@ export function WorkflowSection() {
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Work from anywhere, anytime, with{" "}
-            <span className="text-primary">guaranteed escrow payment</span>
-          </h2>
-        </div>
+       <div className="text-center mb-16">
+  <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
+    Work from anywhere, anytime
+    <br />
+    <span className="text-primary">
+      guaranteed escrow payment
+    </span>
+  </h2>
+</div>
+
 
         {/* Steps Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
