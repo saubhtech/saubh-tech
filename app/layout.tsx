@@ -1,20 +1,46 @@
-import "./globals.css";
-import type { ReactNode } from "react";
+import React from "react"
+import type { Metadata } from 'next'
+import { Geist, Geist_Mono } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
+import './globals.css'
 
-export const metadata = {
-  title: "Saubh.Tech - Community-Driven Phygital Gig-Work Platform",
-  description:
-    "Saubh.Tech - Community-driven phygital gig-work aggregator platform. Build brands, generate organic leads, and earn through escrow-backed payments.",
-  keywords:
-    "gig economy, phygital platform, UGC, social media amplification, organic leads, business branding, escrow payments",
-};
+const _geist = Geist({ subsets: ["latin"] });
+const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export const metadata: Metadata = {
+  title: 'Saubh.Tech - Phygital Gig-Work Marketplace',
+  description: 'Discover and connect with trusted, verified professionals across India\'s fastest-growing sectors. Community-verified phygital gig-work marketplace combining physical trust with digital scalability.',
+  generator: 'v0.app',
+  icons: {
+    icon: [
+      {
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    apple: '/apple-icon.png',
+  },
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
     <html lang="en">
-      <body suppressHydrationWarning>
+      <body className={`font-sans antialiased`}>
         {children}
+        <Analytics />
       </body>
     </html>
-  );
+  )
 }
