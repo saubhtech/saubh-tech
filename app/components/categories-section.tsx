@@ -23,10 +23,10 @@ const categories = [
 
 export function CategoriesSection() {
   return (
-    <section className="relative py-24 md:py-32 bg-background">
+    <section className="relative py-12 md:py-16 bg-background">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col items-center text-center mb-16">
+        <div className="flex flex-col items-center text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/80 border border-border/50 mb-6">
             <Search className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium text-foreground">

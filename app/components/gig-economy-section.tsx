@@ -32,7 +32,7 @@ const stats = [
 
 export function GigEconomySection() {
   return (
-    <section className="relative py-24 overflow-hidden">
+    <section className="relative py-12 md:py-16 overflow-hidden">
       {/* Subtle gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/20 to-background" />
       
@@ -41,7 +41,7 @@ export function GigEconomySection() {
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4 text-balance">
             India&apos;s Booming Gig Economy:{" "}
             <span className="text-primary">Unprecedented Opportunities</span>

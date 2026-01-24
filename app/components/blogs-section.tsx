@@ -38,13 +38,13 @@ function formatDate(dateString: string) {
 
 export function BlogsSection() {
   return (
-    <section className="relative py-24 md:py-32 overflow-hidden">
+    <section className="relative pt-0 pb-12 md:pb-16 overflow-hidden">
       {/* Subtle background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-card/20 to-background" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 text-balance">
             Blogs
           </h2>

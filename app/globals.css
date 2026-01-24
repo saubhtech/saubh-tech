@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /* =========================================================
-   ROOT THEME (UNCHANGED — YOUR ORIGINAL THEME)
+   ROOT THEME (BASE — DARK PREMIUM)
 ========================================================= */
 :root {
   --background: oklch(0.13 0.01 260);
@@ -16,7 +16,11 @@
   --popover: oklch(0.17 0.015 260);
   --popover-foreground: oklch(0.98 0 0);
 
-  --primary: oklch(0.65 0.15 180);
+  /* =========================================================
+     PRIMARY = LOGO GREEN (#4FA34D)
+     Converted to OKLCH (close & safe)
+  ========================================================= */
+  --primary: oklch(0.72 0.17 145);
   --primary-foreground: oklch(0.13 0.01 260);
 
   --secondary: oklch(0.22 0.02 260);
@@ -25,22 +29,25 @@
   --muted: oklch(0.22 0.02 260);
   --muted-foreground: oklch(0.65 0 0);
 
-  --accent: oklch(0.65 0.15 180);
-  --accent-foreground: oklch(0.13 0.01 260);
+  --accent: var(--primary);
+  --accent-foreground: var(--primary-foreground);
 
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  /* =========================================================
+     RED = LOGO RED (STRICTLY LIMITED USE)
+  ========================================================= */
+  --destructive: oklch(0.65 0.22 30);
+  --destructive-foreground: oklch(0.98 0 0);
 
   --border: oklch(0.28 0.02 260);
   --input: oklch(0.22 0.02 260);
-  --ring: oklch(0.65 0.15 180);
+  --ring: var(--primary);
 
   --radius: 0.75rem;
 
   /* =========================================================
-     SAUBH LOGO COLOR SYSTEM (ADDITIVE — SAFE)
+     SAUBH LOGO COLOR SYSTEM (ADDITIVE — BRAND MATCH)
   ========================================================= */
-  --saubh-green: oklch(0.72 0.17 145);
+  --saubh-green: oklch(0.72 0.17 145); /* #4FA34D */
   --saubh-yellow: oklch(0.82 0.18 95);
   --saubh-red: oklch(0.65 0.22 30);
 
@@ -53,7 +60,7 @@
 }
 
 /* =========================================================
-   DARK MODE (UNCHANGED)
+   DARK MODE (UNCHANGED — SAFE)
 ========================================================= */
 .dark {
   --background: oklch(0.13 0.01 260);
@@ -61,7 +68,7 @@
 }
 
 /* =========================================================
-   TAILWIND THEME MAPPING (UNCHANGED)
+   TAILWIND THEME MAPPING
 ========================================================= */
 @theme inline {
   --font-sans: 'Geist', 'Geist Fallback';
@@ -71,8 +78,10 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+
   --color-secondary: var(--secondary);
   --color-muted: var(--muted);
   --color-border: var(--border);
@@ -95,43 +104,45 @@
 }
 
 /* =========================================================
-   🌈 GLOBAL LOGO-INSPIRED AMBIENT ANIMATION
-   (SUBTLE — FULL PAGE — BRAND MATCH)
+   🌈 GLOBAL LOGO-INSPIRED AMBIENT BACKGROUND
+   (SUBTLE — FULL PAGE — EYESAFE)
 ========================================================= */
 body::before {
   content: "";
   position: fixed;
   inset: -20%;
   z-index: -1;
+
   background:
     radial-gradient(
-      45% 35% at 20% 20%,
-      color-mix(in oklch, var(--saubh-green) 25%, transparent),
+      45% 35% at 15% 20%,
+      color-mix(in oklch, var(--saubh-green) 26%, transparent),
       transparent 60%
     ),
     radial-gradient(
-      40% 30% at 80% 30%,
-      color-mix(in oklch, var(--saubh-yellow) 22%, transparent),
+      40% 30% at 85% 25%,
+      color-mix(in oklch, var(--saubh-yellow) 20%, transparent),
       transparent 60%
     ),
     radial-gradient(
-      45% 35% at 50% 80%,
-      color-mix(in oklch, var(--saubh-red) 20%, transparent),
+      45% 35% at 50% 85%,
+      color-mix(in oklch, var(--saubh-red) 14%, transparent),
       transparent 60%
     );
-  filter: blur(120px);
-  animation: saubh-bg-drift 30s ease-in-out infinite;
+
+  filter: blur(130px);
+  animation: saubh-bg-drift 32s ease-in-out infinite;
   pointer-events: none;
 }
 
 @keyframes saubh-bg-drift {
   0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(-4%, -3%) scale(1.05); }
+  50%  { transform: translate(-3%, -2%) scale(1.04); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
 /* =========================================================
-   🌀 LOGO AURA ANIMATION (OPTIONAL — USE ON LOGO ONLY)
+   🌀 LOGO AURA (USE ONLY AROUND LOGO)
 ========================================================= */
 .logo-aura {
   position: relative;
@@ -146,7 +157,7 @@ body::before {
   inset: -10px;
   border-radius: 50%;
   background: var(--saubh-gradient);
-  filter: blur(14px);
+  filter: blur(16px);
   opacity: 0.35;
   z-index: -1;
 }
@@ -154,14 +165,14 @@ body::before {
 .logo-aura::after {
   content: "";
   position: absolute;
-  inset: -14px;
+  inset: -16px;
   border-radius: 50%;
   border: 1px solid transparent;
   background:
     linear-gradient(var(--background), var(--background)) padding-box,
     var(--saubh-gradient) border-box;
-  animation: saubh-rotate 14s linear infinite;
-  opacity: 0.6;
+  animation: saubh-rotate 16s linear infinite;
+  opacity: 0.55;
 }
 
 @keyframes saubh-rotate {
@@ -170,7 +181,7 @@ body::before {
 }
 
 /* =========================================================
-   ✨ OPTIONAL UTILITIES (SAFE — USE IF NEEDED)
+   ✨ OPTIONAL UTILITIES (SAFE)
 ========================================================= */
 .saubh-gradient-text {
   background: var(--saubh-gradient);
@@ -182,6 +193,24 @@ body::before {
   transition: all 0.3s ease;
 }
 .saubh-accent-hover:hover {
-  box-shadow: 0 0 40px color-mix(in oklch, var(--saubh-green) 40%, transparent);
+  box-shadow: 0 0 36px
+    color-mix(in oklch, var(--saubh-green) 40%, transparent);
   transform: translateY(-2px);
 }
+/* Consistent section spacing matching the reference image */
+/* Consistent section spacing - reduced */
+section {
+  @apply py-8 md:py-12 lg:py-14;
+}
+
+/* Container consistent padding */
+.container {
+  @apply px-4 md:px-6 lg:px-8 max-w-7xl mx-auto;
+}
+/* =========================================================
+   🔴 RED USAGE RULE (MENTAL NOTE)
+   USE ONLY FOR:
+   - Community-Verified badge
+   - Login button
+   - Alerts / critical CTA
+========================================================= */

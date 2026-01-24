@@ -3,7 +3,7 @@ import { ArrowRight, Calendar } from "lucide-react";
 
 export function CTASection() {
   return (
-    <section className="relative py-24 overflow-hidden">
+    <section className="relative py-12 md:py-16 overflow-hidden">
       {/* Soft glowing background gradient */}
       <div className="absolute inset-0 z-0">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary/15 rounded-full blur-3xl" />

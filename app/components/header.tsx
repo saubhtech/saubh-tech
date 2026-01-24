@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,49 +17,54 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          
-          {/* ===== Logo ===== */}
-          <Link href="/" className="flex items-center gap-2">
-            <Image
-              src="/Saubh-Good.png"
-              alt="Saubh.Tech Logo"
-              width={36}
-              height={36}
-              className="object-contain"
-              priority
-            />
-            <span className="text-xl font-bold text-foreground hidden sm:block">
-              Saubh<span className="text-primary">.Tech</span>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
+      <div className="container flex h-16 items-center justify-between px-4">
+        {/* ===== Logo ===== */}
+        <Link href="/" className="flex items-center space-x-2">
+          <Image
+            src="/Saubh-Good.png"
+            alt="Saubh.Tech Logo"
+            width={40}
+            height={40}
+            className="h-10 w-10"
+          />
+          <div className="flex items-center gap-1">
+            <span className="text-xl font-bold text-foreground">
+              Saubh
             </span>
-          </Link>
-
-          {/* ===== Desktop Navigation ===== */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          {/* ===== CTA ===== */}
-          <div className="hidden md:flex items-center gap-4">
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-              Login
-            </Button>
+            <span className="text-xl font-bold text-primary">
+              .Tech
+            </span>
           </div>
+        </Link>
+
+        {/* ===== Desktop Navigation ===== */}
+        <nav className="hidden md:flex md:items-center md:gap-6">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* ===== CTA ===== */}
+        <div className="flex items-center gap-4">
+          <Button
+            asChild
+            className="hidden md:inline-flex bg-[#ef4444] hover:bg-[#dc2626] text-white"
+          >
+            <Link href="/login">Login</Link>
+          </Button>
 
           {/* ===== Mobile Menu Button ===== */}
-          <button
-            type="button"
-            className="md:hidden p-2 text-foreground"
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -69,30 +73,33 @@ export function Header() {
             ) : (
               <Menu className="h-6 w-6" />
             )}
-          </button>
+          </Button>
         </div>
-
-        {/* ===== Mobile Navigation ===== */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border/40">
-            <nav className="flex flex-col gap-4">
-              {navItems.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <Button className="mt-2 w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                Login
-              </Button>
-            </nav>
-          </div>
-        )}
       </div>
+
+      {/* ===== Mobile Navigation ===== */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t">
+          <nav className="container flex flex-col gap-4 p-4">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-sm font-medium transition-colors hover:text-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <Button
+              asChild
+              className="w-full bg-[#ef4444] hover:bg-[#dc2626] text-white"
+            >
+              <Link href="/login">Login</Link>
+            </Button>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

@@ -1,6 +1,6 @@
 export default function SupportSection() {
   return (
-    <section className="pricing-section" id="support">
+    <section className="pricing-section" id="support" style={{ paddingTop: 0 }}>
       <div className="container">
 
         <div className="section-header" style={{ 

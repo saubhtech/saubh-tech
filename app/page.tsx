@@ -23,24 +23,26 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-background">
       <Header />
-      <HeroSection />
-      <FeaturesSection />
-      <CategoriesSection />
-      <CommunitySection />
-      <TrustSection />
-      <GigEconomySection />
-      <WorkflowSection />
-      <PhygitalSection />
-      <BrandingSection />
-      <ProvenResultsSection />
-      <SaubhOSSection />
-      <LearningSection />
-      <PricingSection />
-      <BlogsSection />
-      <FAQSection />
-      <TestimonialsSection />
-      <CTASection />
-      <NewsletterSection />
+      <div className="space-y-8 md:space-y-12">
+        <HeroSection />
+        <FeaturesSection />
+        <CategoriesSection />
+        <CommunitySection />
+        <TrustSection />
+        <GigEconomySection />
+        <WorkflowSection />
+        <PhygitalSection />
+        <BrandingSection />
+        <ProvenResultsSection />
+        <SaubhOSSection />
+        <LearningSection />
+        <PricingSection />
+        <BlogsSection />
+        <FAQSection />
+        <TestimonialsSection />
+        <CTASection />
+        <NewsletterSection />
+      </div>
       <Footer />
     </main>
   );

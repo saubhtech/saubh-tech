@@ -33,14 +33,14 @@ const features = [
 
 export function SaubhOSSection() {
   return (
-    <section className="relative py-24 md:py-32 overflow-hidden">
+    <section className="relative pt-0 pb-0 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-background" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/80 border border-border/50 mb-6">
             <Cpu className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium text-foreground">
@@ -56,7 +56,7 @@ export function SaubhOSSection() {
         </div>
 
         {/* Feature Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mb-16">
+        <div className="grid md:grid-cols-2 gap-6">
           {features.map((feature, index) => (
             <Card
               key={index}

@@ -65,7 +65,7 @@ export function FAQSection() {
   );
 
   return (
-    <section className="relative py-24 md:py-32 overflow-hidden">
+    <section className="relative py-12 md:py-16 overflow-hidden">
       {/* ===== Background Image ===== */}
       <div className="absolute inset-0 z-0">
         <Image

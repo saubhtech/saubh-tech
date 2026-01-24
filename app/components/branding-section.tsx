@@ -30,14 +30,14 @@ const features = [
 
 export function BrandingSection() {
   return (
-    <section className="relative py-24 md:py-32 overflow-hidden">
+    <section className="relative pt-0 pb-8 md:pb-16 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-background" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 text-balance">
             No Business Without a Brand.
             <br />
