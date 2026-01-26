@@ -44,7 +44,7 @@ export const authService = {
         {
           issuer: 'saubh-tech',
         } as any // Bypass strict typing temporarily
-      ) as TokenPayload;
+      ) as unknown as TokenPayload;
       return decoded;
     } catch (error) {
       console.error('Token verification failed:', error);
