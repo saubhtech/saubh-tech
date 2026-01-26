@@ -3,14 +3,14 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Rocket, Orbit, Cpu, BrainCircuit, MessageCircle } from "lucide-react";
+import { Menu, X, PuzzleIcon, Sparkles, PuzzleIcon as Puzzle2, GraduationCap, Headset } from "lucide-react";
 
 const navItems = [
-  { label: "Gig-Work", href: "#gig-work", icon: Rocket, color: "#00f7ff" },
-  { label: "Branding", href: "#branding", icon: Orbit, color: "#ff00ff" },
-  { label: "SaubhOS", href: "#saubhos", icon: Cpu, color: "#00ff9d" },
-  { label: "Academy", href: "#academy", icon: BrainCircuit, color: "#ffb800" },
-  { label: "Support", href: "#support", icon: MessageCircle, color: "#ff2e63" },
+  { label: "Gig-Work", href: "#gig-work", icon: PuzzleIcon, color: "#00f7ff" },
+  { label: "Branding", href: "#branding", icon: Sparkles, color: "#ff00ff" },
+  { label: "SaubhOS", href: "#saubhos", icon: Puzzle2, color: "#00ff9d" },
+  { label: "Academy", href: "#academy", icon: GraduationCap, color: "#ffb800" },
+  { label: "Support", href: "#support", icon: Headset, color: "#ff2e63" },
 ];
 
 export function Header() {
@@ -49,7 +49,7 @@ export function Header() {
                 className="group flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary"
               >
                 <IconComponent 
-                  className="h-4 w-4 transition-all duration-300 group-hover:drop-shadow-[0_0_8px_var(--icon-glow)]" 
+                  className={`${item.label === "Academy" ? "h-5 w-5" : "h-4 w-4"} transition-all duration-300 group-hover:drop-shadow-[0_0_8px_var(--icon-glow)]`}
                   style={{ '--icon-glow': item.color } as React.CSSProperties}
                 />
                 {item.label}
@@ -98,7 +98,7 @@ export function Header() {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <IconComponent 
-                    className="h-4 w-4" 
+                    className={`${item.label === "Academy" ? "h-5 w-5" : "h-4 w-4"}`}
                     style={{ color: item.color }}
                   />
                   {item.label}
