@@ -162,7 +162,7 @@ export function Footer() {
         <div className="text-sm text-muted-foreground text-center space-y-2 mb-8">
           <p>
             <MapPin className="inline h-4 w-4 mr-2 text-primary" />
-            92 Deepali Building, Nehru Place, New Delhi - 110019
+            01 Tola-Tari, Sarha, Dahiawan, Chapra, Saran, Bihar - 841301
           </p>
           <p>
             <Mail className="inline h-4 w-4 mr-2 text-primary" />
