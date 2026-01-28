@@ -1,3 +1,4 @@
+// lib/evolution-api.ts
 import axios from 'axios';
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
@@ -6,7 +7,7 @@ const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || 'default';
 
 const evolutionApi = axios.create({
   baseURL: EVOLUTION_API_URL,
-  timeout: 55000, // CRITICAL: Increase timeout
+  timeout: 8000,
   headers: {
     'apikey': API_KEY,
     'Content-Type': 'application/json',
@@ -24,13 +25,27 @@ export const evolutionApiService = {
           number: formattedNumber,
           text: text,
         },
-        { timeout: 45000 } // Per-request timeout
+        { timeout: 7000 }
       );
       return response.data;
     } catch (error) {
       console.error('Error sending message:', error);
       throw error;
     }
+  },
+
+  async sendPassword(phoneNumber: string, userid: number, password: string) {
+    const message = `🎉 Welcome to Saubh.Tech!
+
+Your account has been created successfully.
+
+📱 User ID: ${userid}
+🔑 Password: ${password}
+
+Use your WhatsApp number and this password to login.
+Keep your password secure and don't share it with anyone.`;
+    
+    return this.sendMessage(phoneNumber, message);
   },
 
   async sendOTP(phoneNumber: string, otp: string) {

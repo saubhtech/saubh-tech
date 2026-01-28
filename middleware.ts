@@ -1,45 +1,40 @@
+// middleware.ts (in root directory)
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import jwt from 'jsonwebtoken';
-
-interface DecodedToken {
-  userId: string;
-  phoneNumber: string;
-  role: string;
-  iat: number;
-  exp: number;
-}
+import { verify } from 'jsonwebtoken';
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth-token')?.value;
-  
-  let user: DecodedToken | null = null;
-  
-  if (token) {
+
+  // Protected routes
+  if (request.nextUrl.pathname.startsWith('/dashboard')) {
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
     try {
-      const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-this';
-      user = jwt.verify(token, JWT_SECRET) as DecodedToken;
+      verify(token, process.env.JWT_SECRET!);
+      return NextResponse.next();
     } catch (error) {
-      user = null;
+      return NextResponse.redirect(new URL('/login', request.url));
     }
   }
 
-  const protectedPaths = ['/dashboard', '/profile', '/jobs/create'];
-  const isProtectedPath = protectedPaths.some(path => 
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  if (isProtectedPath && !user) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  if (request.nextUrl.pathname === '/login' && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  // Redirect to dashboard if already logged in
+  if (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register') {
+    if (token) {
+      try {
+        verify(token, process.env.JWT_SECRET!);
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      } catch (error) {
+        // Invalid token, allow access to login/register
+      }
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/profile/:path*', '/jobs/create', '/login'],
+  matcher: ['/dashboard/:path*', '/login', '/register']
 };

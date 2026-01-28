@@ -1,32 +1,48 @@
+// app/api/auth/me/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { authService } from '@/lib/auth';
+import { verify } from 'jsonwebtoken';
+import { userQueries } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from token
-    const decoded = authService.getUserFromRequest(request);
+    const token = request.cookies.get('auth-token')?.value;
 
-    if (!decoded) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    // Return user info from token
-    return NextResponse.json({ 
+    const decoded = verify(token, process.env.JWT_SECRET!) as {
+      userid: number;
+      whatsapp: string;
+      fname: string;
+    };
+
+    const user = await userQueries.findByUserId(decoded.userid);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
       user: {
-        id: decoded.userId,
-        phoneNumber: decoded.phoneNumber,
-        role: decoded.role,
-        isVerified: true,
+        userid: user.userid,
+        fname: user.fname,
+        whatsapp: user.whatsapp,
+        email: user.email,
+        pic: user.pic
       }
     });
-  } catch (error: any) {
-    console.error('Get user error:', error);
+
+  } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to get user information' },
-      { status: 500 }
+      { error: 'Invalid token' },
+      { status: 401 }
     );
   }
 }
