@@ -1,125 +1,152 @@
 // components/auth/RegisterForm.tsx
 'use client';
 
-export default function RegisterForm() {
-  const whatsappNumber = '919770370187';
-  const displayNumber = '+91 97703 70187';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-  const copyNumber = () => {
-    navigator.clipboard.writeText(displayNumber);
-    alert('Number copied!');
+export default function RegisterForm() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    fname: '',
+    whatsapp: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      // Step 1: Send "REGISTER Name" message to user's WhatsApp
+      const registerMessage = `REGISTER ${formData.fname}`;
+      
+      const messageResponse = await fetch('/api/auth/send-register-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          whatsapp: formData.whatsapp,
+          message: registerMessage
+        })
+      });
+
+      if (!messageResponse.ok) {
+        const errorData = await messageResponse.json();
+        setError(errorData.error || 'Failed to send registration message');
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Show success - webhook will handle the rest
+      setSuccess('✅ Registration message sent to your WhatsApp! Please check your phone and reply to complete registration.');
+      setFormData({ fname: '', whatsapp: '' });
+      
+      setTimeout(() => {
+        router.push('/login');
+      }, 5000);
+
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-        Create Account via WhatsApp
+        Create Account
       </h2>
 
-      <div className="space-y-4">
-        {/* Instructions */}
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-5">
-          <h3 className="font-semibold text-green-900 mb-3 flex items-center">
-            <span className="text-2xl mr-2">📱</span>
-            How to Register:
-          </h3>
-          <ol className="space-y-3 text-sm text-green-800">
-            <li className="flex items-start">
-              <span className="font-bold mr-2 text-green-600">1.</span>
-              <span>Open WhatsApp on your phone</span>
-            </li>
-            <li className="flex items-start">
-              <span className="font-bold mr-2 text-green-600">2.</span>
-              <span>Send the registration message to our number</span>
-            </li>
-            <li className="flex items-start">
-              <span className="font-bold mr-2 text-green-600">3.</span>
-              <span>Receive your password instantly!</span>
-            </li>
-          </ol>
+      {/* WhatsApp Registration Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <h3 className="font-semibold text-blue-900 mb-2">📱 How it works:</h3>
+        <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+          <li>Enter your name and WhatsApp number</li>
+          <li>We'll send you a registration message</li>
+          <li>Reply to that message to complete registration</li>
+          <li>Get your password instantly!</li>
+        </ol>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-2 text-gray-700">
+            Full Name
+          </label>
+          <input
+            type="text"
+            value={formData.fname}
+            onChange={(e) => setFormData({...formData, fname: e.target.value})}
+            placeholder="Yash Singh"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+            required
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            This will be sent as: REGISTER {formData.fname || 'Your Name'}
+          </p>
         </div>
 
-        {/* Message to send */}
-        <div className="bg-white border-2 border-blue-300 rounded-lg p-4 shadow-sm">
-          <p className="text-xs text-gray-600 mb-2 font-medium">
-            📝 Copy this message:
+        <div>
+          <label className="block text-sm font-medium mb-2 text-gray-700">
+            WhatsApp Number
+          </label>
+          <input
+            type="tel"
+            value={formData.whatsapp}
+            onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
+            placeholder="+919876543210"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+            required
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Include country code (e.g., +91 for India)
           </p>
-          <div className="bg-gray-50 rounded p-3 mb-3">
-            <code className="text-sm font-mono text-gray-900 block font-semibold">
-              REGISTER Your Full Name
-            </code>
+        </div>
+
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            {error}
           </div>
-          <p className="text-xs text-gray-500 italic">
-            Example:{' '}
-            <span className="font-semibold">REGISTER Yash Singh</span>
-          </p>
-        </div>
+        )}
 
-        {/* WhatsApp Number */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-900 font-medium mb-2">
-            📞 Send to WhatsApp Number:
-          </p>
-          <div className="flex items-center justify-between bg-white rounded p-3 border border-blue-300">
-            <span className="text-lg font-bold text-blue-600">
-              {displayNumber}
-            </span>
-            <button
-              onClick={copyNumber}
-              className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-            >
-              Copy
-            </button>
+        {success && (
+          <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+            {success}
           </div>
-        </div>
+        )}
 
-        {/* What happens next */}
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <h3 className="font-semibold text-purple-900 mb-2 flex items-center">
-            <span className="text-xl mr-2">✨</span>
-            What happens next?
-          </h3>
-          <ul className="space-y-2 text-sm text-purple-800">
-            <li>🔹 You’ll receive your User ID & Password</li>
-            <li>🔹 Use them to login on this website</li>
-            <li>🔹 Keep your password secure</li>
-          </ul>
-        </div>
-
-        {/* WhatsApp Quick Link (FIXED) */}
-        <a
-          href={`https://wa.me/${whatsappNumber}?text=REGISTER%20`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block w-full py-4 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 font-semibold shadow-lg transition-all hover:shadow-xl"
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
         >
-          💬 Open WhatsApp to Register
-        </a>
+          {loading ? 'Sending Message...' : 'Register via WhatsApp'}
+        </button>
 
-        {/* Additional Commands */}
-        <div className="border-t border-gray-200 pt-4 mt-4">
-          <p className="text-xs text-gray-600 font-medium mb-2">
-            📋 Other useful commands:
-          </p>
-          <div className="space-y-2 text-xs text-gray-700">
-            <div className="bg-gray-50 rounded p-2">
-              <code className="font-mono">LOGIN</code> – Get a new password
-            </div>
-            <div className="bg-gray-50 rounded p-2">
-              <code className="font-mono">HELP</code> – Show all commands
-            </div>
-          </div>
-        </div>
-
-        <p className="text-center text-sm text-gray-600 mt-6">
-          Already registered?{' '}
-          <a
-            href="/login"
-            className="text-blue-600 hover:underline font-medium"
-          >
+        <p className="text-center text-sm text-gray-600 mt-4">
+          Already have an account?{' '}
+          <a href="/login" className="text-blue-600 hover:underline font-medium">
             Login here
           </a>
         </p>
+      </form>
+
+      {/* Alternative Direct WhatsApp Method */}
+      <div className="mt-6 pt-6 border-t border-gray-200">
+        <p className="text-sm text-gray-600 text-center mb-3">
+          Or register directly via WhatsApp:
+        </p>
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-gray-600 mb-2">Send this message:</p>
+          <code className="text-sm bg-white px-3 py-2 rounded border border-gray-300 inline-block">
+            REGISTER Your Full Name
+          </code>
+          <p className="text-xs text-gray-500 mt-2">to our WhatsApp number</p>
+        </div>
       </div>
     </div>
   );
