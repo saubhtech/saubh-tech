@@ -1,35 +1,37 @@
 // lib/evolution-api.ts
-import axios from 'axios';
+import axios from "axios";
 
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+const EVOLUTION_API_URL =
+  process.env.EVOLUTION_API_URL || "http://localhost:8080";
 const API_KEY = process.env.EVOLUTION_API_KEY;
-const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || 'default';
+const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "default";
 
 const evolutionApi = axios.create({
   baseURL: EVOLUTION_API_URL,
   timeout: 25000,
   headers: {
-    'apikey': API_KEY,
-    'Content-Type': 'application/json',
+    apikey: API_KEY,
+    "Content-Type": "application/json",
   },
 });
 
 export const evolutionApiService = {
   async sendMessage(number: string, text: string) {
     try {
-      const formattedNumber = number.replace(/^\+/, '') + '@s.whatsapp.net';
-      
+      // Remove + and format correctly - NO @s.whatsapp.net suffix for sendText
+      const formattedNumber = number.replace(/^\+/, "");
+
       const response = await evolutionApi.post(
         `/message/sendText/${INSTANCE_NAME}`,
         {
-          number: formattedNumber,
+          number: formattedNumber, // Just the number: "919770370187"
           text: text,
         },
-        { timeout: 20000 }
+        { timeout: 20000 },
       );
       return response.data;
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error("Error sending message:", error);
       throw error;
     }
   },
@@ -44,7 +46,7 @@ Your account has been created successfully.
 
 Use your WhatsApp number and this password to login.
 Keep your password secure and don't share it with anyone.`;
-    
+
     return this.sendMessage(phoneNumber, message);
   },
 
@@ -55,10 +57,12 @@ Keep your password secure and don't share it with anyone.`;
 
   async getInstanceStatus() {
     try {
-      const response = await evolutionApi.get(`/instance/connectionState/${INSTANCE_NAME}`);
+      const response = await evolutionApi.get(
+        `/instance/connectionState/${INSTANCE_NAME}`,
+      );
       return response.data;
     } catch (error) {
-      console.error('Error getting instance status:', error);
+      console.error("Error getting instance status:", error);
       throw error;
     }
   },
@@ -67,11 +71,11 @@ Keep your password secure and don't share it with anyone.`;
     try {
       const response = await evolutionApi.post(
         `/chat/whatsappNumbers/${INSTANCE_NAME}`,
-        { numbers: [number] }
+        { numbers: [number] },
       );
       return response.data;
     } catch (error) {
-      console.error('Error checking number:', error);
+      console.error("Error checking number:", error);
       throw error;
     }
   },
