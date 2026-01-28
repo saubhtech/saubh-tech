@@ -73,9 +73,10 @@ async function sendMessage(to: string, text: string) {
         apikey: process.env.EVOLUTION_INSTANCE_TOKEN!,
       },
       body: JSON.stringify({
-        number: to.replace('@s.whatsapp.net', ''),
+        number: to, // 🔥 DO NOT MODIFY
         text,
       }),
     }
   );
 }
+
