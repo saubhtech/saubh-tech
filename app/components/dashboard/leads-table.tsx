@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { Search, Plus, MoreVertical, Clock, ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "../ui/button"  // ✅ Changed
+import { Input } from "../ui/input"    // ✅ Changed
 import {
   Table,
   TableBody,

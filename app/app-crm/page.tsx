@@ -1,11 +1,11 @@
-import { DashboardHeader } from "@/components/dashboard/dashboard-header"
-import { FilterSidebar } from "@/components/dashboard/filter-sidebar"
-import { LeadsTable } from "@/components/dashboard/leads-table"
-import { AnalyticsPanel } from "@/components/dashboard/analytics-panel"
-import { CommunicationBar } from "@/components/dashboard/communication-bar"
-import { AlertSection } from "@/components/dashboard/alert-section"
-import { CommunicationMetrics } from "@/components/dashboard/communication-metrics"
-import { CalendarReminders } from "@/components/dashboard/calendar-reminders"
+import { DashboardHeader } from "@/app/components/dashboard/dashboard-header"
+import { FilterSidebar } from "@/app/components/dashboard/filter-sidebar"
+import { LeadsTable } from "@/app/components/dashboard/leads-table"
+import { AnalyticsPanel } from "@/app/components/dashboard/analytics-panel"
+import { CommunicationBar } from "@/app/components/dashboard/communication-bar"
+import { AlertSection } from "@/app/components/dashboard/alert-section"
+import { CommunicationMetrics } from "@/app/components/dashboard/communication-metrics"
+import { CalendarReminders } from "@/app/components/dashboard/calendar-reminders"
 
 export default function AppCrmPage() {
   return (

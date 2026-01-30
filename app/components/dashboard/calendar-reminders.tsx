@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Calendar, Clock, Bell, Volume2, Phone, Settings } from "lucide-react"
-import { Switch } from "@/components/ui/switch"
+import { Switch } from "../ui/switch"  // ✅ Changed from @/app/components/ui/switch
 
 const alertTypes = [
   { label: "Beep", icon: Bell },

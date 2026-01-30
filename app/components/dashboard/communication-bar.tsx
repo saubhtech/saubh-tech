@@ -11,7 +11,7 @@ import {
   Share2,
   Bell
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "../ui/button"  // ✅ Changed from @/app/components/ui/button
 
 const communicationChannels = [
   { icon: Phone, label: "Call", color: "bg-blue-50 text-blue-600 hover:bg-blue-100" },

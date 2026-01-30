@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { Bell, Search, User, Menu, TrendingUp } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "../ui/button"  // ✅ Changed
+import { Input } from "../ui/input"    // ✅ Changed
+
 
 const navItems = ["Dashboard", "Sales", "Analytics", "Settings"]
 
