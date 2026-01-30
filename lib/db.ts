@@ -4,14 +4,15 @@ import { Pool, PoolClient } from 'pg';
 // Create a connection pool with optimized settings
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 10, // Reduced from 20 for better connection management
-  min: 2, // Keep minimum connections alive
+  ssl: process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: false }
+    : false,
+  max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000, // Increased timeout
-  acquireTimeoutMillis: 10000,
+  connectionTimeoutMillis: 10000,
   allowExitOnIdle: false,
 });
+
 
 // Connection event handlers
 pool.on('connect', (client) => {
