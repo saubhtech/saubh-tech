@@ -7,7 +7,7 @@ const SECRET_KEY = new TextEncoder().encode(
 );
 
 // Public routes that don't require authentication
-const publicRoutes = ['/login', '/register', '/api/auth'];
+const publicRoutes = ['/login', '/register', '/api/auth', '/api/webhooks/whatsapp',];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
