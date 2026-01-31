@@ -304,26 +304,31 @@ export default function DistrictsPage() {
       {/* Add/Edit Dialog */}
       {isDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">
                 {editingDistrict ? 'Edit District' : 'Add New District'}
               </h2>
-              <button onClick={() => setIsDialogOpen(false)}>
+              <button 
+                onClick={() => setIsDialogOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Country</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Country *
+                  </label>
                   <select
                     value={formData.countrycode}
                     onChange={(e) =>
                       setFormData({ ...formData, countrycode: e.target.value, stateid: '' })
                     }
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-gray-900 bg-white border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Select a country</option>
                     {countries.map((country) => (
@@ -334,7 +339,9 @@ export default function DistrictsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">State</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    State *
+                  </label>
                   <select
                     value={formData.stateid}
                     onChange={(e) =>
@@ -342,7 +349,7 @@ export default function DistrictsPage() {
                     }
                     required
                     disabled={!formData.countrycode}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                    className="w-full px-3 py-2 text-gray-900 bg-white border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="">Select a state</option>
                     {filteredStates.map((state) => (
@@ -351,9 +358,14 @@ export default function DistrictsPage() {
                       </option>
                     ))}
                   </select>
+                  {!formData.countrycode && (
+                    <p className="text-xs text-gray-500 mt-1">Please select a country first</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">District Name</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    District Name *
+                  </label>
                   <input
                     type="text"
                     value={formData.district}
@@ -362,34 +374,37 @@ export default function DistrictsPage() {
                     }
                     placeholder="e.g., Los Angeles"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-gray-900 bg-white border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">District Headquarters (Optional)</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    District Headquarters
+                  </label>
                   <input
                     type="text"
                     value={formData.districthq}
                     onChange={(e) =>
                       setFormData({ ...formData, districthq: e.target.value })
                     }
-                    placeholder="e.g., Downtown LA"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., Downtown LA (Optional)"
+                    className="w-full px-3 py-2 text-gray-900 bg-white border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Optional field</p>
                 </div>
               </div>
-              <div className="flex gap-2 mt-6">
+              <div className="flex gap-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setIsDialogOpen(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 text-gray-700 bg-white border-2 border-gray-300 rounded-md hover:bg-gray-50 font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   {loading ? 'Saving...' : editingDistrict ? 'Update' : 'Create'}
                 </button>
