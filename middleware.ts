@@ -20,10 +20,10 @@ export async function middleware(request: NextRequest) {
   // Check for auth token
   const token = request.cookies.get('auth-token')?.value;
 
-  if (!token) {
-    // Redirect to login if no token
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
+  // if (!token) {
+  //   // Redirect to login if no token
+  //   return NextResponse.redirect(new URL('/login', request.url));
+  // }
 
   try {
     // Verify JWT token
