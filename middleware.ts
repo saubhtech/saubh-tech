@@ -10,9 +10,9 @@ const publicRoutes = [
   '/login',
   '/register',
   '/api/auth',
-  '/api/dashboard/admin'
+  '/api/admin',              // ✅ Admin APIs
+  '/dashboard/admin'         // ✅ YEH ADD KARO - Dashboard pages
 ];
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
