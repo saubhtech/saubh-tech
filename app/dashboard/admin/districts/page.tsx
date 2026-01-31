@@ -1,34 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
+import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
 
 interface Country {
   countrycode: string;
@@ -45,7 +18,7 @@ interface District {
   districtid: number;
   stateid: number;
   district: string;
-  disthhq: string | null;
+  districthq: string | null;
   state?: string;
   country?: string;
 }
@@ -62,14 +35,22 @@ export default function DistrictsPage() {
   const [editingDistrict, setEditingDistrict] = useState<District | null>(null);
   const [deletingDistrict, setDeletingDistrict] = useState<District | null>(null);
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     countrycode: '',
     stateid: '',
     district: '',
-    disthhq: '',
+    districthq: '',
   });
+
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   useEffect(() => {
     fetchDistricts();
@@ -81,7 +62,7 @@ export default function DistrictsPage() {
     const filtered = districts.filter(
       (district) =>
         district.district.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        district.disthhq?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        district.districthq?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         district.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         district.country?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -109,11 +90,7 @@ export default function DistrictsPage() {
       }
     } catch (error) {
       console.error('Error fetching districts:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch districts',
-        variant: 'destructive',
-      });
+      showNotification('error', 'Failed to fetch districts');
     }
   };
 
@@ -153,12 +130,12 @@ export default function DistrictsPage() {
             districtid: editingDistrict.districtid,
             stateid: parseInt(formData.stateid),
             district: formData.district,
-            disthhq: formData.disthhq || null,
+            districthq: formData.districthq || null,
           }
         : {
             stateid: parseInt(formData.stateid),
             district: formData.district,
-            disthhq: formData.disthhq || null,
+            districthq: formData.districthq || null,
           };
 
       const response = await fetch(url, {
@@ -170,26 +147,15 @@ export default function DistrictsPage() {
       const data = await response.json();
 
       if (data.success) {
-        toast({
-          title: 'Success',
-          description: data.message,
-        });
+        showNotification('success', data.message);
         setIsDialogOpen(false);
         resetForm();
         fetchDistricts();
       } else {
-        toast({
-          title: 'Error',
-          description: data.error,
-          variant: 'destructive',
-        });
+        showNotification('error', data.error);
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'An error occurred',
-        variant: 'destructive',
-      });
+      showNotification('error', 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -208,26 +174,15 @@ export default function DistrictsPage() {
       const data = await response.json();
 
       if (data.success) {
-        toast({
-          title: 'Success',
-          description: data.message,
-        });
+        showNotification('success', data.message);
         setIsDeleteDialogOpen(false);
         setDeletingDistrict(null);
         fetchDistricts();
       } else {
-        toast({
-          title: 'Error',
-          description: data.error,
-          variant: 'destructive',
-        });
+        showNotification('error', data.error);
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete district',
-        variant: 'destructive',
-      });
+      showNotification('error', 'Failed to delete district');
     } finally {
       setLoading(false);
     }
@@ -235,13 +190,12 @@ export default function DistrictsPage() {
 
   const openEditDialog = (district: District) => {
     setEditingDistrict(district);
-    // Find the state to get its countrycode
     const state = states.find((s) => s.stateid === district.stateid);
     setFormData({
       countrycode: state?.countrycode || '',
       stateid: district.stateid.toString(),
       district: district.district,
-      disthhq: district.disthhq || '',
+      districthq: district.districthq || '',
     });
     setIsDialogOpen(true);
   };
@@ -252,219 +206,225 @@ export default function DistrictsPage() {
   };
 
   const resetForm = () => {
-    setFormData({ countrycode: '', stateid: '', district: '', disthhq: '' });
+    setFormData({ countrycode: '', stateid: '', district: '', districthq: '' });
     setEditingDistrict(null);
   };
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-10 px-4">
+      {/* Notification */}
+      {notification && (
+        <div
+          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+            notification.type === 'success'
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : 'bg-red-50 border border-red-200 text-red-800'
+          }`}
+        >
+          {notification.message}
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">District Management</h1>
-        <Button
+        <button
           onClick={() => {
             resetForm();
             setIsDialogOpen(true);
           }}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
-          <Plus className="mr-2 h-4 w-4" /> Add District
-        </Button>
+          <Plus className="h-4 w-4" /> Add District
+        </button>
       </div>
 
+      {/* Search */}
       <div className="mb-4">
         <div className="relative">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
             placeholder="Search districts..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>District ID</TableHead>
-              <TableHead>District Name</TableHead>
-              <TableHead>District HQ</TableHead>
-              <TableHead>State</TableHead>
-              <TableHead>Country</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      {/* Table */}
+      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">District ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">District Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">District HQ</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">State</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Country</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y bg-white">
             {filteredDistricts.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center">
+              <tr>
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-900">
                   No districts found
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : (
               filteredDistricts.map((district) => (
-                <TableRow key={district.districtid}>
-                  <TableCell>{district.districtid}</TableCell>
-                  <TableCell className="font-medium">
-                    {district.district}
-                  </TableCell>
-                  <TableCell>{district.disthhq || 'N/A'}</TableCell>
-                  <TableCell>{district.state}</TableCell>
-                  <TableCell>{district.country}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                <tr key={district.districtid} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 text-sm text-gray-900">{district.districtid}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{district.district}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{district.districthq || 'N/A'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{district.state}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{district.country}</td>
+                  <td className="px-6 py-4 text-sm text-right">
+                    <button
                       onClick={() => openEditDialog(district)}
+                      className="p-2 hover:bg-gray-100 rounded"
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                      <Edit className="h-4 w-4 text-gray-600" />
+                    </button>
+                    <button
                       onClick={() => openDeleteDialog(district)}
+                      className="p-2 hover:bg-gray-100 rounded ml-2"
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                    </button>
+                  </td>
+                </tr>
               ))
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
       {/* Add/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingDistrict ? 'Edit District' : 'Add New District'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingDistrict
-                ? 'Update the district information'
-                : 'Fill in the details to create a new district'}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="country">Country</Label>
-                <Select
-                  value={formData.countrycode}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, countrycode: value, stateid: '' })
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries.map((country) => (
-                      <SelectItem
-                        key={country.countrycode}
-                        value={country.countrycode}
-                      >
-                        {country.country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="state">State</Label>
-                <Select
-                  value={formData.stateid}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, stateid: value })
-                  }
-                  required
-                  disabled={!formData.countrycode}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredStates.map((state) => (
-                      <SelectItem
-                        key={state.stateid}
-                        value={state.stateid.toString()}
-                      >
-                        {state.state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="district">District Name</Label>
-                <Input
-                  id="district"
-                  value={formData.district}
-                  onChange={(e) =>
-                    setFormData({ ...formData, district: e.target.value })
-                  }
-                  placeholder="e.g., Los Angeles"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="disthhq">District Headquarters</Label>
-                <Input
-                  id="disthhq"
-                  value={formData.disthhq}
-                  onChange={(e) =>
-                    setFormData({ ...formData, disthhq: e.target.value })
-                  }
-                  placeholder="e.g., Downtown LA (Optional)"
-                />
-              </div>
+      {isDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                {editingDistrict ? 'Edit District' : 'Add New District'}
+              </h2>
+              <button onClick={() => setIsDialogOpen(false)}>
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Country</label>
+                  <select
+                    value={formData.countrycode}
+                    onChange={(e) =>
+                      setFormData({ ...formData, countrycode: e.target.value, stateid: '' })
+                    }
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a country</option>
+                    {countries.map((country) => (
+                      <option key={country.countrycode} value={country.countrycode}>
+                        {country.country}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">State</label>
+                  <select
+                    value={formData.stateid}
+                    onChange={(e) =>
+                      setFormData({ ...formData, stateid: e.target.value })
+                    }
+                    required
+                    disabled={!formData.countrycode}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Select a state</option>
+                    {filteredStates.map((state) => (
+                      <option key={state.stateid} value={state.stateid.toString()}>
+                        {state.state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">District Name</label>
+                  <input
+                    type="text"
+                    value={formData.district}
+                    onChange={(e) =>
+                      setFormData({ ...formData, district: e.target.value })
+                    }
+                    placeholder="e.g., Los Angeles"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">District Headquarters (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.districthq}
+                    onChange={(e) =>
+                      setFormData({ ...formData, districthq: e.target.value })
+                    }
+                    placeholder="e.g., Downtown LA"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsDialogOpen(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {loading ? 'Saving...' : editingDistrict ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Dialog */}
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Confirm Deletion</h2>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete the district &quot;{deletingDistrict?.district}&quot;? This action cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsDeleteDialogOpen(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
               >
                 Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : editingDistrict ? 'Update' : 'Create'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the district &quot;
-              {deletingDistrict?.district}&quot;? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              {loading ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

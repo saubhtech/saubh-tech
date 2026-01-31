@@ -1,34 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
+import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
 
 interface Country {
   countrycode: string;
@@ -72,7 +45,14 @@ export default function PostalPage() {
   const [editingPostal, setEditingPostal] = useState<Postal | null>(null);
   const [deletingPostal, setDeletingPostal] = useState<Postal | null>(null);
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
   const [formData, setFormData] = useState({
     countrycode: '',
@@ -80,6 +60,11 @@ export default function PostalPage() {
     districtid: '',
     postcode: '',
   });
+
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   useEffect(() => {
     fetchPostals();
@@ -97,7 +82,14 @@ export default function PostalPage() {
         postal.country?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredPostals(filtered);
+    setCurrentPage(1); // Reset to first page on search
   }, [searchTerm, postals]);
+
+  // Pagination calculation
+  const totalPages = Math.ceil(filteredPostals.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPostals = filteredPostals.slice(startIndex, endIndex);
 
   useEffect(() => {
     if (formData.countrycode) {
@@ -131,11 +123,7 @@ export default function PostalPage() {
       }
     } catch (error) {
       console.error('Error fetching postal codes:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch postal codes',
-        variant: 'destructive',
-      });
+      showNotification('error', 'Failed to fetch postal codes');
     }
   };
 
@@ -206,26 +194,15 @@ export default function PostalPage() {
       const data = await response.json();
 
       if (data.success) {
-        toast({
-          title: 'Success',
-          description: data.message,
-        });
+        showNotification('success', data.message);
         setIsDialogOpen(false);
         resetForm();
         fetchPostals();
       } else {
-        toast({
-          title: 'Error',
-          description: data.error,
-          variant: 'destructive',
-        });
+        showNotification('error', data.error);
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'An error occurred',
-        variant: 'destructive',
-      });
+      showNotification('error', 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -244,26 +221,15 @@ export default function PostalPage() {
       const data = await response.json();
 
       if (data.success) {
-        toast({
-          title: 'Success',
-          description: data.message,
-        });
+        showNotification('success', data.message);
         setIsDeleteDialogOpen(false);
         setDeletingPostal(null);
         fetchPostals();
       } else {
-        toast({
-          title: 'Error',
-          description: data.error,
-          variant: 'destructive',
-        });
+        showNotification('error', data.error);
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete postal code',
-        variant: 'destructive',
-      });
+      showNotification('error', 'Failed to delete postal code');
     } finally {
       setLoading(false);
     }
@@ -296,234 +262,260 @@ export default function PostalPage() {
   };
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-10 px-4">
+      {/* Notification */}
+      {notification && (
+        <div
+          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+            notification.type === 'success'
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : 'bg-red-50 border border-red-200 text-red-800'
+          }`}
+        >
+          {notification.message}
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Postal Code Management</h1>
-        <Button
+        <button
           onClick={() => {
             resetForm();
             setIsDialogOpen(true);
           }}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
-          <Plus className="mr-2 h-4 w-4" /> Add Postal Code
-        </Button>
+          <Plus className="h-4 w-4" /> Add Postal Code
+        </button>
       </div>
 
+      {/* Search */}
       <div className="mb-4">
         <div className="relative">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
             placeholder="Search postal codes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Post ID</TableHead>
-              <TableHead>Postal Code</TableHead>
-              <TableHead>District</TableHead>
-              <TableHead>State</TableHead>
-              <TableHead>Country</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPostals.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center">
+      {/* Table */}
+      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Post ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Postal Code</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">District</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">State</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Country</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y bg-white">
+            {currentPostals.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-900">
                   No postal codes found
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : (
-              filteredPostals.map((postal) => (
-                <TableRow key={postal.postid}>
-                  <TableCell>{postal.postid}</TableCell>
-                  <TableCell className="font-medium">
-                    {postal.postcode}
-                  </TableCell>
-                  <TableCell>{postal.district}</TableCell>
-                  <TableCell>{postal.state}</TableCell>
-                  <TableCell>{postal.country}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
+              currentPostals.map((postal) => (
+                <tr key={postal.postid} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 text-sm text-gray-900">{postal.postid}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{postal.postcode}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{postal.district}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{postal.state}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{postal.country}</td>
+                  <td className="px-6 py-4 text-sm text-right">
+                    <button
                       onClick={() => openEditDialog(postal)}
+                      className="p-2 hover:bg-gray-100 rounded"
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                      <Edit className="h-4 w-4 text-gray-600" />
+                    </button>
+                    <button
                       onClick={() => openDeleteDialog(postal)}
+                      className="p-2 hover:bg-gray-100 rounded ml-2"
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                    </button>
+                  </td>
+                </tr>
               ))
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
+      {/* Pagination */}
+      {filteredPostals.length > 0 && (
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-700">
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredPostals.length)} of {filteredPostals.length} results
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Add/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingPostal ? 'Edit Postal Code' : 'Add New Postal Code'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingPostal
-                ? 'Update the postal code information'
-                : 'Fill in the details to create a new postal code'}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="country">Country</Label>
-                <Select
-                  value={formData.countrycode}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      countrycode: value,
-                      stateid: '',
-                      districtid: '',
-                    })
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries.map((country) => (
-                      <SelectItem
-                        key={country.countrycode}
-                        value={country.countrycode}
-                      >
-                        {country.country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="state">State</Label>
-                <Select
-                  value={formData.stateid}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, stateid: value, districtid: '' })
-                  }
-                  required
-                  disabled={!formData.countrycode}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredStates.map((state) => (
-                      <SelectItem
-                        key={state.stateid}
-                        value={state.stateid.toString()}
-                      >
-                        {state.state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="district">District</Label>
-                <Select
-                  value={formData.districtid}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, districtid: value })
-                  }
-                  required
-                  disabled={!formData.stateid}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a district" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredDistricts.map((district) => (
-                      <SelectItem
-                        key={district.districtid}
-                        value={district.districtid.toString()}
-                      >
-                        {district.district}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="postcode">Postal Code</Label>
-                <Input
-                  id="postcode"
-                  value={formData.postcode}
-                  onChange={(e) =>
-                    setFormData({ ...formData, postcode: e.target.value })
-                  }
-                  placeholder="e.g., 90001"
-                  required
-                />
-              </div>
+      {isDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                {editingPostal ? 'Edit Postal Code' : 'Add New Postal Code'}
+              </h2>
+              <button onClick={() => setIsDialogOpen(false)}>
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Country</label>
+                  <select
+                    value={formData.countrycode}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        countrycode: e.target.value,
+                        stateid: '',
+                        districtid: '',
+                      })
+                    }
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a country</option>
+                    {countries.map((country) => (
+                      <option key={country.countrycode} value={country.countrycode}>
+                        {country.country}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">State</label>
+                  <select
+                    value={formData.stateid}
+                    onChange={(e) =>
+                      setFormData({ ...formData, stateid: e.target.value, districtid: '' })
+                    }
+                    required
+                    disabled={!formData.countrycode}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Select a state</option>
+                    {filteredStates.map((state) => (
+                      <option key={state.stateid} value={state.stateid.toString()}>
+                        {state.state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">District</label>
+                  <select
+                    value={formData.districtid}
+                    onChange={(e) =>
+                      setFormData({ ...formData, districtid: e.target.value })
+                    }
+                    required
+                    disabled={!formData.stateid}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Select a district</option>
+                    {filteredDistricts.map((district) => (
+                      <option key={district.districtid} value={district.districtid.toString()}>
+                        {district.district}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Postal Code</label>
+                  <input
+                    type="text"
+                    value={formData.postcode}
+                    onChange={(e) =>
+                      setFormData({ ...formData, postcode: e.target.value })
+                    }
+                    placeholder="e.g., 90001"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsDialogOpen(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {loading ? 'Saving...' : editingPostal ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Dialog */}
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Confirm Deletion</h2>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete the postal code &quot;{deletingPostal?.postcode}&quot;? This action cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsDeleteDialogOpen(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
               >
                 Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : editingPostal ? 'Update' : 'Create'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the postal code &quot;
-              {deletingPostal?.postcode}&quot;? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              {loading ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
