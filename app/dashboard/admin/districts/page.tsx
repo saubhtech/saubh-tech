@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Country {
   countrycode: string;
@@ -40,6 +40,10 @@ export default function DistrictsPage() {
     message: string;
   } | null>(null);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const [formData, setFormData] = useState({
     countrycode: '',
     stateid: '',
@@ -67,6 +71,7 @@ export default function DistrictsPage() {
         district.country?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredDistricts(filtered);
+    setCurrentPage(1); // Reset to first page when search changes
   }, [searchTerm, districts]);
 
   useEffect(() => {
@@ -210,6 +215,16 @@ export default function DistrictsPage() {
     setEditingDistrict(null);
   };
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredDistricts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentDistricts = filteredDistricts.slice(startIndex, endIndex);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
   return (
     <div className="container mx-auto py-10 px-4">
       {/* Notification */}
@@ -238,9 +253,9 @@ export default function DistrictsPage() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="mb-4">
-        <div className="relative">
+      {/* Search and Items Per Page */}
+      <div className="mb-4 flex gap-4 items-center">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <input
             type="text"
@@ -249,6 +264,22 @@ export default function DistrictsPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-600">Show:</label>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
         </div>
       </div>
 
@@ -266,14 +297,14 @@ export default function DistrictsPage() {
             </tr>
           </thead>
           <tbody className="divide-y bg-white">
-            {filteredDistricts.length === 0 ? (
+            {currentDistricts.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-4 text-center text-gray-900">
                   No districts found
                 </td>
               </tr>
             ) : (
-              filteredDistricts.map((district) => (
+              currentDistricts.map((district) => (
                 <tr key={district.districtid} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm text-gray-900">{district.districtid}</td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{district.district}</td>
@@ -300,6 +331,59 @@ export default function DistrictsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {filteredDistricts.length > 0 && (
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredDistricts.length)} of {filteredDistricts.length} districts
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  // Show first page, last page, current page, and pages around current
+                  return page === 1 || 
+                         page === totalPages || 
+                         Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, index, array) => {
+                  // Add ellipsis if there's a gap
+                  const showEllipsisBefore = index > 0 && page - array[index - 1] > 1;
+                  return (
+                    <div key={page} className="flex items-center gap-1">
+                      {showEllipsisBefore && <span className="px-2">...</span>}
+                      <button
+                        onClick={() => goToPage(page)}
+                        className={`px-3 py-1 rounded-md ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit Dialog */}
       {isDialogOpen && (
