@@ -80,7 +80,7 @@ export function Footer() {
                 </td>
                 <td className="border border-border/50 px-4 py-2 text-sm">
                   <Link
-                    href="/community/about-saubh"
+                    href="/legal/about-us"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
                     About Saubh
