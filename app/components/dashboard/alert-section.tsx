@@ -348,7 +348,7 @@ export function AlertSection() {
             </div>
 
             {/* Action buttons */}
-            <div className="mt-4 flex gap-2">
+            {/* <div className="mt-4 flex gap-2">
               <button className="flex-1 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-semibold rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
                 <span className="relative">Mark All as Read</span>
@@ -356,7 +356,7 @@ export function AlertSection() {
               <button className="px-4 py-2.5 bg-white border-2 border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:border-blue-600 hover:bg-blue-50 hover:text-blue-600 transition-all duration-300">
                 Settings
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
