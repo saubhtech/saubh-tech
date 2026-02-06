@@ -13,7 +13,7 @@ const faqs = [
   },
   {
     q: 'How does Saubh.Tech work?',
-    a: 'Saubh connects you with the right people for your needs. Whether you’re looking for a job, a service provider, or just some advice, we can help you find what you’re looking for. Our platform is easy to use and our team is always here to support you.',
+    a: 'Saubh connects you with the right people for your needs. Whether you\'re looking for a job, a service provider, or just some advice, we can help you find what you\'re looking for. Our platform is easy to use and our team is always here to support you.',
   },
 ];
 
@@ -22,47 +22,34 @@ export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!sectionRef.current) return;
-
-    const els = sectionRef.current.querySelectorAll('.anim-up');
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-            observer.unobserve(entry.target);
+            entry.target.querySelectorAll('.anim-up').forEach((el) =>
+              el.classList.add('visible')
+            );
           }
         });
       },
-      { threshold: 0.15 }
+      { threshold: 0.1 }
     );
-
-    els.forEach((el) => observer.observe(el));
-
+    if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
   }, []);
 
   const toggle = (i: number) => {
-    setOpenIndex((prev) => (prev === i ? null : i));
+    setOpenIndex(openIndex === i ? null : i);
   };
 
   return (
-    <section ref={sectionRef} className="faq section-pad" id="faq">
+    <section ref={sectionRef} className="faq section-pad" id="faq" aria-labelledby="faq-title">
       <div className="container">
-
-        {/* HEADER (NO ANIMATION ON TAG) */}
-        <div className="faq-header">
-          <span className="section-tag">
-            <i className="fas fa-circle-question"></i> FAQ
-          </span>
-
-          <p className="section-subtitle anim-up">
-            Find answers to common questions about Saubh.Tech
-          </p>
+        <div className="faq-header anim-up">
+          {/* <span className="section-tag"><i className="fas fa-circle-question"></i> FAQ</span> */}
+          <h2 id="faq-title" className="section-title">Frequently Asked Questions</h2>
+          <p className="section-subtitle">Find answers to common questions about Saubh.Tech</p>
         </div>
-
-        {/* FAQ ITEMS */}
         <div className="faq-row">
           {faqs.map((faq, i) => (
             <div
@@ -70,27 +57,28 @@ export default function FAQSection() {
               className={`faq-item anim-up${openIndex === i ? ' open' : ''}`}
               style={{ transitionDelay: `${i * 0.1}s` }}
             >
-              <button
-                className="faq-q"
+              <button 
+                className="faq-q" 
                 onClick={() => toggle(i)}
                 aria-expanded={openIndex === i}
+                aria-controls={`faq-answer-${i}`}
               >
                 <span className="faq-question-text">{faq.q}</span>
                 <i className="fas fa-chevron-down"></i>
               </button>
-
-              <div className="faq-a">
+              <div 
+                id={`faq-answer-${i}`}
+                className="faq-a"
+                role="region"
+                aria-labelledby={`faq-question-${i}`}
+              >
                 <p>{faq.a}</p>
               </div>
             </div>
           ))}
         </div>
-
-        {/* VIEW MORE */}
         <div className="faq-more anim-up" style={{ marginTop: 24 }}>
-          <a href="#knowledge-base">
-            Go to FAQs &amp; Knowledge Base <i className="fas fa-arrow-right"></i>
-          </a>
+          <a href="#knowledge-base">Go to FAQs &amp; Knowledge Base <i className="fas fa-arrow-right"></i></a>
         </div>
       </div>
     </section>

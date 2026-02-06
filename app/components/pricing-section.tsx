@@ -283,7 +283,7 @@ export default function PricingSection() {
           background: rgba(10,13,8,0.9);
           border: 1px solid rgba(255,255,255,0.08);
           position: relative;
-          overflow: hidden;
+          overflow: visible;
           transition: all .5s cubic-bezier(.4,0,.2,1);
 
           opacity: 0;
@@ -304,6 +304,7 @@ export default function PricingSection() {
 
         /* Popular */
         .pr-popular {
+          padding-top: 44px;
           border-color: rgba(var(--pcr), 0.35);
           box-shadow: 0 0 40px rgba(var(--pcr), 0.08);
         }
@@ -333,7 +334,7 @@ export default function PricingSection() {
           top: 0; left: 0; right: 0;
           height: 3px;
           background: var(--pc);
-          border-radius: 3px 3px 0 0;
+          border-radius: 24px 24px 0 0;
           transition: height .35s ease, box-shadow .35s ease;
           z-index: 2;
         }
@@ -346,12 +347,13 @@ export default function PricingSection() {
         .pr-glow {
           position: absolute;
           inset: 0;
-          border-radius: inherit;
+          border-radius: 24px;
           background: radial-gradient(circle at 50% 0%, rgba(var(--pcr), 0.08), transparent 65%);
           opacity: 0;
           transition: opacity .5s ease;
           pointer-events: none;
           z-index: 0;
+          overflow: hidden;
         }
         .pr-card:hover .pr-glow { opacity: 1; }
 
