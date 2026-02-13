@@ -1,54 +1,40 @@
-'use client';
-
-export default function Hero() {
+export default function HeroSection() {
   return (
-    <header className="hero" id="gig-work">
-      <div className="hero-video-wrap">
-        <video
-          className="hero-video"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          poster=""
-          aria-hidden="true"
-        >
-          <source src="/videos/saubhtech.mp4" type="video/mp4" />
-        </video>
-        <div className="hero-video-overlay"></div>
+    <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-[120px] pb-20 relative overflow-hidden bg-gradient-to-br from-[#0A1A0A] via-[#112211] via-60% to-[#1A0E0A] hero-glow">
+      {/* Badges */}
+      <div className="flex flex-wrap justify-center gap-3 mb-10 relative z-10 anim-up">
+        <span className="inline-flex items-center gap-2 px-5 py-2 bg-saubh-card border border-saubh-border rounded-full font-heading text-[0.82rem] font-medium tracking-wider uppercase">
+          <i className="fas fa-shield-halved text-saubh-green" />
+          <span className="text-saubh-green">Community-Verified</span>
+        </span>
+        <span className="inline-flex items-center gap-2 px-5 py-2 bg-saubh-card border border-saubh-border rounded-full font-heading text-[0.82rem] font-medium tracking-wider uppercase">
+          <i className="fas fa-lock text-saubh-orange" />
+          <span className="text-saubh-orange">Escrow-Protected</span>
+        </span>
       </div>
-      <div className="hero-orb g"></div>
-      <div className="hero-orb o"></div>
-      <div className="hero-orb r"></div>
-      <div className="hero-content">
-        <div className="hero-badges">
-          <span className="hero-badge">
-            <i className="fas fa-shield-halved"></i> Community-Verified
-          </span>
-          <span className="hero-badge">
-            <i className="fas fa-lock"></i> Escrow-Protected
-          </span>
-        </div>
-        <h1>
-          <span className="accent">Phygital Gig Marketplace</span>
-        </h1>
-        <p className="hero-sub">
-          Connect with verified individuals and businesses worldwide for secure
-          gig work payments.
-        </p>
-        <div className="btn-group" style={{ justifyContent: 'center' }}>
-          <a href="#register" className="btn btn-primary">
-            <i className="fas fa-user-plus"></i> Register for Gig-Work
-          </a>
-          <a href="#post" className="btn btn-outline">
-            <i className="fas fa-plus-circle"></i> Post Requirements
-          </a>
-          <a href="#demo" className="btn btn-ghost">
-            <i className="fas fa-calendar-check"></i> Schedule a Demo
-          </a>
-        </div>
+
+      {/* Title */}
+      <h1 className="font-heading font-bold text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-tight mb-6 relative z-10 anim-up">
+        <span className="grad-text">Phygital Gig</span><br />Marketplace
+      </h1>
+
+      {/* Subtitle */}
+      <p className="text-saubh-muted text-lg max-w-xl mx-auto mb-10 relative z-10 anim-up">
+        Connect with verified individuals and businesses worldwide for secure gig work payments.
+      </p>
+
+      {/* CTAs */}
+      <div className="flex flex-wrap justify-center gap-4 relative z-10 anim-up">
+        <a href="#" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-btn btn-gradient-primary text-white font-heading font-semibold text-sm no-underline hover:-translate-y-0.5 transition-transform">
+          <i className="fas fa-user-plus" /> Register for Gig
+        </a>
+        <a href="#" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-btn border-[1.5px] border-saubh-orange text-saubh-orange font-heading font-semibold text-sm no-underline hover:-translate-y-0.5 transition-transform bg-transparent">
+          <i className="fas fa-plus-circle" /> Post Requirements
+        </a>
+        <a href="#" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-btn border-[1.5px] border-white/25 text-saubh-text font-heading font-semibold text-sm no-underline hover:-translate-y-0.5 transition-transform bg-transparent">
+          <i className="fas fa-calendar-check" /> Schedule a Demo
+        </a>
       </div>
-    </header>
+    </section>
   );
 }

@@ -1,166 +1,63 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
+import { useState } from 'react';
 
-const languages = [
-  { code: 'en', label: 'English', short: 'EN' },
-  { code: 'hi', label: 'हिन्दी', short: 'HI' },
-  { code: 'bn', label: 'বাংলা', short: 'BN' },
-  { code: 'te', label: 'తెలుగు', short: 'TE' },
-  { code: 'mr', label: 'मराठी', short: 'MR' },
-  { code: 'ta', label: 'தமிழ்', short: 'TA' },
-  { code: 'gu', label: 'ગુજરાતી', short: 'GU' },
-  { code: 'ur', label: 'اردو', short: 'UR' },
-  { code: 'kn', label: 'ಕನ್ನಡ', short: 'KN' },
-  { code: 'or', label: 'ଓଡ଼ିଆ', short: 'OR' },
-  { code: 'ml', label: 'മലയാളം', short: 'ML' },
-  { code: 'pa', label: 'ਪੰਜਾਬੀ', short: 'PA' },
-];
+export default function Header() {
+  const [menuOpen, setMenuOpen] = useState(false);
 
-export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
-  const [selectedLang, setSelectedLang] = useState(languages[0]);
-  const langRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 60);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(e.target as Node)) {
-        setLangOpen(false);
-      }
-    };
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
-
-  const handleLangSelect = (lang: typeof languages[0]) => {
-    setSelectedLang(lang);
-    setLangOpen(false);
-  };
-
-  const closeMenu = () => setMobileMenuOpen(false);
+  const navLinks = [
+    { label: 'Gig-work', icon: 'fa-briefcase' },
+    { label: 'Branding', icon: 'fa-bullhorn' },
+    { label: 'SaubhOS', icon: 'fa-gear' },
+    { label: 'Academy', icon: 'fa-graduation-cap' },
+    { label: 'Support', icon: 'fa-headset' },
+  ];
 
   return (
-    <>
-      <nav
-        className={`nav${scrolled ? ' scrolled' : ''}`}
-        role="navigation"
-        aria-label="Main navigation"
-      >
-        <div className="nav-inner">
-          <a href="/" className="nav-logo" aria-label="Saubh.Tech Home">
-            <Image
-              src="/images/Saubh-logo.png"
-              alt="Saubh.Tech Logo"
-              width={40}
-              height={40}
-            />
-            <span>
-              Saubh<span className="dot">.</span>Tech
-            </span>
-          </a>
+    <nav className="fixed top-0 left-0 right-0 z-50 h-[72px] flex items-center justify-between px-8 bg-[rgba(12,15,10,0.85)] backdrop-blur-xl border-b border-saubh-border">
+      <a href="#" className="flex items-center gap-2.5 no-underline">
+        <div className="w-9 h-9 rounded-lg btn-gradient-primary flex items-center justify-center font-heading font-extrabold text-white text-lg">S</div>
+        <span className="font-heading font-bold text-lg text-saubh-text">Saubh.Tech</span>
+      </a>
 
-          <div className="nav-links">
-            <a href="#gig-work">
-              <i className="fas fa-briefcase"></i> Gig-work
+      {/* Desktop Nav */}
+      <ul className="hidden lg:flex items-center gap-8 list-none">
+        {navLinks.map((link) => (
+          <li key={link.label}>
+            <a href="#" className="text-saubh-muted hover:text-saubh-text text-sm flex items-center gap-1.5 no-underline transition-colors">
+              <i className={`fas ${link.icon} text-xs`} /> {link.label}
             </a>
-            <a href="#branding">
-              <i className="fas fa-bullhorn"></i> Branding
-            </a>
-            <a href="#saubhos">
-              <i className="fas fa-microchip"></i> SaubhOS
-            </a>
-            <a href="#learning">
-              <i className="fas fa-graduation-cap"></i> Academy
-            </a>
-            <a href="#faq">
-              <i className="fas fa-headset"></i> Support
-            </a>
+          </li>
+        ))}
+      </ul>
 
-            <div className="lang-switcher" ref={langRef}>
-              <button
-                className="lang-btn"
-                onClick={() => setLangOpen(!langOpen)}
-                aria-label="Select language"
-              >
-                <i className="fas fa-globe"></i> {selectedLang.short}{' '}
-                <i className="fas fa-chevron-down" style={{ fontSize: '.6rem' }}></i>
-              </button>
-              <div className={`lang-dropdown${langOpen ? ' open' : ''}`}>
-                <div className="lang-dropdown-inner">
-                  {languages.map((lang) => (
-                    <button
-                      key={lang.code}
-                      className={`lang-option${lang.code === selectedLang.code ? ' active' : ''}`}
-                      onClick={() => handleLangSelect(lang)}
-                    >
-                      <span className="lang-label">{lang.label}</span>
-                      <span className="lang-code">{lang.short}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <a href="#login" className="nav-cta">
-              <i className="fas fa-arrow-right-to-bracket"></i> Login
-            </a>
-          </div>
-
-          <button
-            className="menu-toggle"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            <i className={`fas ${mobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`}></i>
-          </button>
+      <div className="flex items-center gap-4">
+        <div className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-saubh-card border border-saubh-border text-saubh-muted text-xs cursor-pointer">
+          <i className="fas fa-globe" /> EN <i className="fas fa-chevron-down text-[0.6rem]" />
         </div>
-      </nav>
-
-      <div className={`mobile-menu${mobileMenuOpen ? ' open' : ''}`}>
-        <a href="#gig-work" onClick={closeMenu}>
-          <i className="fas fa-briefcase"></i> Gig-work
+        <a href="#" className="flex items-center gap-1.5 px-6 py-2 rounded-btn btn-gradient-primary text-white font-heading font-semibold text-sm no-underline">
+          <i className="fas fa-arrow-right-to-bracket" /> Login
         </a>
-        <a href="#branding" onClick={closeMenu}>
-          <i className="fas fa-bullhorn"></i> Branding
-        </a>
-        <a href="#saubhos" onClick={closeMenu}>
-          <i className="fas fa-microchip"></i> SaubhOS
-        </a>
-        <a href="#learning" onClick={closeMenu}>
-          <i className="fas fa-graduation-cap"></i> Academy
-        </a>
-        <a href="#faq" onClick={closeMenu}>
-          <i className="fas fa-headset"></i> Support
-        </a>
-
-        <div className="mobile-lang-grid">
-          {languages.map((lang) => (
-            <button
-              key={lang.code}
-              className={`mobile-lang-btn${lang.code === selectedLang.code ? ' active' : ''}`}
-              onClick={() => { 
-                handleLangSelect(lang); 
-                closeMenu(); 
-              }}
-            >
-              {lang.label}
-            </button>
-          ))}
-        </div>
-
-        <a href="#login" onClick={closeMenu} className="mobile-login-btn">
-          <i className="fas fa-arrow-right-to-bracket"></i> Login
-        </a>
+        {/* Mobile hamburger */}
+        <button onClick={() => setMenuOpen(!menuOpen)} className="lg:hidden text-saubh-muted text-xl bg-transparent border-none cursor-pointer">
+          <i className={`fas ${menuOpen ? 'fa-xmark' : 'fa-bars'}`} />
+        </button>
       </div>
-    </>
+
+      {/* Mobile Menu */}
+      {menuOpen && (
+        <div className="absolute top-[72px] left-0 right-0 bg-saubh-dark border-b border-saubh-border p-6 lg:hidden">
+          <ul className="list-none flex flex-col gap-4">
+            {navLinks.map((link) => (
+              <li key={link.label}>
+                <a href="#" className="text-saubh-muted hover:text-saubh-text text-base flex items-center gap-2 no-underline">
+                  <i className={`fas ${link.icon}`} /> {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </nav>
   );
 }
