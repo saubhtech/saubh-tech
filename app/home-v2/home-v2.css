@@ -1,0 +1,36 @@
+/* home-v2.css - Scoped styles for /home-v2 route */
+/* This is a copy of the standalone landing page CSS */
+
+/* ===== CSS VARIABLES ===== */
+:root {
+  --green: #6DB33F;
+  --green-light: #8FD45E;
+  --green-dark: #4A8C1F;
+  --amber: #F0960E;
+  --orange: #E8773A;
+  --coral: #E8553A;
+  --red: #D63A2A;
+  --gradient-brand: linear-gradient(135deg, #6DB33F 0%, #8FD45E 25%, #F0960E 60%, #E8553A 100%);
+  --gradient-hero: linear-gradient(160deg, #0a1a0a 0%, #112211 30%, #1a1206 60%, #1a0e0a 100%);
+  --gradient-text: linear-gradient(135deg, #8FD45E, #F0960E, #E8553A);
+  --gradient-btn: linear-gradient(135deg, #6DB33F, #E8553A);
+  --gradient-btn-hover: linear-gradient(135deg, #5A9E30, #D04828);
+  --bg-dark: #0C0F0A;
+  --bg-dark-card: rgba(255,255,255,0.04);
+  --bg-light: #FAFAF7;
+  --bg-cream: #F5F3EE;
+  --text-dark: #1A1D1A;
+  --text-light: #F0EDE8;
+  --text-muted: #9CA39C;
+  --glass: rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.1);
+  --glass-light: rgba(109,179,63,0.08);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 24px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.12);
+  --shadow-glow: 0 0 60px rgba(109,179,63,0.15);
+  --font-display: 'Sora', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --nav-h: 72px;
+}
