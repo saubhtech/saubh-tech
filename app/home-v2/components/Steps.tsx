@@ -31,7 +31,6 @@ export default function WorkflowSection() {
             <h4>Get Paid Instantly Securely</h4>
           </div>
         </div>
-
         <div className="btn-group" style={{ justifyContent: 'center' }}>
           <a href="#register" className="btn btn-primary">
             <i className="fas fa-user-plus"></i> Register for Gig-Work

@@ -43,19 +43,13 @@ export default function PhygitalSection() {
             </div>
             <h3>Physical Trust</h3>
           </div>
-          <div
-            className="phygital-card anim-up"
-            style={{ transitionDelay: ".1s" }}
-          >
+          <div className="phygital-card anim-up" style={{ transitionDelay: '.1s' }}>
             <div className="phygital-icon">
               <i className="fas fa-rocket"></i>
             </div>
             <h3>Digital Scalability</h3>
           </div>
-          <div
-            className="phygital-card anim-up"
-            style={{ transitionDelay: ".2s" }}
-          >
+          <div className="phygital-card anim-up" style={{ transitionDelay: '.2s' }}>
             <div className="phygital-icon">
               <i className="fas fa-arrows-turn-to-dots"></i>
             </div>

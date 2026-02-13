@@ -3,7 +3,6 @@
 export default function Hero() {
   return (
     <header className="hero" id="gig-work">
-      {/* Video Background */}
       <div className="hero-video-wrap">
         <video
           className="hero-video"
@@ -19,15 +18,10 @@ export default function Hero() {
         </video>
         <div className="hero-video-overlay"></div>
       </div>
-
-      {/* Floating Orbs */}
       <div className="hero-orb g"></div>
       <div className="hero-orb o"></div>
       <div className="hero-orb r"></div>
-
-      {/* Hero Content */}
       <div className="hero-content">
-        {/* Badges */}
         <div className="hero-badges">
           <span className="hero-badge">
             <i className="fas fa-shield-halved"></i> Community-Verified
@@ -36,19 +30,13 @@ export default function Hero() {
             <i className="fas fa-lock"></i> Escrow-Protected
           </span>
         </div>
-
-        {/* Title */}
         <h1>
           <span className="accent">Phygital Gig Marketplace</span>
         </h1>
-
-        {/* Subtitle */}
         <p className="hero-sub">
           Connect with verified individuals and businesses worldwide for secure
           gig work payments.
         </p>
-
-        {/* CTA Buttons */}
         <div className="btn-group" style={{ justifyContent: 'center' }}>
           <a href="#register" className="btn btn-primary">
             <i className="fas fa-user-plus"></i> Register for Gig-Work
