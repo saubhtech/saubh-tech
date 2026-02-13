@@ -8,6 +8,7 @@ const SECRET_KEY = new TextEncoder().encode(
 // Public routes
 const publicRoutes = [
   '/',
+  '/home-v2',
   '/login',
   '/register',
   '/api/auth',
