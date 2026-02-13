@@ -1,89 +1,36 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
-
-const stats = [
-  { end: 6.9, suffix: 'x', decimal: true, text: 'higher conversion rates from UGC vs traditional ads' },
-  { end: 65, suffix: '%', decimal: false, text: 'lower customer acquisition costs vs paid advertising' },
-  { end: 82, suffix: '%', decimal: false, text: 'more engagement, trust, and conversion through organic leads' },
-  { end: 40, suffix: '%', decimal: false, text: 'increase in repeat orders due to peer recommendations' },
-];
-
-function useCounter(end: number, dur: number, go: boolean, dec: boolean) {
-  const [v, setV] = useState(0);
-  useEffect(() => {
-    if (!go) return;
-    let s: number | null = null;
-    let r: number;
-    const tick = (t: number) => {
-      if (!s) s = t;
-      const p = Math.min((t - s) / dur, 1);
-      const e = 1 - Math.pow(1 - p, 3);
-      setV(dec ? Math.round(e * end * 10) / 10 : Math.round(e * end));
-      if (p < 1) r = requestAnimationFrame(tick);
-    };
-    r = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(r);
-  }, [go, end, dur, dec]);
-  return v;
-}
-
-function StatCard({ s, i, go }: { s: typeof stats[0]; i: number; go: boolean }) {
-  const count = useCounter(s.end, 2000, go, s.decimal);
-  return (
-    <div className="proven-card anim-up" style={{ transitionDelay: `${i * 0.1}s` }}>
-      <div className="proven-num">
-        {s.decimal ? count.toFixed(1) : count}
-        {s.suffix}
-      </div>
-      <p><span className="check">✓</span> {s.text}</p>
-    </div>
-  );
-}
-
 export default function ProvenResultsSection() {
-  const ref = useRef<HTMLElement>(null);
-  const [go, setGo] = useState(false);
-
-  useEffect(() => {
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            setGo(true);
-            e.target.querySelectorAll('.anim-up').forEach((el) =>
-              el.classList.add('visible')
-            );
-          }
-        });
-      },
-      { threshold: 0.15 }
-    );
-    if (ref.current) obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
+  const stats = [
+    { value: '6.9x', color: 'text-saubh-green', desc: 'higher conversion rates from UGC vs traditional ads', grad: 'card-grad-green' },
+    { value: '65%', color: 'text-saubh-orange', desc: 'lower customer acquisition costs vs paid advertising', grad: 'card-grad-orange' },
+    { value: '82%', color: 'text-saubh-red', desc: 'more engagement, trust, and conversion through organic leads', grad: 'card-grad-red' },
+    { value: '40%', color: 'grad-text', desc: 'increase in repeat orders due to peer recommendations', grad: 'card-grad-multi' },
+  ];
 
   return (
-    <section ref={ref} className="proven section-pad" aria-labelledby="proven-title">
-      <div className="container">
-        <div className="proven-header anim-up">
-          <span className="section-tag"><i className="fas fa-chart-line"></i> Proven Results</span>
+    <section className="py-20 bg-saubh-dark">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center mb-12 anim-up">
+          <span className="inline-flex items-center gap-2 px-5 py-2 bg-saubh-card border border-saubh-border rounded-full font-heading text-[0.82rem] font-medium tracking-wider uppercase">
+            <i className="fas fa-chart-line text-saubh-green" />
+            <span className="text-saubh-green">Proven Results</span>
+          </span>
         </div>
-        <div className="proven-grid">
-          {stats.map((s, i) => (
-            <StatCard key={s.end} s={s} i={i} go={go} />
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          {stats.map((stat) => (
+            <div key={stat.value} className={`card-grad ${stat.grad} bg-saubh-card border border-saubh-border rounded-card p-10 text-center hover:border-white/20 transition-all anim-up`}>
+              <div className={`font-heading text-5xl font-extrabold mb-3 ${stat.color}`}>{stat.value}</div>
+              <p className="text-saubh-muted text-sm text-left flex items-start gap-2">
+                <i className="fas fa-check text-saubh-green flex-shrink-0 mt-1" /> {stat.desc}
+              </p>
+            </div>
           ))}
         </div>
-        <div className="btn-group" style={{ justifyContent: 'center', marginTop: 48 }}>
-          <a href="#register" className="btn btn-primary">
-            <i className="fas fa-user-plus"></i> Register for Gig-Work
-          </a>
-          <a href="#post" className="btn btn-outline">
-            <i className="fas fa-plus-circle"></i> Post Requirements
-          </a>
-          <a href="#demo" className="btn btn-ghost">
-            <i className="fas fa-calendar-check"></i> Schedule a Demo
-          </a>
+
+        <div className="flex flex-wrap justify-center gap-4 anim-up">
+          <a href="#" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-btn btn-gradient-primary text-white font-heading font-semibold text-sm no-underline hover:-translate-y-0.5 transition-transform"><i className="fas fa-user-plus" /> Register for Gig</a>
+          <a href="#" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-btn border-[1.5px] border-saubh-orange text-saubh-orange font-heading font-semibold text-sm no-underline hover:-translate-y-0.5 transition-transform bg-transparent"><i className="fas fa-plus-circle" /> Post Requirements</a>
+          <a href="#" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-btn border-[1.5px] border-white/25 text-saubh-text font-heading font-semibold text-sm no-underline hover:-translate-y-0.5 transition-transform bg-transparent"><i className="fas fa-calendar-check" /> Schedule a Demo</a>
         </div>
       </div>
     </section>
