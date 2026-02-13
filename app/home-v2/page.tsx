@@ -14,6 +14,7 @@ import CommunitySection from "./components/community-section";
 import PricingSection from "./components/pricing-section";
 import NewsletterSection from "./components/newsletter-section";
 import Footer from "./components/footer";
+import ScrollAnimator from "./components/scroll-animator";
 
 export default function HomeV2() {
   return (
@@ -34,6 +35,7 @@ export default function HomeV2() {
       <PricingSection />
       <NewsletterSection />
       <Footer />
+      <ScrollAnimator />
     </>
   );
 }
