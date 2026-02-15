@@ -96,7 +96,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            <a href="#login" className="nav-cta">
+            <a href="/login" className="nav-cta">
               <i className="fas fa-arrow-right-to-bracket"></i> Login
             </a>
           </div>
@@ -120,7 +120,7 @@ export default function Navbar() {
           </a>
         ))}
         <a
-          href="#login"
+          href="/login"
           onClick={closeMenu}
           style={{
             background: 'var(--gradient-btn)',
