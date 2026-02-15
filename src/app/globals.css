@@ -1803,3 +1803,15 @@ body {
 @media (max-width: 480px) {
   .lg-card { padding: 28px 22px; }
 }
+
+/* ━━ AUTOFILL OVERRIDE ━━ */
+.lg-input-wrap input:-webkit-autofill,
+.lg-input-wrap input:-webkit-autofill:hover,
+.lg-input-wrap input:-webkit-autofill:focus,
+.lg-input-wrap input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px rgba(10,13,8,0.92) inset !important;
+  box-shadow: 0 0 0 30px rgba(10,13,8,0.92) inset !important;
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
