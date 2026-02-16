@@ -1,5 +1,5 @@
 # Saubh.Tech — Project Index
-> Last updated: February 16, 2026 (12 languages active: en, hi, bn, te, mr, ta, gu, kn, ml, pa, or, as)
+> Last updated: February 16, 2026 (13 languages active: en, hi, bn, te, mr, ta, gu, kn, ml, pa, or, as, ur)
 
 ## 🏗️ Infrastructure
 
@@ -142,12 +142,12 @@ All `.map()` in components MUST use **stable non-translated keys** (`id`, `index
 | 10 | pa | Punjabi | Gurmukhi | 212 | `strings/pa.ts` | ✅ Active |
 | 11 | or | Odia | Odia | 212 | `strings/or.ts` | ✅ Active |
 | 12 | as | Assamese | Bengali | 212 | `strings/as.ts` | ✅ Active |
+| 13 | ur | Urdu | Arabic (RTL) | 212 | `strings/ur.ts` | ✅ Active |
 
-### ⏳ Pending — Indian Languages (remaining 11)
+### ⏳ Pending — Indian Languages (remaining 10)
 | # | Code | Language | Script | Speakers | Status |
 |---|------|----------|--------|----------|--------|
-| 13 | ur | Urdu | Arabic (RTL) | 70M | ⏳ Next |
-| 14 | ne | Nepali | Devanagari | 16M | ⏳ Pending |
+| 14 | ne | Nepali | Devanagari | 16M | ⏳ Next |
 | 15 | sa | Sanskrit | Devanagari | — | ⏳ Pending |
 | 16 | mai | Maithili | Devanagari | — | ⏳ Pending |
 | 17 | kok | Konkani | Devanagari | — | ⏳ Pending |
