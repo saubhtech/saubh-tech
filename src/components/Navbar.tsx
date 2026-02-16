@@ -10,6 +10,7 @@ export default function Navbar() {
   const { t, lang, setLang, languages, loading } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [mobileLangOpen, setMobileLangOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
@@ -37,15 +38,20 @@ export default function Navbar() {
     return () => document.removeEventListener('click', handleClick);
   }, []);
 
-  const closeMenu = () => setMobileOpen(false);
+  const closeMenu = () => {
+    setMobileOpen(false);
+    setMobileLangOpen(false);
+  };
 
   // Find current language display name
   const currentLang = languages.find((l) => l.code === lang);
   const displayCode = currentLang ? currentLang.code.toUpperCase() : 'EN';
+  const displayName = currentLang ? currentLang.name : 'English';
 
   const handleLangChange = (code: string) => {
     setLang(code);
     setLangOpen(false);
+    setMobileLangOpen(false);
   };
 
   return (
@@ -115,6 +121,35 @@ export default function Navbar() {
             <i className={link.icon}></i> {link.label}
           </a>
         ))}
+
+        {/* Mobile Language Switcher */}
+        <div className="mobile-lang-section">
+          <button
+            className="mobile-lang-toggle"
+            onClick={() => setMobileLangOpen(!mobileLangOpen)}
+          >
+            <span className="mobile-lang-toggle-left">
+              <i className="fas fa-globe"></i>
+              <span>{loading ? '...' : displayName}</span>
+            </span>
+            <i className={`fas fa-chevron-down mobile-lang-chevron${mobileLangOpen ? ' rotated' : ''}`}></i>
+          </button>
+          <div className={`mobile-lang-grid${mobileLangOpen ? ' open' : ''}`}>
+            {languages.map((l) => (
+              <button
+                key={l.code}
+                className={`mobile-lang-item${l.code === lang ? ' active' : ''}`}
+                onClick={() => {
+                  handleLangChange(l.code);
+                  closeMenu();
+                }}
+              >
+                {l.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <Link
           href="/login"
           onClick={closeMenu}
