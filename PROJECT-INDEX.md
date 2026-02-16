@@ -1,5 +1,5 @@
 # Saubh.Tech — Project Index
-> Last updated: February 16, 2026 (Bengali added, stable React keys, direct dynamic imports)
+> Last updated: February 16, 2026 (6 languages active: en, hi, bn, te, mr, ta)
 
 ## 🏗️ Infrastructure
 
@@ -81,14 +81,14 @@ All `.map()` in components MUST use **stable non-translated keys** (`id`, `index
 
 ## 📁 Key Files (Must-Read for New Sessions)
 
-### ⭐ Files Opus Must Read Before Any i18n Task
+### ⭐ Files Opus Must Read Before Any Task
 | Priority | File | Purpose | How to Read |
 |----------|------|---------|-------------|
-| 1 | `PROJECT-INDEX.md` | This file — full project context | `github:get_file_contents owner=saubhtech repo=saubh-tech path=PROJECT-INDEX.md` |
+| 1 | `PROJECT-INDEX.md` | This file — full project context, architecture, i18n status | `github:get_file_contents owner=saubhtech repo=saubh-tech path=PROJECT-INDEX.md` |
 | 2 | `src/lib/i18n/strings/en.ts` | Master English strings (212 keys, source of truth) | `github:get_file_contents ...path=src/lib/i18n/strings/en.ts` |
 | 3 | `src/lib/i18n/TranslationProvider.tsx` | Translation loading + LANG_LOADERS map | `github:get_file_contents ...path=src/lib/i18n/TranslationProvider.tsx` |
-| 4 | `src/lib/i18n/strings/hi.ts` | Reference translation file (Hindi) — use as template | `github:get_file_contents ...path=src/lib/i18n/strings/hi.ts` |
-| 5 | `src/lib/i18n/languages.ts` | All 37 language definitions | `github:get_file_contents ...path=src/lib/i18n/languages.ts` |
+| 4 | `src/lib/i18n/languages.ts` | All 37 language definitions | `github:get_file_contents ...path=src/lib/i18n/languages.ts` |
+| 5 | `src/lib/i18n/strings/hi.ts` | Reference translation file (Hindi) — use as template format | `github:get_file_contents ...path=src/lib/i18n/strings/hi.ts` |
 
 ### Component Files (src/components/)
 | Component | File | React Key |
@@ -127,46 +127,54 @@ All `.map()` in components MUST use **stable non-translated keys** (`id`, `index
 
 ## 🌍 i18n Translation Status
 
-### Completed Languages
-| # | Code | Language | Status | File |
-|---|------|----------|--------|------|
-| 1 | en | English | ✅ Master (212 keys) | `strings/en.ts` |
-| 2 | hi | Hindi | ✅ Complete (212 keys) | `strings/hi.ts` |
-| 3 | bn | Bengali | ✅ Complete (212 keys) | `strings/bn.ts` |
+### ✅ Active Languages (in LANG_LOADERS, deployed)
+| # | Code | Language | Script | Keys | File | Loader |
+|---|------|----------|--------|------|------|--------|
+| 1 | en | English | Latin | 212 | `strings/en.ts` | Direct import (base) |
+| 2 | hi | Hindi | Devanagari | 212 | `strings/hi.ts` | ✅ Active |
+| 3 | bn | Bengali | Bengali | 212 | `strings/bn.ts` | ✅ Active |
+| 4 | te | Telugu | Telugu | 212 | `strings/te.ts` | ✅ Active |
+| 5 | mr | Marathi | Devanagari | 212 | `strings/mr.ts` | ✅ Active |
+| 6 | ta | Tamil | Tamil | 212 | `strings/ta.ts` | ✅ Active |
 
-### Pending — Indian Languages (22 total, prioritized by speaker count)
-| # | Code | Language | Speakers | Batch | Status |
-|---|------|----------|----------|-------|--------|
-| 4 | te | Telugu | 83M | Batch 1 | ⏳ Pending |
-| 5 | mr | Marathi | 83M | Batch 1 | ⏳ Pending |
-| 6 | ta | Tamil | 78M | Batch 1 | ⏳ Pending |
-| 7 | gu | Gujarati | 56M | Batch 2 | ⏳ Pending |
-| 8 | kn | Kannada | 44M | Batch 2 | ⏳ Pending |
-| 9 | ml | Malayalam | 38M | Batch 2 | ⏳ Pending |
-| 10 | pa | Punjabi | 33M | Batch 2 | ⏳ Pending |
-| 11 | or | Odia | 35M | Batch 2 | ⏳ Pending |
-| 12 | as | Assamese | 15M | Batch 2 | ⏳ Pending |
-| 13 | ur | Urdu (RTL) | 70M | Batch 3 | ⏳ Pending |
-| 14 | ne | Nepali | 16M | Batch 3 | ⏳ Pending |
-| 15-23 | sa,mai,kok,doi,sd,ks,brx,sat,mni | Remaining | — | Batch 4 | ⏳ Pending |
+### ⏳ Pending — Indian Languages (remaining 17)
+| # | Code | Language | Script | Speakers | Status |
+|---|------|----------|--------|----------|--------|
+| 7 | gu | Gujarati | Gujarati | 56M | ⏳ Next |
+| 8 | kn | Kannada | Kannada | 44M | ⏳ Next |
+| 9 | ml | Malayalam | Malayalam | 38M | ⏳ Next |
+| 10 | pa | Punjabi | Gurmukhi | 33M | ⏳ Pending |
+| 11 | or | Odia | Odia | 35M | ⏳ Pending |
+| 12 | as | Assamese | Bengali | 15M | ⏳ Pending |
+| 13 | ur | Urdu | Arabic (RTL) | 70M | ⏳ Pending |
+| 14 | ne | Nepali | Devanagari | 16M | ⏳ Pending |
+| 15 | sa | Sanskrit | Devanagari | — | ⏳ Pending |
+| 16 | mai | Maithili | Devanagari | — | ⏳ Pending |
+| 17 | kok | Konkani | Devanagari | — | ⏳ Pending |
+| 18 | doi | Dogri | Devanagari | — | ⏳ Pending |
+| 19 | sd | Sindhi | Arabic (RTL) | — | ⏳ Pending |
+| 20 | ks | Kashmiri | Arabic (RTL) | — | ⏳ Pending |
+| 21 | brx | Bodo | Devanagari | — | ⏳ Pending |
+| 22 | sat | Santali | Ol Chiki | — | ⏳ Pending |
+| 23 | mni | Manipuri | Bengali | — | ⏳ Pending |
 
-### Pending — International Languages (14 total)
-| # | Code | Language | Batch | Status |
-|---|------|----------|-------|--------|
-| 24 | es | Spanish | Batch 5 | ⏳ Pending |
-| 25 | fr | French | Batch 5 | ⏳ Pending |
-| 26 | ar | Arabic (RTL) | Batch 5 | ⏳ Pending |
-| 27 | zh | Chinese | Batch 5 | ⏳ Pending |
-| 28 | pt | Portuguese | Batch 6 | ⏳ Pending |
-| 29 | ru | Russian | Batch 6 | ⏳ Pending |
-| 30 | de | German | Batch 6 | ⏳ Pending |
-| 31 | ja | Japanese | Batch 6 | ⏳ Pending |
-| 32 | ko | Korean | Batch 7 | ⏳ Pending |
-| 33 | tr | Turkish | Batch 7 | ⏳ Pending |
-| 34 | th | Thai | Batch 7 | ⏳ Pending |
-| 35 | vi | Vietnamese | Batch 7 | ⏳ Pending |
-| 36 | id | Indonesian | Batch 7 | ⏳ Pending |
-| 37 | ms | Malay | Batch 7 | ⏳ Pending |
+### ⏳ Pending — International Languages (14)
+| # | Code | Language | Script | Status |
+|---|------|----------|--------|--------|
+| 24 | es | Spanish | Latin | ⏳ Pending |
+| 25 | fr | French | Latin | ⏳ Pending |
+| 26 | ar | Arabic | Arabic (RTL) | ⏳ Pending |
+| 27 | zh | Chinese | CJK | ⏳ Pending |
+| 28 | pt | Portuguese | Latin | ⏳ Pending |
+| 29 | ru | Russian | Cyrillic | ⏳ Pending |
+| 30 | de | German | Latin | ⏳ Pending |
+| 31 | ja | Japanese | CJK | ⏳ Pending |
+| 32 | ko | Korean | Hangul | ⏳ Pending |
+| 33 | tr | Turkish | Latin | ⏳ Pending |
+| 34 | th | Thai | Thai | ⏳ Pending |
+| 35 | vi | Vietnamese | Latin | ⏳ Pending |
+| 36 | id | Indonesian | Latin | ⏳ Pending |
+| 37 | ms | Malay | Latin | ⏳ Pending |
 
 ---
 
@@ -213,16 +221,27 @@ pm2 logs saubh-gig --lines 20
 10. **i18n: Use explicit LANG_LOADERS map** — not template literal `` import(`./strings/${code}`) `` which Turbopack can't resolve
 11. **i18n: en.ts uses `as const`** — need `const enBase: Record<string, string> = en` for dynamic key lookups in TranslationProvider
 12. **i18n: API route imports must match existing files** — never import a language file that hasn't been pushed yet
+13. **i18n: Smart quotes / curly apostrophes** — NEVER use ' ' " " in translation strings; always use straight quotes ' " or escaped \'
 
 ---
 
 ## 🚀 New Session Prompt Template
 
-When starting a new Claude session for this project, paste the following prompt:
+### What Opus Must Read & Why
+
+| # | File Path | Why It's Needed |
+|---|-----------|-----------------|
+| 1 | `PROJECT-INDEX.md` | **Start here always.** Full project context: infra, architecture, i18n status, component map, React key rules, lessons learned. Prevents repeating past mistakes. |
+| 2 | `src/lib/i18n/strings/en.ts` | **Master key list.** All 212 translation keys with English values. This is the source of truth — every language file must match this exact key set. |
+| 3 | `src/lib/i18n/TranslationProvider.tsx` | **Loader registry.** Shows which languages are active in `LANG_LOADERS`. New languages must be registered here after their .ts file is pushed. |
+| 4 | `src/lib/i18n/languages.ts` | **Language definitions.** All 37 languages with codes, native names, scripts, RTL/LTR, geo-mappings. Needed for any language-related work. |
+| 5 | `src/lib/i18n/strings/hi.ts` | **Translation template.** Use this as the format reference when creating new language files. Shows exact structure and type annotation. |
+
+### ── PROMPT FORMAT ──
+
+Copy everything between the `---` lines and fill in the `[TASK]` section:
 
 ---
-
-### PROMPT TO COPY:
 
 ```
 Project: Saubh.Tech — Phygital Gig Marketplace
@@ -239,18 +258,21 @@ BEFORE doing anything, read these files in order using github:get_file_contents 
 For i18n translation tasks, also read:
 5. path=src/lib/i18n/strings/hi.ts — Reference translation (Hindi, use as template format)
 
-TASK: [describe your task here]
+TASK: [Describe your task here]
 
 RULES:
 - Never use translated text as React key (causes invisible sections)
 - Use TranslationStrings type for compile-time enforcement
 - Register new languages in LANG_LOADERS after pushing the .ts file
+- Never use smart quotes/curly apostrophes in translation strings
 - Deploy: cd /data/projects/saubh-gig && git pull origin main && pnpm build && pm2 restart saubh-gig
 ```
 
 ---
 
-### EXAMPLE: Adding a new language (e.g., Telugu)
+### Example Prompts
+
+#### Adding a New Language (e.g., Gujarati)
 
 ```
 Project: Saubh.Tech — Phygital Gig Marketplace
@@ -263,11 +285,15 @@ BEFORE doing anything, read these files using github:get_file_contents (owner=sa
 3. path=src/lib/i18n/TranslationProvider.tsx
 4. path=src/lib/i18n/strings/hi.ts
 
-TASK: Add Telugu (te) translation. Create strings/te.ts with all 212 keys translated.
-Register it in LANG_LOADERS. Update PROJECT-INDEX.md status.
+TASK: Add Gujarati (gu) translation.
+- Create src/lib/i18n/strings/gu.ts with all 212 keys translated to Gujarati
+- Use TranslationStrings type for compile-time safety
+- Uncomment/add gu loader in LANG_LOADERS in TranslationProvider.tsx
+- Update PROJECT-INDEX.md status from ⏳ to ✅
+- Push all changes to main branch
 ```
 
-### EXAMPLE: Fixing a component bug
+#### Fixing a Component Bug
 
 ```
 Project: Saubh.Tech — Phygital Gig Marketplace
@@ -279,7 +305,7 @@ TASK: The Pricing section cards are not rendering on mobile. Debug and fix.
 Read: src/components/Pricing.tsx and src/app/globals.css
 ```
 
-### EXAMPLE: General website changes
+#### General Website Changes
 
 ```
 Project: Saubh.Tech — Phygital Gig Marketplace
@@ -288,4 +314,27 @@ Repo: github.com/saubhtech/saubh-tech (public, branch: main)
 BEFORE doing anything, read: path=PROJECT-INDEX.md
 
 TASK: [Add new blog section / Change hero text / Update pricing / etc.]
+```
+
+#### Adding Multiple Languages in One Session
+
+```
+Project: Saubh.Tech — Phygital Gig Marketplace
+Repo: github.com/saubhtech/saubh-tech (public, branch: main)
+
+BEFORE doing anything, read these files using github:get_file_contents (owner=saubhtech, repo=saubh-tech):
+1. path=PROJECT-INDEX.md
+2. path=src/lib/i18n/strings/en.ts
+3. path=src/lib/i18n/TranslationProvider.tsx
+4. path=src/lib/i18n/strings/hi.ts
+
+TASK: Add the following languages one by one:
+- Gujarati (gu), Kannada (kn), Malayalam (ml)
+
+For each language:
+1. Create strings/xx.ts with all 212 keys using TranslationStrings type
+2. Add loader to LANG_LOADERS in TranslationProvider.tsx
+3. Update PROJECT-INDEX.md status
+
+Push all changes when done.
 ```
