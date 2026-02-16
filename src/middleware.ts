@@ -81,7 +81,6 @@ export async function middleware(req: NextRequest) {
   if (!detected) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
       || req.headers.get('x-real-ip')
-      || req.ip
       || '';
     if (ip && ip !== '127.0.0.1' && ip !== '::1') {
       detected = await detectFromIP(ip);
