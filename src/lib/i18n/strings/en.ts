@@ -2,8 +2,14 @@
 // Every translatable string on saubh.tech, keyed by component.identifier.
 // This is the source of truth. saubh-lang translates these keys → 37 languages.
 // Keys use dot notation: component.subkey.detail
+//
+// ⚠️  ADDING A NEW KEY?
+//    1. Add it here first (this is the master).
+//    2. TypeScript will ERROR in every language file that's missing it.
+//    3. Add the translated value to each language file.
+//    4. Run: npx ts-node scripts/validate-i18n.ts to verify.
 
-const en: Record<string, string> = {
+const en = {
 
   // ─── Navbar ───
   'nav.gigWork': 'Gig-work',
@@ -250,6 +256,16 @@ const en: Record<string, string> = {
   // ─── SEO / Meta ───
   'meta.title': 'Saubh.Tech \u2014 Phygital Gig Marketplace | UGC & Branding Platform',
   'meta.description': 'Connect with verified individuals and businesses worldwide for secure gig work, UGC content creation, and digital branding. Escrow-protected payments.',
-};
+} as const;
+
+// ─── Derived types ───
+/** Union of all valid translation keys */
+export type TranslationKey = keyof typeof en;
+
+/** A complete translation must have ALL keys from English */
+export type TranslationStrings = Record<TranslationKey, string>;
+
+/** Total number of keys (for runtime validation) */
+export const TOTAL_KEYS = Object.keys(en).length;
 
 export default en;

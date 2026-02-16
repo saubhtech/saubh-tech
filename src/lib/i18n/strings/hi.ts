@@ -1,8 +1,12 @@
 // ─── Hindi Translations ───
 // Pre-computed Hindi translations for saubh.tech
 // Source of truth: en.ts → translated to Hindi
+//
+// ⚠️  Type-safe: TypeScript will ERROR if any key from en.ts is missing here.
 
-const hi: Record<string, string> = {
+import type { TranslationStrings } from './en';
+
+const hi: TranslationStrings = {
 
   // ─── Navbar ───
   'nav.gigWork': 'गिग-वर्क',
