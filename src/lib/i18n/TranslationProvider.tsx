@@ -42,11 +42,13 @@ const translationCache = new Map<string, Record<string, string>>();
 type LangLoader = () => Promise<{ default: Record<string, string> }>;
 
 const LANG_LOADERS: Record<string, LangLoader> = {
+  // ─── Active Languages (6 total) ───
   hi: () => import('./strings/hi'),
   bn: () => import('./strings/bn'),
-  // te: () => import('./strings/te'),
-  // mr: () => import('./strings/mr'),
-  // ta: () => import('./strings/ta'),
+  te: () => import('./strings/te'),
+  mr: () => import('./strings/mr'),
+  ta: () => import('./strings/ta'),
+  // ─── Pending Languages (add loader when .ts file is pushed) ───
   // gu: () => import('./strings/gu'),
   // kn: () => import('./strings/kn'),
   // ml: () => import('./strings/ml'),
@@ -55,6 +57,29 @@ const LANG_LOADERS: Record<string, LangLoader> = {
   // as: () => import('./strings/as'),
   // ur: () => import('./strings/ur'),
   // ne: () => import('./strings/ne'),
+  // sa: () => import('./strings/sa'),
+  // mai: () => import('./strings/mai'),
+  // kok: () => import('./strings/kok'),
+  // doi: () => import('./strings/doi'),
+  // sd: () => import('./strings/sd'),
+  // ks: () => import('./strings/ks'),
+  // brx: () => import('./strings/brx'),
+  // sat: () => import('./strings/sat'),
+  // mni: () => import('./strings/mni'),
+  // ar: () => import('./strings/ar'),
+  // zh: () => import('./strings/zh'),
+  // fr: () => import('./strings/fr'),
+  // de: () => import('./strings/de'),
+  // ja: () => import('./strings/ja'),
+  // ko: () => import('./strings/ko'),
+  // pt: () => import('./strings/pt'),
+  // ru: () => import('./strings/ru'),
+  // es: () => import('./strings/es'),
+  // th: () => import('./strings/th'),
+  // vi: () => import('./strings/vi'),
+  // id: () => import('./strings/id'),
+  // ms: () => import('./strings/ms'),
+  // tr: () => import('./strings/tr'),
 };
 
 // ─── Provider ───
