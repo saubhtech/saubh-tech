@@ -1,5 +1,5 @@
 # Saubh.Tech — Project Index
-> Last updated: February 16, 2026 (6 languages active: en, hi, bn, te, mr, ta)
+> Last updated: February 16, 2026 (8 languages active: en, hi, bn, te, mr, ta, gu, kn)
 
 ## 🏗️ Infrastructure
 
@@ -136,12 +136,12 @@ All `.map()` in components MUST use **stable non-translated keys** (`id`, `index
 | 4 | te | Telugu | Telugu | 212 | `strings/te.ts` | ✅ Active |
 | 5 | mr | Marathi | Devanagari | 212 | `strings/mr.ts` | ✅ Active |
 | 6 | ta | Tamil | Tamil | 212 | `strings/ta.ts` | ✅ Active |
+| 7 | gu | Gujarati | Gujarati | 212 | `strings/gu.ts` | ✅ Active |
+| 8 | kn | Kannada | Kannada | 212 | `strings/kn.ts` | ✅ Active |
 
-### ⏳ Pending — Indian Languages (remaining 17)
+### ⏳ Pending — Indian Languages (remaining 15)
 | # | Code | Language | Script | Speakers | Status |
 |---|------|----------|--------|----------|--------|
-| 7 | gu | Gujarati | Gujarati | 56M | ⏳ Next |
-| 8 | kn | Kannada | Kannada | 44M | ⏳ Next |
 | 9 | ml | Malayalam | Malayalam | 38M | ⏳ Next |
 | 10 | pa | Punjabi | Gurmukhi | 33M | ⏳ Pending |
 | 11 | or | Odia | Odia | 35M | ⏳ Pending |
@@ -272,7 +272,7 @@ RULES:
 
 ### Example Prompts
 
-#### Adding a New Language (e.g., Gujarati)
+#### Adding a New Language (e.g., Malayalam)
 
 ```
 Project: Saubh.Tech — Phygital Gig Marketplace
@@ -285,10 +285,10 @@ BEFORE doing anything, read these files using github:get_file_contents (owner=sa
 3. path=src/lib/i18n/TranslationProvider.tsx
 4. path=src/lib/i18n/strings/hi.ts
 
-TASK: Add Gujarati (gu) translation.
-- Create src/lib/i18n/strings/gu.ts with all 212 keys translated to Gujarati
+TASK: Add Malayalam (ml) translation.
+- Create src/lib/i18n/strings/ml.ts with all 212 keys translated to Malayalam
 - Use TranslationStrings type for compile-time safety
-- Uncomment/add gu loader in LANG_LOADERS in TranslationProvider.tsx
+- Uncomment/add ml loader in LANG_LOADERS in TranslationProvider.tsx
 - Update PROJECT-INDEX.md status from ⏳ to ✅
 - Push all changes to main branch
 ```
@@ -329,7 +329,7 @@ BEFORE doing anything, read these files using github:get_file_contents (owner=sa
 4. path=src/lib/i18n/strings/hi.ts
 
 TASK: Add the following languages one by one:
-- Gujarati (gu), Kannada (kn), Malayalam (ml)
+- Malayalam (ml), Punjabi (pa), Odia (or)
 
 For each language:
 1. Create strings/xx.ts with all 212 keys using TranslationStrings type
