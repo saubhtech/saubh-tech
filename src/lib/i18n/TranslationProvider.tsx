@@ -42,7 +42,7 @@ const translationCache = new Map<string, Record<string, string>>();
 type LangLoader = () => Promise<{ default: Record<string, string> }>;
 
 const LANG_LOADERS: Record<string, LangLoader> = {
-  // ─── Active Languages (8 total) ───
+  // ─── Active Languages (9 total) ───
   hi: () => import('./strings/hi'),
   bn: () => import('./strings/bn'),
   te: () => import('./strings/te'),
@@ -50,8 +50,8 @@ const LANG_LOADERS: Record<string, LangLoader> = {
   ta: () => import('./strings/ta'),
   gu: () => import('./strings/gu'),
   kn: () => import('./strings/kn'),
+  ml: () => import('./strings/ml'),
   // ─── Pending Languages (add loader when .ts file is pushed) ───
-  // ml: () => import('./strings/ml'),
   // pa: () => import('./strings/pa'),
   // or: () => import('./strings/or'),
   // as: () => import('./strings/as'),
