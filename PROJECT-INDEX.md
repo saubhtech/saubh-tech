@@ -1,5 +1,5 @@
 # Saubh.Tech — Project Index
-> Last updated: February 15, 2026 (night — backup system implemented)
+> Last updated: February 16, 2026 (saubh-lang Phase 2 — i18n website integration)
 
 ## 🏗️ Infrastructure
 
@@ -14,8 +14,9 @@
 | **Database** | PostgreSQL |
 | **Cache** | Redis |
 | **Process Manager** | PM2 |
+| **Container Runtime** | Docker + Docker Compose |
 | **Firewall** | UFW + fail2ban |
-| **Ports Open** | 80/443 (web), 5104 (SSH), 3000 (Next.js) |
+| **Ports Open** | 80/443 (web), 5104 (SSH), 3000 (Next.js), 3100 (Lang API) |
 
 ## 📂 Active Projects
 
@@ -28,45 +29,110 @@
 - **Port**: 3000
 - **Domain**: https://saubh.tech
 - **Logo**: `public/logo.jpg` (source: `C:\Projects\saubh-logo.jpg`)
-- **Status**: ✅ Live (Feb 15, 2026)
+- **Status**: ✅ Live (Feb 16, 2026 — with i18n Phase 2)
 
 #### Component Architecture (src/components/)
-| Component | File | Interactive |
-|-----------|------|------------|
-| Navbar | `Navbar.tsx` | ✅ Mobile menu, lang dropdown, scroll effect |
-| Hero | `Hero.tsx` | Video background (`public/saubhtech.mp4`) |
-| Phygital | `Phygital.tsx` | Scroll animations |
-| Steps | `Steps.tsx` | Scroll animations |
-| RealPeople | `RealPeople.tsx` | Scroll animations |
-| Sectors | `Sectors.tsx` | 16 sector chips |
-| Branding | `Branding.tsx` | — |
-| ProvenResults | `ProvenResults.tsx` | — |
-| SaubhOS | `SaubhOS.tsx` | — |
-| Learning | `Learning.tsx` | — |
-| Blog | `Blog.tsx` | 6 article cards |
-| FAQ | `FAQ.tsx` | ✅ Accordion toggle |
-| Community | `Community.tsx` | 6 voice cards |
-| Pricing | `Pricing.tsx` | ✅ Tab switching (Q/H/A) |
-| Newsletter | `Newsletter.tsx` | ✅ Form handling |
-| Footer | `Footer.tsx` | — |
-| ScrollAnimations | `ScrollAnimations.tsx` | IntersectionObserver hook |
+| Component | File | Interactive | i18n |
+|-----------|------|------------|------|
+| Navbar | `Navbar.tsx` | ✅ Mobile menu, lang dropdown, scroll effect | ✅ `useTranslation` |
+| Hero | `Hero.tsx` | Video background (`public/saubhtech.mp4`) | ✅ `useTranslation` |
+| Phygital | `Phygital.tsx` | Scroll animations | ✅ `useTranslation` |
+| Steps | `Steps.tsx` | Scroll animations | ✅ `useTranslation` |
+| RealPeople | `RealPeople.tsx` | Scroll animations | ✅ `useTranslation` |
+| Sectors | `Sectors.tsx` | 16 sector chips | ✅ `useTranslation` |
+| Branding | `Branding.tsx` | — | ✅ `useTranslation` |
+| ProvenResults | `ProvenResults.tsx` | — | ✅ `useTranslation` |
+| SaubhOS | `SaubhOS.tsx` | — | ✅ `useTranslation` |
+| Learning | `Learning.tsx` | — | ✅ `useTranslation` |
+| Blog | `Blog.tsx` | 6 article cards | ✅ `useTranslation` |
+| FAQ | `FAQ.tsx` | ✅ Accordion toggle | ✅ `useTranslation` |
+| Community | `Community.tsx` | 6 voice cards | ✅ `useTranslation` |
+| Pricing | `Pricing.tsx` | ✅ Tab switching (Q/H/A) | ✅ `useTranslation` |
+| Newsletter | `Newsletter.tsx` | ✅ Form handling | ✅ `useTranslation` |
+| Footer | `Footer.tsx` | — | ✅ `useTranslation` |
+| ScrollAnimations | `ScrollAnimations.tsx` | IntersectionObserver hook | — (no text) |
+
+#### i18n Architecture (src/lib/i18n/)
+| File | Purpose |
+|------|---------|
+| `index.ts` | Barrel export for all i18n modules |
+| `languages.ts` | 37 language definitions, geo-mapping, Accept-Language parser |
+| `strings/en.ts` | Complete English strings dictionary (170+ keys) |
+| `TranslationProvider.tsx` | React Context: lang detection, API fetch, caching, `t()` function |
+
+#### i18n Language Detection Priority
+| Priority | Method | Source |
+|----------|--------|--------|
+| 1 | URL `?lang=` param | User shares translated link |
+| 2 | `saubh-lang` cookie | Returning visitor preference |
+| 3 | IP geolocation | saubh-lang `/api/lang/detect` (500ms timeout) |
+| 4 | `Accept-Language` header | Browser language setting |
+| 5 | Default: `en` | Fallback |
 
 #### Key Files
 | File | Purpose |
 |------|---------|
-| `src/app/page.tsx` | Main page — imports all components |
-| `src/app/layout.tsx` | Root layout, SEO metadata, fonts, Font Awesome |
+| `src/app/page.tsx` | Main page — wraps with `<TranslationProvider>` |
+| `src/app/layout.tsx` | Root layout, dynamic `<html lang>` from cookie, SEO metadata |
 | `src/app/globals.css` | All custom CSS (1550 lines, extracted from HTML) |
+| `src/middleware.ts` | Next.js middleware — geo-detect IP → set `saubh-lang` cookie |
+| `src/lib/i18n/TranslationProvider.tsx` | Core i18n: Context, API fetch, caching |
+| `src/lib/i18n/languages.ts` | 37 language configs with geo-mapping |
+| `src/lib/i18n/strings/en.ts` | English base strings (source of truth) |
 | `src/lib/constants.ts` | Shared constants (logo path) |
 | `postcss.config.mjs` | Empty — Tailwind PostCSS disabled to preserve custom CSS |
+| `next.config.ts` | Config with LANG_API env variable |
 | `public/logo.jpg` | Saubh.Tech logo (used in Navbar + Footer) |
 | `src/app/login/page.tsx` | Login/Register page (`/login` route) |
+
+#### Environment Variables
+| Variable | Where | Value |
+|----------|-------|-------|
+| `LANG_API_INTERNAL_URL` | Server `.env.local` | `http://localhost:3100` |
+| `NEXT_PUBLIC_LANG_API_URL` | Server `.env.local` | `/api/lang` |
+
+---
+
+### 2. saubh-lang (Language Microservice)
+- **Local Path**: `C:\Projects\saubh-lang\`
+- **Server Path**: `/data/projects/saubh-lang/`
+- **GitHub**: https://github.com/saubhtech/saubh-lang (private)
+- **Stack**: Docker Compose — Node.js Gateway + Python FastAPI Services
+- **Port**: 3100 (API Gateway)
+- **Git**: `6f4d31a` Initial commit (Feb 15, 2026)
+- **Status**: 🔧 Phase 1 Complete — Phase 2 Website Integration Ready
+
+#### Language Support — 37 Languages
+
+**22 Indian (IndicTrans2):** hi, bn, ta, te, mr, gu, kn, ml, pa, or, as, ur, ne, sa, mai, kok, doi, sd, brx, sat, mni, ks
+
+**15 International (NLLB):** en (direct), ar, zh, fr, de, ja, ko, pt, ru, es, th, vi, id, ms, tr
+
+#### Development Phases
+| Phase | Scope | Status |
+|-------|-------|--------|
+| 1 | Core Translation API + Docker setup | ✅ Code complete |
+| 2 | Website i18n integration | ✅ Complete (Feb 16, 2026) |
+| 3 | WhatsApp bot integration | Planned |
+| 4 | Chat widget + STT | Planned |
+| 5 | Polish, monitoring, load testing | Planned |
+
+#### Caddy Config (when ready)
+```
+saubh.tech {
+    reverse_proxy /api/lang/* localhost:3100
+    reverse_proxy * localhost:3000
+}
+```
+
+---
 
 ## 📂 GitHub Repositories (saubhtech)
 
 | Repo | Type | Description | Status |
 |------|------|-------------|--------|
-| **saubh-tech** | Public | Main website (Next.js) | ✅ Live |
+| **saubh-tech** | Public | Main website (Next.js + i18n) | ✅ Live |
+| **saubh-lang** | Private | Language microservice (Docker) | 🔧 Building |
 | **saubh-opus** | Private | Monorepo (website, CRM, APIs) | Archived |
 | **chatgpt** | Private | ChatGPT related | Recent |
 | **whatsapp-crm-frontend** | Private | WhatsApp CRM UI | Paused |
@@ -89,6 +155,16 @@ Server (/data/projects/saubh-gig)
 Live (https://saubh.tech)
 ```
 
+```
+Local PC (C:\Projects\saubh-lang)
+    ↓ git push
+GitHub (saubhtech/saubh-lang)
+    ↓ git pull (on server)
+Server (/data/projects/saubh-lang)
+    ↓ docker compose up -d --build
+Live (https://saubh.tech/api/lang/*)
+```
+
 ## 🛡️ Backup Strategy (3-Copy Rule)
 
 Every piece of code exists in **3 places** at all times: Local PC, GitHub, Google Drive.
@@ -96,7 +172,7 @@ Every piece of code exists in **3 places** at all times: Local PC, GitHub, Googl
 ### Copy 1: Local PC (Real-time)
 | Item | Detail |
 |------|--------|
-| **Location** | `C:\Projects\saubh-tech\` |
+| **Location** | `C:\Projects\saubh-tech\` + `C:\Projects\saubh-lang\` |
 | **Method** | Git commits (version history) |
 | **Frequency** | Every code change |
 | **Dated Backups** | `C:\Backups\SaubhTech\YYYY-MM-DD\` |
@@ -107,7 +183,7 @@ Every piece of code exists in **3 places** at all times: Local PC, GitHub, Googl
 ### Copy 2: GitHub (Every Push)
 | Item | Detail |
 |------|--------|
-| **Repo** | https://github.com/saubhtech/saubh-tech |
+| **Repos** | saubhtech/saubh-tech + saubhtech/saubh-lang |
 | **Method** | `git push origin main` |
 | **Frequency** | Every change |
 | **Version Tags** | `git tag v1.0-description` before major changes |
@@ -122,108 +198,47 @@ Every piece of code exists in **3 places** at all times: Local PC, GitHub, Googl
 | **Retention** | 15 days on server, unlimited on Drive |
 | **Contents** | Source tar.gz + server configs + DB dump |
 
-### Backup Contents per Run
-
-| File | Contents |
-|------|----------|
-| `saubh-tech_src_DATE_TIME.tar.gz` | Source code (no node_modules/.next/.git) |
-| `server-configs_DATE.tar.gz` | Caddy, SSH, UFW, fail2ban configs |
-| `saubh-db_DATE.sql.gz` | PostgreSQL full dump (if data exists) |
-
-### Backup Scripts Location
-
-| Script | Location | Purpose |
-|--------|----------|---------|
-| `backup-local.ps1` | `C:\Projects\saubh-tech\` | Local PC → C:\Backups\SaubhTech\ |
-| `backup-server.sh` | `/home/admin1/scripts/` | Server → Google Drive |
-| `setup-gdrive.sh` | `/home/admin1/scripts/` | One-time rclone setup guide |
-
-### How to Run Backups
-
-```powershell
-# --- LOCAL BACKUP (Windows PowerShell) ---
-cd C:\Projects\saubh-tech
-powershell -ExecutionPolicy Bypass -File backup-local.ps1
-# Creates: C:\Backups\SaubhTech\2026-02-15\saubh-tech_2026-02-15_1430.zip
-```
-
-```bash
-# --- SERVER BACKUP (SSH into server) ---
-/home/admin1/scripts/backup-server.sh
-# Creates: /home/admin1/backups/2026-02-15/ + uploads to Google Drive
-```
-
-```bash
-# --- CHECK BACKUP LOG ---
-cat /home/admin1/backups/backup-log.txt
-```
-
-### Google Drive Setup (One-Time)
-
-```bash
-# 1. Install rclone
-curl https://rclone.org/install.sh | sudo bash
-
-# 2. Configure (follow prompts, use headless auth)
-rclone config
-# name: gdrive → type: Google Drive → scope: full → auto config: n
-# Open URL in local browser → authorize → paste code
-
-# 3. Test
-rclone mkdir gdrive:SaubhTech-Backups
-
-# 4. Setup cron
-crontab -e
-# Add: 30 18 * * * /home/admin1/scripts/backup-server.sh >> /home/admin1/backups/cron.log 2>&1
-```
-
 ## 📋 Server Commands Cheatsheet
 
 ```bash
 # SSH into server
 ssh -p 5104 admin1@103.67.236.186
 
-# Deploy latest from GitHub
+# Deploy saubh-tech (website)
 cd /data/projects/saubh-gig
 git pull origin main
 pnpm install
 pnpm build
 pm2 restart saubh-gig
 
+# Deploy saubh-lang (language service)
+cd /data/projects/saubh-lang
+git pull origin main
+docker compose up -d --build
+
 # Check status
 pm2 status
+docker compose -f /data/projects/saubh-lang/docker-compose.yml ps
 pm2 logs saubh-gig
-
-# Manual restart
-fuser -k 3000/tcp
-pm2 start ecosystem.config.js
 ```
 
 ## 📋 Local Dev Commands
 
 ```powershell
-# Start local development
+# Start saubh-tech local development
 cd C:\Projects\saubh-tech
 pnpm dev
-# Opens http://localhost:3000
+
+# Test language switching locally
+# Visit: http://localhost:3000?lang=hi
+# Visit: http://localhost:3000?lang=bn
+# Visit: http://localhost:3000?lang=ar  (RTL test)
 
 # Push changes to GitHub
 git add .
 git commit -m "description of change"
 git push origin main
-
-# Deploy to server (from local)
-ssh -p 5104 admin1@103.67.236.186 "cd /data/projects/saubh-gig && git pull && pnpm install && pnpm build && pm2 restart saubh-gig"
 ```
-
-## 📁 Backups Archive
-
-| File | Date | Size | Contents | Location |
-|------|------|------|----------|----------|
-| full-projects-backup-feb15.tar.gz | Feb 15, 2026 | 673MB | All /data/projects/ | `C:\Backups\SaubhTech\Feb15\` |
-| server-configs-backup-feb15.tar.gz | Feb 15, 2026 | 2KB | Caddy, SSH, UFW, fail2ban | `C:\Backups\SaubhTech\Feb15\` |
-| *Daily automated* | Daily | ~5-10MB | Source + configs + DB | `gdrive:SaubhTech-Backups/YYYY-MM-DD/` |
-| *Local snapshots* | On demand | ~50MB | Full project zip | `C:\Backups\SaubhTech\YYYY-MM-DD\` |
 
 ## ⚠️ Lessons Learned
 
@@ -233,5 +248,13 @@ ssh -p 5104 admin1@103.67.236.186 "cd /data/projects/saubh-gig && git pull && pn
 4. **Tag before major changes**: `git tag before-change-description`
 5. **Next.js directory priority**: `app/` overrides `src/app/` when both exist — never have both
 6. **Tailwind PostCSS strips custom CSS** — if using custom CSS, remove `@tailwindcss/postcss` from postcss.config.mjs
-7. **Smart quotes break JS** — curly apostrophes (`'`) in strings cause parse errors; use double quotes for strings containing apostrophes
-8. **Split HTML into React components** — avoid `dangerouslySetInnerHTML`; use proper components with data arrays for maintainability
+7. **Smart quotes break JS** — curly apostrophes in strings cause parse errors; use double quotes
+8. **Split HTML into React components** — avoid `dangerouslySetInnerHTML`; use proper components
+9. **Non-interactive SSH loses PATH** — `pnpm`, `pm2` not found via `ssh user@host "cmd"`. SSH in interactively
+10. **Chrome autofill overrides placeholders** — use `autoComplete="off"` and autofill CSS overrides
+11. **PowerShell `$` in SSH commands fails** — use single quotes to avoid variable expansion
+12. **Docker model volumes persist** — AI model weights in named volumes survive container rebuilds
+13. **i18n: Extract ALL strings to a central dictionary** — never hardcode text in components
+14. **i18n: Use cookie for language persistence** — URL params alone don't survive navigation
+15. **i18n: Always fall back to English** — if translation API is down, show English not blank
+16. **i18n: Set 500ms timeout for middleware API calls** — never slow down page load for geo-detect
