@@ -4,22 +4,16 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import en from './strings/en';
 import { LANGUAGES, DEFAULT_LANG, SUPPORTED_CODES, getLang, type LangDef } from './languages';
 
-// Cast en to Record<string, string> for dynamic key lookups
+// Widen en's 'as const' literal type for dynamic key lookups
 const enBase: Record<string, string> = en;
 
 // ─── Types ───
 interface TranslationCtx {
-  /** Current language code */
   lang: string;
-  /** Current language definition */
   langDef: LangDef;
-  /** Translate a key → localized string */
   t: (key: string) => string;
-  /** Switch language */
   setLang: (code: string) => void;
-  /** Whether translations are loading */
   loading: boolean;
-  /** All supported languages */
   languages: typeof LANGUAGES;
 }
 
@@ -39,11 +33,25 @@ function setCookie(name: string, value: string, days: number = 365) {
   document.cookie = `${name}=${encodeURIComponent(value)};path=/;expires=${d.toUTCString()};SameSite=Lax`;
 }
 
-// ─── Saubh-lang API URL ───
-const LANG_API = process.env.NEXT_PUBLIC_LANG_API_URL || '/api/lang';
-
 // ─── In-memory translation cache ───
 const translationCache = new Map<string, Record<string, string>>();
+
+// ─── Dynamic import loader ───
+// Each language file becomes a separate webpack chunk (code-split).
+// No API roundtrip needed — translations load directly as JS modules.
+async function importLanguage(code: string): Promise<Record<string, string> | null> {
+  try {
+    // Webpack sees this pattern and creates a chunk per language file.
+    // Only the requested language is downloaded.
+    const mod = await import(
+      /* webpackChunkName: "i18n-[request]" */
+      `./strings/${code}`
+    );
+    return mod.default as Record<string, string>;
+  } catch {
+    return null;
+  }
+}
 
 // ─── Provider ───
 export function TranslationProvider({ children }: { children: ReactNode }) {
@@ -51,23 +59,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   const [strings, setStrings] = useState<Record<string, string>>(enBase);
   const [loading, setLoading] = useState(false);
 
-  // ─── Detect initial language (runs once on mount) ───
-  useEffect(() => {
-    // Priority: 1. URL ?lang= param  2. Cookie  3. Geo-detect cookie set by middleware
-    const params = new URLSearchParams(window.location.search);
-    const urlLang = params.get('lang');
-    const cookieLang = getCookie('saubh-lang');
-
-    const detected = urlLang || cookieLang || DEFAULT_LANG;
-    const valid = SUPPORTED_CODES.includes(detected) ? detected : DEFAULT_LANG;
-
-    if (valid !== DEFAULT_LANG) {
-      setLangState(valid);
-      loadTranslations(valid);
-    }
-  }, []);
-
-  // ─── Load translations from saubh-lang API ───
+  // ─── Load translations via dynamic import ───
   const loadTranslations = useCallback(async (code: string) => {
     if (code === 'en') {
       setStrings(enBase);
@@ -84,45 +76,48 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     try {
-      const res = await fetch(`${LANG_API}/page`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: '/', target: code, format: 'json' }),
-      });
+      const langStrings = await importLanguage(code);
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.strings && typeof data.strings === 'object') {
-          // Merge with English base (so missing keys fall back to English)
-          const merged = { ...enBase, ...data.strings };
-          translationCache.set(code, merged);
-          setStrings(merged);
-        } else {
-          // API returned OK but no strings — fall back to English
-          setStrings(enBase);
-        }
+      if (langStrings) {
+        // Merge with English base (missing keys fall back to English)
+        const merged = { ...enBase, ...langStrings };
+        translationCache.set(code, merged);
+        setStrings(merged);
       } else {
-        // API error — fall back to English
-        console.warn(`[i18n] Translation API returned ${res.status} for ${code}, using English`);
+        console.warn(`[i18n] Language '${code}' not available, using English`);
         setStrings(enBase);
       }
     } catch {
-      // API unreachable — fall back to English
-      console.warn(`[i18n] Translation API unreachable for ${code}, using English`);
+      console.warn(`[i18n] Failed to load '${code}', using English`);
       setStrings(enBase);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // ─── Switch language (called from Navbar dropdown) ───
+  // ─── Detect initial language (runs once on mount) ───
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlLang = params.get('lang');
+    const cookieLang = getCookie('saubh-lang');
+
+    const detected = urlLang || cookieLang || DEFAULT_LANG;
+    const valid = SUPPORTED_CODES.includes(detected) ? detected : DEFAULT_LANG;
+
+    if (valid !== DEFAULT_LANG) {
+      setLangState(valid);
+      loadTranslations(valid);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── Switch language ───
   const setLang = useCallback(
     (code: string) => {
       if (!SUPPORTED_CODES.includes(code)) return;
       setLangState(code);
       setCookie('saubh-lang', code);
 
-      // Update URL without reload (remove ?lang= if present, add new one)
       const url = new URL(window.location.href);
       if (code === DEFAULT_LANG) {
         url.searchParams.delete('lang');
@@ -131,12 +126,10 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       }
       window.history.replaceState({}, '', url.toString());
 
-      // Update <html lang="..."> and dir
       const langDef = getLang(code);
       document.documentElement.lang = code;
       document.documentElement.dir = langDef?.dir || 'ltr';
 
-      // Load translations
       loadTranslations(code);
     },
     [loadTranslations]
