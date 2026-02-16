@@ -1,17 +1,23 @@
-const stats = [
-  { num: '6.9x', text: 'higher conversion rates from UGC vs traditional ads', delay: '0s' },
-  { num: '65%', text: 'lower customer acquisition costs vs paid advertising', delay: '.1s' },
-  { num: '82%', text: 'more engagement, trust, and conversion through organic leads', delay: '.2s' },
-  { num: '40%', text: 'increase in repeat orders due to peer recommendations', delay: '.3s' },
-];
+'use client';
+
+import { useTranslation } from '@/lib/i18n';
 
 export default function ProvenResults() {
+  const { t } = useTranslation();
+
+  const stats = [
+    { num: '6.9x', text: t('proven.stat1.text'), delay: '0s' },
+    { num: '65%', text: t('proven.stat2.text'), delay: '.1s' },
+    { num: '82%', text: t('proven.stat3.text'), delay: '.2s' },
+    { num: '40%', text: t('proven.stat4.text'), delay: '.3s' },
+  ];
+
   return (
     <section className="proven section-pad" aria-labelledby="proven-title">
       <div className="container">
         <div className="proven-header anim-up">
           <span className="section-tag">
-            <i className="fas fa-chart-line"></i> Proven Results
+            <i className="fas fa-chart-line"></i> {t('proven.tag')}
           </span>
         </div>
         <div className="proven-grid">
@@ -30,13 +36,13 @@ export default function ProvenResults() {
         </div>
         <div className="btn-group" style={{ justifyContent: 'center', marginTop: '48px' }}>
           <a href="#register" className="btn btn-primary">
-            <i className="fas fa-user-plus"></i> Register for Gig-Work
+            <i className="fas fa-user-plus"></i> {t('proven.btn.register')}
           </a>
           <a href="#post" className="btn btn-outline">
-            <i className="fas fa-plus-circle"></i> Post Requirements
+            <i className="fas fa-plus-circle"></i> {t('proven.btn.post')}
           </a>
           <a href="#demo" className="btn btn-ghost">
-            <i className="fas fa-calendar-check"></i> Schedule a Demo
+            <i className="fas fa-calendar-check"></i> {t('proven.btn.demo')}
           </a>
         </div>
       </div>

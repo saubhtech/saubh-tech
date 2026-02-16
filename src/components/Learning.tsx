@@ -1,23 +1,29 @@
-const features = [
-  { icon: 'fas fa-book-open', text: 'Study with contents and videos', delay: '0s' },
-  { icon: 'fas fa-chalkboard-user', text: 'Interactive trainer-led online classes', delay: '.1s' },
-  { icon: 'fas fa-certificate', text: 'Certification to boost credibility', delay: '.2s' },
-];
+'use client';
 
-const programs = [
-  { icon: 'fas fa-heart-pulse', name: 'Life Counselling Professional (LCP)' },
-  { icon: 'fas fa-chart-column', name: 'Business Consulting Professional (BCP)' },
-];
+import { useTranslation } from '@/lib/i18n';
 
 export default function Learning() {
+  const { t } = useTranslation();
+
+  const features = [
+    { icon: 'fas fa-book-open', text: t('learning.feat1'), delay: '0s' },
+    { icon: 'fas fa-chalkboard-user', text: t('learning.feat2'), delay: '.1s' },
+    { icon: 'fas fa-certificate', text: t('learning.feat3'), delay: '.2s' },
+  ];
+
+  const programs = [
+    { icon: 'fas fa-heart-pulse', name: t('learning.prog1') },
+    { icon: 'fas fa-chart-column', name: t('learning.prog2') },
+  ];
+
   return (
     <section className="learning section-pad" id="learning" aria-labelledby="learning-title">
       <div className="container">
         <div className="learning-header anim-up">
           <span className="section-tag">
-            <i className="fas fa-graduation-cap"></i> Learning &amp; Skilling
+            <i className="fas fa-graduation-cap"></i> {t('learning.tag')}
           </span>
-          <h2 className="section-title">Invest in Your Future</h2>
+          <h2 className="section-title">{t('learning.title')}</h2>
         </div>
         <div className="learning-features">
           {features.map((feat) => (
@@ -37,7 +43,7 @@ export default function Learning() {
               marginBottom: '20px',
             }}
           >
-            Training Programs
+            {t('learning.programs')}
           </p>
         </div>
         <div className="training-row">
@@ -49,10 +55,10 @@ export default function Learning() {
         </div>
         <div className="btn-group" style={{ justifyContent: 'center' }}>
           <a href="#training" className="btn btn-primary">
-            <i className="fas fa-play-circle"></i> Join Free Training Session
+            <i className="fas fa-play-circle"></i> {t('learning.btn.join')}
           </a>
           <a href="#meeting" className="btn btn-outline">
-            <i className="fas fa-calendar-check"></i> Schedule a Meeting
+            <i className="fas fa-calendar-check"></i> {t('learning.btn.meeting')}
           </a>
         </div>
       </div>

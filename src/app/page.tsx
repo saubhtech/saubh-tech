@@ -1,3 +1,4 @@
+import { TranslationProvider } from '@/lib/i18n';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import Phygital from '@/components/Phygital';
@@ -18,7 +19,7 @@ import ScrollAnimations from '@/components/ScrollAnimations';
 
 export default function Home() {
   return (
-    <>
+    <TranslationProvider>
       <ScrollAnimations />
       <Navbar />
       <Hero />
@@ -36,6 +37,6 @@ export default function Home() {
       <Pricing />
       <Newsletter />
       <Footer />
-    </>
+    </TranslationProvider>
   );
 }

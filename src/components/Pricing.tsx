@@ -1,71 +1,58 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from '@/lib/i18n';
 
 type Period = 'quarterly' | 'half' | 'annual';
 
-const plans = [
-  {
-    tier: 'STARTER',
-    name: 'Visibility',
-    desc: 'Solo entrepreneurs, very small, local businesses for maintaining minimal presence.',
-    prices: { quarterly: '₹15,999', half: '₹29,999', annual: '₹55,999' },
-    features: [
-      '8 image posts per month',
-      '4 reels/carousels/shorts per month',
-      '2 LinkedIn posts/blogs per month',
-    ],
-    popular: false,
-    delay: '0s',
-  },
-  {
-    tier: 'GROWTH',
-    name: 'Accelerator',
-    desc: 'Small & Medium Businesses, service providers for driving engagement and organic leads.',
-    prices: { quarterly: '₹35,999', half: '₹67,999', annual: '₹1,25,999' },
-    features: [
-      '20 image posts per month',
-      '10 reels/carousels/shorts per month',
-      '4 LinkedIn posts/blogs per month',
-    ],
-    popular: true,
-    delay: '.1s',
-  },
-  {
-    tier: 'PRO',
-    name: 'Branding',
-    desc: 'SMEs and e-commerce businesses for high-impact social presence, rapid scaling and strong branding.',
-    prices: { quarterly: '₹74,999', half: '₹1,39,999', annual: '₹2,59,999' },
-    features: [
-      '50 image posts per month',
-      '20 reels/carousels/shorts/testimonials per month',
-      '10 LinkedIn posts/blogs per month',
-      '20 X posts per month',
-    ],
-    popular: false,
-    delay: '.2s',
-  },
-];
-
-const tabs: { label: string; value: Period }[] = [
-  { label: 'Quarterly', value: 'quarterly' },
-  { label: 'Half-Yearly', value: 'half' },
-  { label: 'Annual', value: 'annual' },
-];
-
 export default function Pricing() {
+  const { t } = useTranslation();
   const [period, setPeriod] = useState<Period>('quarterly');
+
+  const plans = [
+    {
+      tier: t('pricing.starter.tier'),
+      name: t('pricing.starter.name'),
+      desc: t('pricing.starter.desc'),
+      prices: { quarterly: '₹15,999', half: '₹29,999', annual: '₹55,999' },
+      features: [t('pricing.starter.f1'), t('pricing.starter.f2'), t('pricing.starter.f3')],
+      popular: false,
+      delay: '0s',
+    },
+    {
+      tier: t('pricing.growth.tier'),
+      name: t('pricing.growth.name'),
+      desc: t('pricing.growth.desc'),
+      prices: { quarterly: '₹35,999', half: '₹67,999', annual: '₹1,25,999' },
+      features: [t('pricing.growth.f1'), t('pricing.growth.f2'), t('pricing.growth.f3')],
+      popular: true,
+      delay: '.1s',
+    },
+    {
+      tier: t('pricing.pro.tier'),
+      name: t('pricing.pro.name'),
+      desc: t('pricing.pro.desc'),
+      prices: { quarterly: '₹74,999', half: '₹1,39,999', annual: '₹2,59,999' },
+      features: [t('pricing.pro.f1'), t('pricing.pro.f2'), t('pricing.pro.f3'), t('pricing.pro.f4')],
+      popular: false,
+      delay: '.2s',
+    },
+  ];
+
+  const tabs: { label: string; value: Period }[] = [
+    { label: t('pricing.tab.quarterly'), value: 'quarterly' },
+    { label: t('pricing.tab.half'), value: 'half' },
+    { label: t('pricing.tab.annual'), value: 'annual' },
+  ];
 
   return (
     <section className="pricing section-pad" id="pricing" aria-labelledby="pricing-title">
       <div className="container">
         <div className="pricing-header anim-up">
           <span className="section-tag">
-            <i className="fas fa-tags"></i> Branding Subscription
+            <i className="fas fa-tags"></i> {t('pricing.tag')}
           </span>
-          <h2 className="section-title">
-            Integrate the Power of People with the Intelligence of Technology
-          </h2>
+          <h2 className="section-title">{t('pricing.title')}</h2>
         </div>
 
         <div className="pricing-tabs" role="tablist">
@@ -93,7 +80,7 @@ export default function Pricing() {
               <p className="price-desc">{plan.desc}</p>
               <div className="price-amounts">
                 <div className="price-row">
-                  <span>Price</span>
+                  <span>{t('pricing.price')}</span>
                   <span className="price-val">{plan.prices[period]}</span>
                 </div>
               </div>
@@ -109,7 +96,7 @@ export default function Pricing() {
                 className={`btn ${plan.popular ? 'btn-primary' : 'btn-outline'}`}
                 style={{ width: '100%', justifyContent: 'center' }}
               >
-                Get Started
+                {t('pricing.getStarted')}
               </a>
             </div>
           ))}
@@ -117,10 +104,10 @@ export default function Pricing() {
 
         <div className="btn-group" style={{ justifyContent: 'center', marginTop: '48px' }}>
           <a href="#post" className="btn btn-outline">
-            <i className="fas fa-plus-circle"></i> Post Requirement
+            <i className="fas fa-plus-circle"></i> {t('pricing.btn.post')}
           </a>
           <a href="#demo" className="btn btn-ghost">
-            <i className="fas fa-calendar-check"></i> Schedule a Demo
+            <i className="fas fa-calendar-check"></i> {t('pricing.btn.demo')}
           </a>
         </div>
       </div>

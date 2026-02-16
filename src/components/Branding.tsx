@@ -1,41 +1,47 @@
-const cards = [
-  {
-    icon: 'fas fa-layer-group',
-    title: 'Aggregation',
-    subtitle: 'User Generated Content (UGC) Hub',
-    desc: 'Users create authentic content including reviews, testimonials, and videos that resonate with your audience.',
-    delay: '0s',
-  },
-  {
-    icon: 'fas fa-tower-broadcast',
-    title: 'Amplification',
-    subtitle: 'Social Media Amplification (SMA) Network',
-    desc: 'Multi-channel people-to-people content distribution that multiplies reach, drives engagement and visibility.',
-    delay: '.1s',
-  },
-  {
-    icon: 'fas fa-gears',
-    title: 'Automation',
-    subtitle: 'Organic Leads Generation (OLG) Engine',
-    desc: 'Unified multi-channel campaigns, landing pages, and sign-ups delivering pre-qualified leads directly to your CRM sales funnel.',
-    delay: '.2s',
-  },
-];
+'use client';
+
+import { useTranslation } from '@/lib/i18n';
 
 export default function Branding() {
+  const { t } = useTranslation();
+
+  const cards = [
+    {
+      icon: 'fas fa-layer-group',
+      title: t('branding.card1.title'),
+      subtitle: t('branding.card1.subtitle'),
+      desc: t('branding.card1.desc'),
+      delay: '0s',
+    },
+    {
+      icon: 'fas fa-tower-broadcast',
+      title: t('branding.card2.title'),
+      subtitle: t('branding.card2.subtitle'),
+      desc: t('branding.card2.desc'),
+      delay: '.1s',
+    },
+    {
+      icon: 'fas fa-gears',
+      title: t('branding.card3.title'),
+      subtitle: t('branding.card3.subtitle'),
+      desc: t('branding.card3.desc'),
+      delay: '.2s',
+    },
+  ];
+
   return (
     <section className="branding section-pad" id="branding" aria-labelledby="branding-title">
       <div className="container">
         <div className="branding-header anim-up">
           <span className="section-tag light">
-            <i className="fas fa-bullhorn"></i> Branding
+            <i className="fas fa-bullhorn"></i> {t('branding.tag')}
           </span>
           <h2 className="section-title" style={{ color: 'var(--text-dark)' }}>
-            No Business Without a Brand.
+            {t('branding.title')}
           </h2>
         </div>
         <div className="branding-sub anim-up">
-          <p>No Brand Without Social Proof.</p>
+          <p>{t('branding.subtitle')}</p>
         </div>
         <div className="branding-grid">
           {cards.map((card) => (
