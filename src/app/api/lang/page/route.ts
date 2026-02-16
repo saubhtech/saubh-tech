@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // ─── Pre-computed translation imports ───
+// Add new language imports here as files are created in src/lib/i18n/strings/
 import hi from '@/lib/i18n/strings/hi';
-import bn from '@/lib/i18n/strings/bn';
-import ta from '@/lib/i18n/strings/ta';
-import te from '@/lib/i18n/strings/te';
-import mr from '@/lib/i18n/strings/mr';
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
-  hi, bn, ta, te, mr,
+  hi,
 };
 
 export async function POST(req: NextRequest) {
