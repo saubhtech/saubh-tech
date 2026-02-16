@@ -1,33 +1,31 @@
-const cards = [
-  {
-    icon: 'fas fa-briefcase',
-    title: 'Verified Providers',
-    items: [
-      'List offerings across multiple sectors and territories.',
-      'Bid on assignments, procure prepaid demand,',
-      'Complete work, get escrow-guaranteed payments.',
-    ],
-    delay: '0s',
-  },
-  {
-    icon: 'fas fa-user-tie',
-    title: 'Verified Clients',
-    items: [
-      'Post assignments to outsource requirements.',
-      'Call or chat with verified providers.',
-      'Compare bids, and hire with escrow protection.',
-    ],
-    delay: '.1s',
-  },
-];
+'use client';
+
+import { useTranslation } from '@/lib/i18n';
 
 export default function RealPeople() {
+  const { t } = useTranslation();
+
+  const cards = [
+    {
+      icon: 'fas fa-briefcase',
+      title: t('rp.providers.title'),
+      items: [t('rp.providers.1'), t('rp.providers.2'), t('rp.providers.3')],
+      delay: '0s',
+    },
+    {
+      icon: 'fas fa-user-tie',
+      title: t('rp.clients.title'),
+      items: [t('rp.clients.1'), t('rp.clients.2'), t('rp.clients.3')],
+      delay: '.1s',
+    },
+  ];
+
   return (
     <section className="real-people section-pad" aria-labelledby="rp-title">
       <div className="container">
         <div className="rp-header anim-up">
           <span className="section-tag light">
-            <i className="fas fa-bolt"></i> Real People. Real Work. Real Trust.
+            <i className="fas fa-bolt"></i> {t('rp.tag')}
           </span>
         </div>
         <div className="rp-grid">
@@ -53,13 +51,13 @@ export default function RealPeople() {
         </div>
         <div className="btn-group" style={{ justifyContent: 'center' }}>
           <a href="#offer" className="btn btn-outline dark">
-            <i className="fas fa-hand-holding-heart"></i> Offer Service/Product
+            <i className="fas fa-hand-holding-heart"></i> {t('rp.btn.offer')}
           </a>
           <a href="#post" className="btn btn-outline dark">
-            <i className="fas fa-plus-circle"></i> Post Requirements
+            <i className="fas fa-plus-circle"></i> {t('rp.btn.post')}
           </a>
           <a href="#demo" className="btn btn-outline dark">
-            <i className="fas fa-calendar-check"></i> Schedule a Demo
+            <i className="fas fa-calendar-check"></i> {t('rp.btn.demo')}
           </a>
         </div>
       </div>

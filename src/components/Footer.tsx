@@ -1,5 +1,8 @@
+'use client';
+
 import Image from 'next/image';
 import { LOGO_SRC } from '@/lib/constants';
+import { useTranslation } from '@/lib/i18n';
 
 const socials = [
   { href: '#', label: 'Facebook', icon: 'fab fa-facebook-f' },
@@ -10,30 +13,32 @@ const socials = [
   { href: '#', label: 'Pinterest', icon: 'fab fa-pinterest-p' },
 ];
 
-const communityLinks = [
-  'About Saubh Global',
-  'Founding Co-owners',
-  'Be a Certified Advisor',
-  'Team Saubh',
-  'Calculate Earnings',
-];
-
-const businessLinks = [
-  'Unified Communication',
-  'Marketing & Sales',
-  'HR & Recruitment',
-  'Counselling & Admission',
-];
-
-const legalLinks = [
-  'Data Privacy, DPDPA & GDPR',
-  'Terms of Service',
-  'Escrow System',
-  'Refund Policy',
-  'Online Payment',
-];
-
 export default function Footer() {
+  const { t } = useTranslation();
+
+  const communityLinks = [
+    t('footer.community.about'),
+    t('footer.community.founders'),
+    t('footer.community.advisor'),
+    t('footer.community.team'),
+    t('footer.community.earnings'),
+  ];
+
+  const businessLinks = [
+    t('footer.business.comm'),
+    t('footer.business.marketing'),
+    t('footer.business.hr'),
+    t('footer.business.counselling'),
+  ];
+
+  const legalLinks = [
+    t('footer.legal.privacy'),
+    t('footer.legal.terms'),
+    t('footer.legal.escrow'),
+    t('footer.legal.refund'),
+    t('footer.legal.payment'),
+  ];
+
   return (
     <footer className="footer" role="contentinfo">
       <div className="container">
@@ -48,10 +53,10 @@ export default function Footer() {
             </div>
             <div className="footer-info">
               <div className="footer-info-item">
-                <i className="fas fa-id-card"></i> GSTN: 10AAUPS8603H1ZH
+                <i className="fas fa-id-card"></i> {t('footer.gstn')}
               </div>
               <div className="footer-info-item">
-                <i className="fas fa-building"></i> UDYAM-BR-31-0056281
+                <i className="fas fa-building"></i> {t('footer.udyam')}
               </div>
               <div className="footer-info-item">
                 <i className="fas fa-envelope"></i>{' '}
@@ -77,7 +82,7 @@ export default function Footer() {
 
           {/* Community */}
           <div className="footer-col">
-            <h4>Community</h4>
+            <h4>{t('footer.community')}</h4>
             {communityLinks.map((link) => (
               <a key={link} href="#">{link}</a>
             ))}
@@ -85,7 +90,7 @@ export default function Footer() {
 
           {/* Business */}
           <div className="footer-col">
-            <h4>Business</h4>
+            <h4>{t('footer.business')}</h4>
             {businessLinks.map((link) => (
               <a key={link} href="#">{link}</a>
             ))}
@@ -93,7 +98,7 @@ export default function Footer() {
 
           {/* Legal */}
           <div className="footer-col">
-            <h4>Legal</h4>
+            <h4>{t('footer.legal')}</h4>
             {legalLinks.map((link) => (
               <a key={link} href="#">{link}</a>
             ))}
@@ -104,18 +109,18 @@ export default function Footer() {
           <div className="footer-addresses">
             <div className="footer-addr">
               <i className="fas fa-location-dot"></i>
-              <span>01 Tola-Tari, Sarha, Dahiawan, Chapra, Saran, Bihar – 841301</span>
+              <span>{t('footer.addr1')}</span>
             </div>
             <div className="footer-addr">
               <i className="fas fa-location-dot"></i>
-              <span>5th floor, S.B. Plaza, Opp Assam Secretariat, Dispur - 781006</span>
+              <span>{t('footer.addr2')}</span>
             </div>
           </div>
           <p className="tagline">
-            <span className="gradient-text">Gig Work. Verified People. Secured Income</span>
+            <span className="gradient-text">{t('footer.tagline')}</span>
           </p>
           <p>
-            Envisioned by Mani, a jewel of the earth. &nbsp;|&nbsp; ©2026 Saubh.Tech &nbsp;|&nbsp; All Rights Reserved.
+            {t('footer.credit')} &nbsp;|&nbsp; {t('footer.copyright')} &nbsp;|&nbsp; {t('footer.rights')}
           </p>
         </div>
       </div>

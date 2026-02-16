@@ -4,46 +4,22 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { LOGO_SRC } from '@/lib/constants';
-
-const languages = [
-  { code: 'en', name: 'English' },
-  { code: 'hi', name: 'हिन्दी' },
-  { code: 'bn', name: 'বাংলা' },
-  { code: 'te', name: 'తెలుగు' },
-  { code: 'mr', name: 'मराठी' },
-  { code: 'ta', name: 'தமிழ்' },
-  { code: 'gu', name: 'ગુજરાતી' },
-  { code: 'ur', name: 'اردو' },
-  { code: 'kn', name: 'ಕನ್ನಡ' },
-  { code: 'or', name: 'ଓଡ଼ିଆ' },
-  { code: 'ml', name: 'മലയാളം' },
-  { code: 'pa', name: 'ਪੰਜਾਬੀ' },
-  { code: 'as', name: 'অসমীয়া' },
-  { code: 'mai', name: 'मैथिली' },
-  { code: 'sa', name: 'संस्कृतम्' },
-  { code: 'sd', name: 'سنڌي' },
-  { code: 'ne', name: 'नेपाली' },
-  { code: 'ks', name: 'कॉशुर' },
-  { code: 'kok', name: 'कोंकणी' },
-  { code: 'doi', name: 'डोगरी' },
-  { code: 'mni', name: 'মৈতৈলোন্' },
-  { code: 'brx', name: 'बड़ो' },
-  { code: 'sat', name: 'ᱥᱟᱱᱛᱟᱲᱤ' },
-];
-
-const navLinks = [
-  { href: '#gig-work', icon: 'fas fa-briefcase', label: 'Gig-work' },
-  { href: '#branding', icon: 'fas fa-bullhorn', label: 'Branding' },
-  { href: '#saubhos', icon: 'fas fa-microchip', label: 'SaubhOS' },
-  { href: '#learning', icon: 'fas fa-graduation-cap', label: 'Academy' },
-  { href: '#faq', icon: 'fas fa-headset', label: 'Support' },
-];
+import { useTranslation } from '@/lib/i18n';
 
 export default function Navbar() {
+  const { t, lang, setLang, languages, loading } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+
+  const navLinks = [
+    { href: '#gig-work', icon: 'fas fa-briefcase', label: t('nav.gigWork') },
+    { href: '#branding', icon: 'fas fa-bullhorn', label: t('nav.branding') },
+    { href: '#saubhos', icon: 'fas fa-microchip', label: t('nav.saubhos') },
+    { href: '#learning', icon: 'fas fa-graduation-cap', label: t('nav.academy') },
+    { href: '#faq', icon: 'fas fa-headset', label: t('nav.support') },
+  ];
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 60);
@@ -62,6 +38,15 @@ export default function Navbar() {
   }, []);
 
   const closeMenu = () => setMobileOpen(false);
+
+  // Find current language display name
+  const currentLang = languages.find((l) => l.code === lang);
+  const displayCode = currentLang ? currentLang.code.toUpperCase() : 'EN';
+
+  const handleLangChange = (code: string) => {
+    setLang(code);
+    setLangOpen(false);
+  };
 
   return (
     <>
@@ -85,20 +70,30 @@ export default function Navbar() {
                 onClick={() => setLangOpen(!langOpen)}
                 aria-label="Select language"
               >
-                <i className="fas fa-globe"></i> EN{' '}
+                <i className="fas fa-globe"></i>{' '}
+                {loading ? '...' : displayCode}{' '}
                 <i className="fas fa-chevron-down" style={{ fontSize: '.6rem' }}></i>
               </button>
               <div className={`lang-dropdown${langOpen ? ' open' : ''}`} id="langDrop">
-                {languages.map((lang) => (
-                  <a key={lang.code} href={`?lang=${lang.code}`}>
-                    {lang.name}
+                {languages.map((l) => (
+                  <a
+                    key={l.code}
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleLangChange(l.code);
+                    }}
+                    className={l.code === lang ? 'active' : ''}
+                    style={l.code === lang ? { fontWeight: 700, background: 'rgba(0,200,83,.1)' } : undefined}
+                  >
+                    {l.name}
                   </a>
                 ))}
               </div>
             </div>
 
             <Link href="/login" className="nav-cta">
-              <i className="fas fa-arrow-right-to-bracket"></i> Login
+              <i className="fas fa-arrow-right-to-bracket"></i> {t('nav.login')}
             </Link>
           </div>
 
@@ -132,7 +127,7 @@ export default function Navbar() {
             fontWeight: 700,
           }}
         >
-          <i className="fas fa-arrow-right-to-bracket"></i> Login
+          <i className="fas fa-arrow-right-to-bracket"></i> {t('nav.login')}
         </Link>
       </div>
     </>

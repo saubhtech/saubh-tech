@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -18,9 +19,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// RTL languages
+const RTL_LANGS = new Set(['ar', 'ur', 'sd', 'ks']);
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Read language from cookie (set by middleware)
+  const cookieStore = await cookies();
+  const lang = cookieStore.get('saubh-lang')?.value || 'en';
+  const dir = RTL_LANGS.has(lang) ? 'rtl' : 'ltr';
+
   return (
-    <html lang="en">
+    <html lang={lang} dir={dir}>
       <head>
         {/* Google Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />

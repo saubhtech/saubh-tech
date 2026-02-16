@@ -1,46 +1,28 @@
-const cards = [
-  {
-    icon: 'fas fa-chart-pie',
-    title: 'Data & Marketing',
-    desc: 'Upload or extract targeted data. Generate leads through multichannel campaigns Email, WhatsApp, RCM, Call, Virtual Meeting, Social-media, and In-person Visits.',
-    delay: '0s',
-  },
-  {
-    icon: 'fas fa-headset',
-    title: 'Sales & Support',
-    desc: 'No more guessing or missing opportunities. Using unified communication system (UCS) connect with your leads, set follow-up reminders and close the deals faster.',
-    delay: '.1s',
-  },
-  {
-    icon: 'fas fa-users-gear',
-    title: 'HR & Recruitment',
-    desc: 'Automate your HR Management. Post requirements, let interested candidates contact you and get the best talents to turn your vision into reality.',
-    delay: '.2s',
-  },
-  {
-    icon: 'fas fa-route',
-    title: 'Career Choice',
-    desc: '1500 occupations, based on Ability, Activity, Industry, Interest, Knowledge, Outlook, Pathway, Preference, Sector, Skills, STEM, Technology, Traits, and Zone.',
-    delay: '.3s',
-  },
-];
+'use client';
+
+import { useTranslation } from '@/lib/i18n';
 
 export default function SaubhOS() {
+  const { t } = useTranslation();
+
+  const cards = [
+    { icon: 'fas fa-chart-pie', title: t('saubhos.card1.title'), desc: t('saubhos.card1.desc'), delay: '0s' },
+    { icon: 'fas fa-headset', title: t('saubhos.card2.title'), desc: t('saubhos.card2.desc'), delay: '.1s' },
+    { icon: 'fas fa-users-gear', title: t('saubhos.card3.title'), desc: t('saubhos.card3.desc'), delay: '.2s' },
+    { icon: 'fas fa-route', title: t('saubhos.card4.title'), desc: t('saubhos.card4.desc'), delay: '.3s' },
+  ];
+
   return (
     <section className="saubhos section-pad" id="saubhos" aria-labelledby="saubhos-title">
       <div className="container">
         <div className="saubhos-header anim-up">
           <span className="section-tag light">
-            <i className="fas fa-microchip"></i> SaubhOS – Operating System
+            <i className="fas fa-microchip"></i> {t('saubhos.tag')}
           </span>
         </div>
         <div className="saubhos-grid">
           {cards.map((card) => (
-            <div
-              key={card.title}
-              className="saubhos-card anim-up"
-              style={{ transitionDelay: card.delay }}
-            >
+            <div key={card.title} className="saubhos-card anim-up" style={{ transitionDelay: card.delay }}>
               <div className="saubhos-card-icon">
                 <i className={card.icon}></i>
               </div>
@@ -51,10 +33,10 @@ export default function SaubhOS() {
         </div>
         <div className="btn-group" style={{ justifyContent: 'center', marginTop: '48px' }}>
           <a href="#saubhos-free" className="btn btn-outline dark">
-            <i className="fas fa-download"></i> Get Free SaubhOS
+            <i className="fas fa-download"></i> {t('saubhos.btn.free')}
           </a>
           <a href="#demo" className="btn btn-outline dark">
-            <i className="fas fa-calendar-check"></i> Schedule a Demo
+            <i className="fas fa-calendar-check"></i> {t('saubhos.btn.demo')}
           </a>
         </div>
       </div>

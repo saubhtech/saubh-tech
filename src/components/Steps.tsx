@@ -1,12 +1,18 @@
-const steps = [
-  { num: 1, icon: 'fas fa-user-check', title: 'Sign Up, Get Verified', delay: '0s' },
-  { num: 2, icon: 'fas fa-file-invoice-dollar', title: 'Procure Prepaid Demand', delay: '.1s' },
-  { num: 3, icon: 'fas fa-gavel', title: 'Bid on Assignments', delay: '.2s' },
-  { num: 4, icon: 'fas fa-clipboard-check', title: 'Fulfil requirements', delay: '.3s' },
-  { num: 5, icon: 'fas fa-money-bill-wave', title: 'Get Paid Instantly securely', delay: '.4s' },
-];
+'use client';
+
+import { useTranslation } from '@/lib/i18n';
 
 export default function Steps() {
+  const { t } = useTranslation();
+
+  const steps = [
+    { num: 1, icon: 'fas fa-user-check', title: t('steps.1'), delay: '0s' },
+    { num: 2, icon: 'fas fa-file-invoice-dollar', title: t('steps.2'), delay: '.1s' },
+    { num: 3, icon: 'fas fa-gavel', title: t('steps.3'), delay: '.2s' },
+    { num: 4, icon: 'fas fa-clipboard-check', title: t('steps.4'), delay: '.3s' },
+    { num: 5, icon: 'fas fa-money-bill-wave', title: t('steps.5'), delay: '.4s' },
+  ];
+
   return (
     <section className="steps" aria-label="How it works">
       <div className="container">
@@ -27,13 +33,13 @@ export default function Steps() {
         </div>
         <div className="btn-group" style={{ justifyContent: 'center', marginTop: '48px' }}>
           <a href="#register" className="btn btn-primary">
-            <i className="fas fa-user-plus"></i> Register for Gig-Work
+            <i className="fas fa-user-plus"></i> {t('steps.btn.register')}
           </a>
           <a href="#post" className="btn btn-outline">
-            <i className="fas fa-plus-circle"></i> Post Requirements
+            <i className="fas fa-plus-circle"></i> {t('steps.btn.post')}
           </a>
           <a href="#demo" className="btn btn-ghost">
-            <i className="fas fa-calendar-check"></i> Schedule a Demo
+            <i className="fas fa-calendar-check"></i> {t('steps.btn.demo')}
           </a>
         </div>
       </div>

@@ -1,4 +1,10 @@
+'use client';
+
+import { useTranslation } from '@/lib/i18n';
+
 export default function Hero() {
+  const { t } = useTranslation();
+
   return (
     <header className="hero" id="gig-work">
       {/* Video Background */}
@@ -22,27 +28,25 @@ export default function Hero() {
       <div className="hero-content">
         <div className="hero-badges">
           <span className="hero-badge">
-            <i className="fas fa-shield-halved"></i> Community-Verified
+            <i className="fas fa-shield-halved"></i> {t('hero.badge.verified')}
           </span>
           <span className="hero-badge">
-            <i className="fas fa-lock"></i> Escrow-Protected
+            <i className="fas fa-lock"></i> {t('hero.badge.escrow')}
           </span>
         </div>
         <h1>
-          <span className="accent">Phygital Gig Marketplace</span>
+          <span className="accent">{t('hero.title')}</span>
         </h1>
-        <p className="hero-sub">
-          Connect with verified individuals and businesses worldwide for secure gig work payments.
-        </p>
+        <p className="hero-sub">{t('hero.subtitle')}</p>
         <div className="btn-group" style={{ justifyContent: 'center' }}>
           <a href="#register" className="btn btn-primary">
-            <i className="fas fa-user-plus"></i> Register for Gig-Work
+            <i className="fas fa-user-plus"></i> {t('hero.btn.register')}
           </a>
           <a href="#post" className="btn btn-outline">
-            <i className="fas fa-plus-circle"></i> Post Requirements
+            <i className="fas fa-plus-circle"></i> {t('hero.btn.post')}
           </a>
           <a href="#demo" className="btn btn-ghost">
-            <i className="fas fa-calendar-check"></i> Schedule a Demo
+            <i className="fas fa-calendar-check"></i> {t('hero.btn.demo')}
           </a>
         </div>
       </div>
