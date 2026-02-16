@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // ─── Pre-computed translation imports ───
-// Add more languages here as they become available
 import hi from '@/lib/i18n/strings/hi';
+import bn from '@/lib/i18n/strings/bn';
+import ta from '@/lib/i18n/strings/ta';
+import te from '@/lib/i18n/strings/te';
+import mr from '@/lib/i18n/strings/mr';
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
-  hi,
+  hi, bn, ta, te, mr,
 };
 
-// ─── POST /api/lang/page ───
-// Called by TranslationProvider to fetch translated strings
-// Body: { url: string, target: string, format: 'json' }
-// Response: { strings: Record<string, string>, lang: string, source: string }
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -24,7 +23,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if we have pre-computed translations for this language
     const strings = TRANSLATIONS[target];
 
     if (strings) {
@@ -34,7 +32,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Language not yet available — return empty (frontend falls back to English)
     return NextResponse.json(
       { strings: null, lang: target, source: 'unavailable' },
       { status: 200 }
@@ -47,7 +44,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ─── GET /api/lang/page — health check ───
 export async function GET() {
   const available = Object.keys(TRANSLATIONS);
   return NextResponse.json({
