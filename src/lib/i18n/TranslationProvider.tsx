@@ -4,6 +4,9 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import en from './strings/en';
 import { LANGUAGES, DEFAULT_LANG, SUPPORTED_CODES, getLang, type LangDef } from './languages';
 
+// Cast en to Record<string, string> for dynamic key lookups
+const enBase: Record<string, string> = en;
+
 // ─── Types ───
 interface TranslationCtx {
   /** Current language code */
@@ -45,7 +48,7 @@ const translationCache = new Map<string, Record<string, string>>();
 // ─── Provider ───
 export function TranslationProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<string>(DEFAULT_LANG);
-  const [strings, setStrings] = useState<Record<string, string>>(en);
+  const [strings, setStrings] = useState<Record<string, string>>(enBase);
   const [loading, setLoading] = useState(false);
 
   // ─── Detect initial language (runs once on mount) ───
@@ -67,7 +70,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   // ─── Load translations from saubh-lang API ───
   const loadTranslations = useCallback(async (code: string) => {
     if (code === 'en') {
-      setStrings(en);
+      setStrings(enBase);
       setLoading(false);
       return;
     }
@@ -91,22 +94,22 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         if (data.strings && typeof data.strings === 'object') {
           // Merge with English base (so missing keys fall back to English)
-          const merged = { ...en, ...data.strings };
+          const merged = { ...enBase, ...data.strings };
           translationCache.set(code, merged);
           setStrings(merged);
         } else {
           // API returned OK but no strings — fall back to English
-          setStrings(en);
+          setStrings(enBase);
         }
       } else {
         // API error — fall back to English
         console.warn(`[i18n] Translation API returned ${res.status} for ${code}, using English`);
-        setStrings(en);
+        setStrings(enBase);
       }
     } catch {
       // API unreachable — fall back to English
       console.warn(`[i18n] Translation API unreachable for ${code}, using English`);
-      setStrings(en);
+      setStrings(enBase);
     } finally {
       setLoading(false);
     }
@@ -142,7 +145,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   // ─── Translation function ───
   const t = useCallback(
     (key: string): string => {
-      return strings[key] || en[key] || key;
+      return strings[key] || enBase[key] || key;
     },
     [strings]
   );
