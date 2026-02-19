@@ -4,9 +4,9 @@
   "private": true,
   "description": "Saubh.Tech — Phygital Gig Marketplace (Next.js web app)",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack --port 3000",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 3000",
     "lint": "next lint"
   },
   "dependencies": {
