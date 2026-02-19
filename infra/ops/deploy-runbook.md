@@ -21,12 +21,12 @@ Server: Ubuntu 24.04 | IP: 103.67.236.186 | SSH Port: 5104
 ssh -p 5104 admin1@103.67.236.186
 ```
 
-### 1.2 Install Node.js 22 LTS
+### 1.2 Install Node.js 24 LTS
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt-get install -y nodejs
-node -v  # should print v22.x.x
+node -v  # should print v24.x.x
 ```
 
 ### 1.3 Install pnpm
