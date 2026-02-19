@@ -1,4 +1,4 @@
-import * as request from 'supertest';
+import request from 'supertest';
 import { getApp, closeApp } from './helpers/app.helper';
 import { INestApplication } from '@nestjs/common';
 
