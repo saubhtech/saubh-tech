@@ -2,13 +2,14 @@
 # Usage: make <target>
 
 .PHONY: help install dev build start clean lint typecheck deploy validate-i18n translate
-.PHONY: dev-up dev-down dev-logs dev-ps migrate test-e2e
+.PHONY: dev-up dev-down dev-logs dev-ps migrate migrate-prod seed studio test-e2e
 
 # ─── Variables ───────────────────────────────────────────────────────────────
 
 COMPOSE_FILE := infra/compose/dev/docker-compose.dev.yml
 ENV_FILE     := infra/compose/dev/.env.dev
 COMPOSE      := docker compose -f $(COMPOSE_FILE) --env-file $(ENV_FILE)
+API          := pnpm --filter @saubhtech/api
 
 # ─── Default ─────────────────────────────────────────────────────────────────
 
@@ -62,8 +63,17 @@ start: ## Start production server
 
 # ─── Database ────────────────────────────────────────────────────────────────
 
-migrate: ## Run database migrations (stub — wire to your ORM)
-	@echo "⚠️  migrate: not yet wired. Add your ORM migration command here."
+migrate: ## Run Prisma migrations (dev — creates + applies)
+	$(API) prisma:migrate
+
+migrate-prod: ## Run Prisma migrations (deploy — applies only)
+	$(API) prisma:migrate:prod
+
+seed: ## Seed the database with initial data
+	$(API) prisma:seed
+
+studio: ## Open Prisma Studio (database GUI)
+	$(API) prisma:studio
 
 # ─── Quality ─────────────────────────────────────────────────────────────────
 
@@ -81,7 +91,7 @@ test-e2e: ## Run end-to-end tests (stub — wire to Playwright/Cypress)
 # ─── i18n ────────────────────────────────────────────────────────────────────
 
 validate-i18n: ## Validate all translation files against en.ts
-	npx ts-node scripts/validate-i18n.ts
+	pnpm exec ts-node scripts/validate-i18n.ts
 
 translate: ## Run auto-translation engine (requires server)
 	python3 scripts/auto-translate.py --status
