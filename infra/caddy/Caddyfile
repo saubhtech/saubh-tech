@@ -1,0 +1,104 @@
+# ─── Saubh.Tech Platform — Production Caddyfile ─────────────────────────────
+# Server: Ubuntu 24.04 | IP: 103.67.236.186
+# TLS: Managed by Cloudflare (Full Strict) — Caddy handles origin certs
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─── Global options ─────────────────────────────────────────────────────────
+{
+	# Cloudflare proxy: trust their IPs for X-Forwarded-For
+	servers {
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+	}
+
+	# TODO: Rate limiting — uncomment when caddy-rate-limit plugin is installed
+	# order rate_limit before reverse_proxy
+}
+
+# ─── Shared snippet: security headers ───────────────────────────────────────
+(security_headers) {
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		X-XSS-Protection "1; mode=block"
+		-Server
+	}
+}
+
+# ─── Shared snippet: no-cache HTML ──────────────────────────────────────────
+(no_cache_html) {
+	header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate"
+	header Pragma "no-cache"
+	header Expires "0"
+}
+
+# ─── Shared snippet: static asset caching ───────────────────────────────────
+(cache_static) {
+	header /_next/static/* Cache-Control "public, max-age=31536000, immutable"
+}
+
+# ─── saubh.tech → apps/web (port 3000) ─────────────────────────────────────
+saubh.tech {
+	import security_headers
+	import cache_static
+
+	# HTML responses: never cache (Cloudflare must also respect this)
+	@html {
+		not path /_next/static/* /favicon.ico *.css *.js *.png *.jpg *.svg *.woff2
+	}
+	handle @html {
+		import no_cache_html
+	}
+
+	# TODO: Rate limiting
+	# rate_limit {remote.host} 60r/m
+
+	reverse_proxy localhost:3000
+}
+
+# ─── api.saubh.tech → apps/api (port 3001) ─────────────────────────────────
+api.saubh.tech {
+	import security_headers
+
+	# API responses: never cache
+	import no_cache_html
+
+	# TODO: Rate limiting — stricter for API
+	# rate_limit {remote.host} 120r/m
+
+	reverse_proxy localhost:3001
+}
+
+# ─── realtime.saubh.tech → apps/realtime (port 3002) ────────────────────────
+realtime.saubh.tech {
+	import security_headers
+
+	# WebSocket support — no buffering, no timeouts
+	reverse_proxy localhost:3002 {
+		transport http {
+			versions h2c 1.1
+		}
+		header_up Connection {>Connection}
+		header_up Upgrade {>Upgrade}
+	}
+}
+
+# ─── admin.saubh.tech → apps/admin (port 3003) ─────────────────────────────
+admin.saubh.tech {
+	import security_headers
+	import cache_static
+
+	@html {
+		not path /_next/static/* /favicon.ico *.css *.js *.png *.jpg *.svg *.woff2
+	}
+	handle @html {
+		import no_cache_html
+	}
+
+	# TODO: IP allowlist for admin panel
+	# @blocked not remote_ip 103.67.236.0/24
+	# respond @blocked 403
+
+	reverse_proxy localhost:3003
+}
