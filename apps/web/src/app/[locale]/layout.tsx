@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { isValidLocale, localeToLang } from '@/lib/i18n/locale-map';
 import { LocaleHydrator } from './locale-hydrator';
+import LocaleBanner from '@/components/LocaleBanner';
 
 const RTL_LANGS = new Set(['ur', 'ar', 'sd', 'ks']);
 
@@ -24,6 +25,7 @@ export default async function LocaleLayout({
     <>
       <LocaleHydrator lang={lang} dir={dir as 'ltr' | 'rtl'} />
       {children}
+      <LocaleBanner />
     </>
   );
 }
