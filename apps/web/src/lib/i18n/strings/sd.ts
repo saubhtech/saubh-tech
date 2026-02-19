@@ -241,7 +241,7 @@ const sd: TranslationStrings = {
   'footer.legal.terms': 'سروس جا شرط',
   'footer.legal.escrow': 'ايسڪرو سسٽم',
   'footer.legal.refund': 'واپسي جي پاليسي',
-  'footer.legal.payment': 'آن لائين ادائگي',
+  'footer.legal.payment': 'آن لائن ادائگي',
   'footer.addr1': '01 تولا تاري، سارها، دهياوان، چپرا، ساران، بهار \u2013 841301',
   'footer.addr2': '5th فلور، S.B. پلازا، آسام سيڪريٽريٽ جي سامهون، ديپور - 781006',
   'footer.tagline': 'گيگ ڪم. تصديق ٿيل ماڻهو. محفوظ آمدني',

@@ -107,7 +107,7 @@ const vi: TranslationStrings = {
   // ─── Saubhos ───
   'saubhos.tag': 'SaubhOS \u2013 Hệ điều hành',
   'saubhos.card1.title': 'Dữ liệu & Tiếp thị',
-  'saubhos.card1.desc': 'Tải lên hoặc trích xuất dữ liệu được nhắm mục tiêu. Tạo khách hàng tiềm năng thông qua các chiến dịch đa kênh Email, WhatsApp, RCM, Cuộc gọi, Cuộc hỌp ảo, Phương tiện truyền thông xã hội và Lượt truy cập trực tiếp.',
+  'saubhos.card1.desc': 'Tải lên hoặc trích xuất dữ liệu được nhắm mục tiêu. Tạo khách hàng tiềm năng thông qua các chiến dịch đa kênh Email, WhatsApp, RCM, Cuộc gọi, Cuộc họp ảo, Phương tiện truyền thông xã hội và Lượt truy cập trực tiếp.',
   'saubhos.card2.title': 'Bán hàng & Hỗ trợ',
   'saubhos.card2.desc': 'Không còn đoán hoặc bỏ lỡ cơ hội. Sử dụng hệ thống liên lạc hợp nhất (UCS) kết nối với khách hàng tiềm năng của bạn, đặt lời nhắc theo dõi và chốt giao dịch nhanh hơn.',
   'saubhos.card3.title': 'Nhân sự & Tuyển dụng',
@@ -127,7 +127,7 @@ const vi: TranslationStrings = {
   'learning.prog1': 'Chuyên gia tư vấn cuộc sống (LCP)',
   'learning.prog2': 'Chuyên gia tư vấn kinh doanh (BCP)',
   'learning.btn.join': 'Tham gia buổi đào tạo miễn phí',
-  'learning.btn.meeting': 'Lên lịch một cuộc hỌp',
+  'learning.btn.meeting': 'Lên lịch một cuộc họp',
 
   // ─── Blog ───
   'blog.tag': 'Kinh tế tự do',
@@ -136,7 +136,7 @@ const vi: TranslationStrings = {
   'blog.cat1': 'Kinh tế tự do & Công việc thực tế',
   'blog.cat2': 'Xây dựng thương hiệu, UGC & Tin cậy',
   'blog.art1.title': 'Công việc Phygital là gì và tại sao nó là tương lai của nền kinh tế Gig của Ấn Độ',
-  'blog.art1.desc': 'Khám phá cách công việc phygital kết hợp niềm tin vật lý với khả năng mở rộng kỹ thuật số để cách mạng hóa nền kinh tế biểu diễn của Ấn Độ.',
+  'blog.art1.desc': 'Khám phá cách công việc phygital kết hợp niềm tin vật chất với khả năng mở rộng kỹ thuật số để cách mạng hóa nền kinh tế biểu diễn của Ấn Độ.',
   'blog.art2.title': 'Sự trỗi dậy của nền kinh tế tự do của Ấn Độ: Cơ hội, thách thức và xu hướng',
   'blog.art2.desc': 'Khám phá sự tăng trưởng bùng nổ của nền kinh tế tự do của Ấn Độ và ý nghĩa của nó đối với người lao động và doanh nghiệp.',
   'blog.art3.title': 'Tại sao nền tảng chỉ dành cho kỹ thuật số không còn đủ nữa',
@@ -216,7 +216,7 @@ const vi: TranslationStrings = {
 
   // ─── Newsletter ───
   'newsletter.title': 'Bản tin',
-  'newsletter.subtitle': 'Luôn cập nhật thông tin mới nhất từ \u200bSaubh.Tech',
+  'newsletter.subtitle': 'Luôn cập nhật thông tin mới nhất từ ​​Saubh.Tech',
   'newsletter.name': 'Tên',
   'newsletter.whatsapp': 'WhatsApp',
   'newsletter.email': 'E-mail',
