@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10'
+
+jobs:
+  lint-and-type-check:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @saubhtech/api prisma:generate
+
+      - name: Type check shared
+        run: pnpm --filter @saubhtech/shared typecheck
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-type-check
+
+    services:
+      postgres_test:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: saubhtech_test
+          POSTGRES_PASSWORD: ci_test_password
+          POSTGRES_DB: saubhtech_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U saubhtech_test -d saubhtech_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://saubhtech_test:ci_test_password@127.0.0.1:5433/saubhtech_test?schema=public
+      TEST_DATABASE_URL: postgresql://saubhtech_test:ci_test_password@127.0.0.1:5433/saubhtech_test?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @saubhtech/api prisma:generate
+
+      - name: Run Prisma migrations on test DB
+        run: pnpm --filter @saubhtech/api prisma:migrate:prod
+
+      - name: Run E2E tests
+        run: cd apps/api && pnpm test:e2e
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: apps/api/test/
+          retention-days: 7
