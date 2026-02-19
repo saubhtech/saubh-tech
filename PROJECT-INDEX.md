@@ -1,5 +1,5 @@
 # Saubh.Tech — Project Index
-> Last updated: February 19, 2026 (monorepo migration complete, 13 languages active)
+> Last updated: February 19, 2026 (monorepo migration complete, S2 verified, 13 languages active)
 
 ## 🏗️ Infrastructure
 
@@ -23,7 +23,7 @@
 ```
 platform/                          ← repo root
 ├── Makefile                       ← make dev / make build / make deploy
-├── package.json                   ← workspace root (no deps, only scripts)
+├── package.json                   ← workspace root (zero deps, only scripts)
 ├── pnpm-workspace.yaml            ← apps/* + packages/*
 ├── pnpm-lock.yaml
 ├── PROJECT-INDEX.md               ← this file
