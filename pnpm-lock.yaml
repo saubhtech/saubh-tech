@@ -56,6 +56,9 @@ importers:
       '@prisma/client':
         specifier: ^6.0.0
         version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
+      '@saubhtech/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -151,6 +154,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@saubhtech/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       next:
         specifier: 16.1.6
         version: 16.1.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
