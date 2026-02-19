@@ -1,5 +1,5 @@
 # Saubh.Tech — Project Index
-> Last updated: February 16, 2026 (13 languages active: en, hi, bn, te, mr, ta, gu, kn, ml, pa, or, as, ur)
+> Last updated: February 19, 2026 (monorepo migration complete, 13 languages active)
 
 ## 🏗️ Infrastructure
 
@@ -18,18 +18,54 @@
 | **Firewall** | UFW + fail2ban |
 | **Ports Open** | 80/443 (web), 5104 (SSH), 3000 (Next.js) |
 
-## 📂 Active Projects
+## 📂 Monorepo Structure
 
-### 1. saubh-tech (Main Website)
-- **Local Path**: `C:\Projects\saubh-tech\`
+```
+platform/                          ← repo root
+├── Makefile                       ← make dev / make build / make deploy
+├── package.json                   ← workspace root (no deps, only scripts)
+├── pnpm-workspace.yaml            ← apps/* + packages/*
+├── pnpm-lock.yaml
+├── PROJECT-INDEX.md               ← this file
+├── README.md
+├── .gitignore
+├── backup-local.ps1
+├── scripts/                       ← repo-level tooling
+│   ├── auto-translate.py          ← automated i18n translation engine
+│   ├── install-auto-translate.sh  ← server installer for auto-translate
+│   └── validate-i18n.ts           ← CLI i18n key validator
+├── apps/
+│   └── web/                       ← @saubhtech/web (Next.js 16)
+│       ├── package.json
+│       ├── next.config.ts
+│       ├── postcss.config.mjs
+│       ├── tsconfig.json
+│       ├── public/                ← static assets (logo.jpg, SVGs)
+│       └── src/
+│           ├── middleware.ts
+│           ├── app/               ← Next.js App Router pages + API routes
+│           ├── components/        ← 17 React components
+│           └── lib/               ← i18n system, constants
+└── packages/
+    └── shared/                    ← @saubhtech/shared
+        ├── package.json
+        ├── tsconfig.json
+        └── src/
+            ├── types/             ← LangCode, Language, TranslationMap
+            ├── constants/         ← RTL_LANGS, APP_NAME, etc.
+            └── utils/             ← isRtl(), getDir()
+```
+
+### GitHub
+- **Repo**: https://github.com/saubhtech/platform (public, branch: main)
+- **Local Path**: `C:\Users\Rishutosh Kumar\Documents\platform`
 - **Server Path**: `/data/projects/saubh-gig/`
-- **GitHub**: https://github.com/saubhtech/saubh-tech (public)
-- **Stack**: Next.js 16 + TypeScript + Custom CSS (no Tailwind PostCSS)
-- **Package Manager**: pnpm
-- **Port**: 3000
-- **Domain**: https://saubh.tech
-- **Logo**: `public/logo.jpg`
-- **Status**: ✅ Live
+
+### Workspaces
+| Package | Name | Description |
+|---------|------|-------------|
+| `apps/web` | `@saubhtech/web` | Next.js 16 + TypeScript + Tailwind v4 web app |
+| `packages/shared` | `@saubhtech/shared` | Shared types, constants, utilities |
 
 ---
 
@@ -58,20 +94,22 @@ All `.map()` in components MUST use **stable non-translated keys** (`id`, `index
 
 ### How to Add a New Language
 ```
-1. Create: src/lib/i18n/strings/xx.ts
+1. Create: apps/web/src/lib/i18n/strings/xx.ts
    - Import type: import type { TranslationStrings } from './en';
    - Use type: const xx: TranslationStrings = { ...212 keys... };
    - TypeScript will ERROR if any key is missing
 
-2. Register loader in TranslationProvider.tsx:
+2. Register loader in apps/web/src/lib/i18n/TranslationProvider.tsx:
    const LANG_LOADERS: Record<string, LangLoader> = {
      hi: () => import('./strings/hi'),
-     bn: () => import('./strings/bn'),
      xx: () => import('./strings/xx'),  // ← add this line
    };
 
 3. Deploy:
-   cd /data/projects/saubh-gig && git pull origin main && pnpm build && pm2 restart saubh-gig
+   make deploy
+   # or manually:
+   ssh -p 5104 admin1@103.67.236.186
+   cd /data/projects/saubh-gig && git pull origin main && pnpm install && pnpm build && pm2 restart saubh-gig
 
 4. Test:
    https://saubh.tech/?lang=xx
@@ -82,15 +120,15 @@ All `.map()` in components MUST use **stable non-translated keys** (`id`, `index
 ## 📁 Key Files (Must-Read for New Sessions)
 
 ### ⭐ Files Opus Must Read Before Any Task
-| Priority | File | Purpose | How to Read |
-|----------|------|---------|-------------|
-| 1 | `PROJECT-INDEX.md` | This file — full project context, architecture, i18n status | `github:get_file_contents owner=saubhtech repo=saubh-tech path=PROJECT-INDEX.md` |
-| 2 | `src/lib/i18n/strings/en.ts` | Master English strings (212 keys, source of truth) | `github:get_file_contents ...path=src/lib/i18n/strings/en.ts` |
-| 3 | `src/lib/i18n/TranslationProvider.tsx` | Translation loading + LANG_LOADERS map | `github:get_file_contents ...path=src/lib/i18n/TranslationProvider.tsx` |
-| 4 | `src/lib/i18n/languages.ts` | All 37 language definitions | `github:get_file_contents ...path=src/lib/i18n/languages.ts` |
-| 5 | `src/lib/i18n/strings/hi.ts` | Reference translation file (Hindi) — use as template format | `github:get_file_contents ...path=src/lib/i18n/strings/hi.ts` |
+| Priority | File | Purpose |
+|----------|------|---------|
+| 1 | `PROJECT-INDEX.md` | This file — full project context, architecture, i18n status |
+| 2 | `apps/web/src/lib/i18n/strings/en.ts` | Master English strings (212 keys, source of truth) |
+| 3 | `apps/web/src/lib/i18n/TranslationProvider.tsx` | Translation loading + LANG_LOADERS map |
+| 4 | `apps/web/src/lib/i18n/languages.ts` | All 37 language definitions |
+| 5 | `apps/web/src/lib/i18n/strings/hi.ts` | Reference translation file (Hindi) — use as template |
 
-### Component Files (src/components/)
+### Component Files (apps/web/src/components/)
 | Component | File | React Key |
 |-----------|------|-----------|
 | Navbar | `Navbar.tsx` | N/A (static) |
@@ -114,14 +152,17 @@ All `.map()` in components MUST use **stable non-translated keys** (`id`, `index
 ### Other Key Files
 | File | Purpose |
 |------|---------|
-| `src/app/page.tsx` | Main page — wraps all components in `<TranslationProvider>` |
-| `src/app/layout.tsx` | Root layout, dynamic `<html lang>` from cookie, SEO metadata |
-| `src/app/globals.css` | All custom CSS (~1550 lines) |
-| `src/app/api/lang/page/route.ts` | API route for translations (kept for external tools) |
-| `src/app/api/lang/validate/route.ts` | Runtime i18n validation endpoint |
-| `scripts/validate-i18n.ts` | CLI i18n validator |
-| `src/lib/constants.ts` | Shared constants (logo path) |
-| `next.config.ts` | Next.js config |
+| `apps/web/src/app/page.tsx` | Main page — wraps all components in `<TranslationProvider>` |
+| `apps/web/src/app/layout.tsx` | Root layout, dynamic `<html lang>` from cookie, SEO metadata |
+| `apps/web/src/app/globals.css` | All custom CSS (~1550 lines) |
+| `apps/web/src/app/api/lang/page/route.ts` | API route for translations (kept for external tools) |
+| `apps/web/src/app/api/lang/validate/route.ts` | Runtime i18n validation endpoint |
+| `apps/web/src/lib/constants.ts` | Shared constants (logo path) |
+| `apps/web/next.config.ts` | Next.js config |
+| `apps/web/package.json` | Web app dependencies (Next.js, React, Tailwind) |
+| `packages/shared/src/types/index.ts` | Shared types (LangCode, Language, TranslationMap) |
+| `packages/shared/src/constants/index.ts` | Shared constants (RTL_LANGS, APP_NAME) |
+| `packages/shared/src/utils/index.ts` | Shared utilities (isRtl, getDir) |
 
 ---
 
@@ -145,18 +186,18 @@ All `.map()` in components MUST use **stable non-translated keys** (`id`, `index
 | 13 | ur | Urdu | Arabic (RTL) | 212 | `strings/ur.ts` | ✅ Active |
 
 ### ⏳ Pending — Indian Languages (remaining 10)
-| # | Code | Language | Script | Speakers | Status |
-|---|------|----------|--------|----------|--------|
-| 14 | ne | Nepali | Devanagari | 16M | ⏳ Next |
-| 15 | sa | Sanskrit | Devanagari | — | ⏳ Pending |
-| 16 | mai | Maithili | Devanagari | — | ⏳ Pending |
-| 17 | kok | Konkani | Devanagari | — | ⏳ Pending |
-| 18 | doi | Dogri | Devanagari | — | ⏳ Pending |
-| 19 | sd | Sindhi | Arabic (RTL) | — | ⏳ Pending |
-| 20 | ks | Kashmiri | Arabic (RTL) | — | ⏳ Pending |
-| 21 | brx | Bodo | Devanagari | — | ⏳ Pending |
-| 22 | sat | Santali | Ol Chiki | — | ⏳ Pending |
-| 23 | mni | Manipuri | Bengali | — | ⏳ Pending |
+| # | Code | Language | Script | Status |
+|---|------|----------|--------|--------|
+| 14 | ne | Nepali | Devanagari | ⏳ Next |
+| 15 | sa | Sanskrit | Devanagari | ⏳ Pending |
+| 16 | mai | Maithili | Devanagari | ⏳ Pending |
+| 17 | kok | Konkani | Devanagari | ⏳ Pending |
+| 18 | doi | Dogri | Devanagari | ⏳ Pending |
+| 19 | sd | Sindhi | Arabic (RTL) | ⏳ Pending |
+| 20 | ks | Kashmiri | Arabic (RTL) | ⏳ Pending |
+| 21 | brx | Bodo | Devanagari | ⏳ Pending |
+| 22 | sat | Santali | Ol Chiki | ⏳ Pending |
+| 23 | mni | Manipuri | Bengali | ⏳ Pending |
 
 ### ⏳ Pending — International Languages (14)
 | # | Code | Language | Script | Status |
@@ -181,24 +222,40 @@ All `.map()` in components MUST use **stable non-translated keys** (`id`, `index
 ## 🔄 Development Workflow
 
 ```
-Local PC (C:\Projects\saubh-tech)
+Local PC (C:\Users\Rishutosh Kumar\Documents\platform)
     ↓ git push
-GitHub (saubhtech/saubh-tech)
+GitHub (saubhtech/platform)
     ↓ git pull (on server)
 Server (/data/projects/saubh-gig)
-    ↓ pnpm build → pm2 restart
+    ↓ pnpm install → pnpm build → pm2 restart
 Live (https://saubh.tech)
+```
+
+### Makefile Commands
+```bash
+make install        # pnpm install
+make dev            # Start dev server (Turbopack)
+make build          # Production build
+make start          # Start production server
+make lint           # Lint all packages
+make typecheck      # Type-check shared package
+make validate-i18n  # Validate translation files
+make translate      # Show translation status
+make clean          # Remove build artifacts
+make deploy         # Deploy to production (SSH)
 ```
 
 ## 📋 Server Deploy Commands
 
 ```bash
-# SSH into server
-ssh -p 5104 admin1@103.67.236.186
+# Quick deploy via Makefile
+make deploy
 
-# Deploy saubh-tech
+# Manual deploy
+ssh -p 5104 admin1@103.67.236.186
 cd /data/projects/saubh-gig
 git pull origin main
+pnpm install
 pnpm build
 pm2 restart saubh-gig
 
@@ -222,6 +279,7 @@ pm2 logs saubh-gig --lines 20
 11. **i18n: en.ts uses `as const`** — need `const enBase: Record<string, string> = en` for dynamic key lookups in TranslationProvider
 12. **i18n: API route imports must match existing files** — never import a language file that hasn't been pushed yet
 13. **i18n: Smart quotes / curly apostrophes** — NEVER use ' ' " " in translation strings; always use straight quotes ' " or escaped \'
+14. **Monorepo: deps belong in workspace packages** — root package.json has zero dependencies, only scripts
 
 ---
 
@@ -231,41 +289,36 @@ pm2 logs saubh-gig --lines 20
 
 | # | File Path | Why It's Needed |
 |---|-----------|-----------------|
-| 1 | `PROJECT-INDEX.md` | **Start here always.** Full project context: infra, architecture, i18n status, component map, React key rules, lessons learned. Prevents repeating past mistakes. |
-| 2 | `src/lib/i18n/strings/en.ts` | **Master key list.** All 212 translation keys with English values. This is the source of truth — every language file must match this exact key set. |
-| 3 | `src/lib/i18n/TranslationProvider.tsx` | **Loader registry.** Shows which languages are active in `LANG_LOADERS`. New languages must be registered here after their .ts file is pushed. |
-| 4 | `src/lib/i18n/languages.ts` | **Language definitions.** All 37 languages with codes, native names, scripts, RTL/LTR, geo-mappings. Needed for any language-related work. |
-| 5 | `src/lib/i18n/strings/hi.ts` | **Translation template.** Use this as the format reference when creating new language files. Shows exact structure and type annotation. |
+| 1 | `PROJECT-INDEX.md` | **Start here always.** Full project context: infra, architecture, i18n status, component map, React key rules, lessons learned. |
+| 2 | `apps/web/src/lib/i18n/strings/en.ts` | **Master key list.** All 212 translation keys with English values. Source of truth. |
+| 3 | `apps/web/src/lib/i18n/TranslationProvider.tsx` | **Loader registry.** Shows which languages are active in `LANG_LOADERS`. |
+| 4 | `apps/web/src/lib/i18n/languages.ts` | **Language definitions.** All 37 languages with codes, native names, scripts, RTL/LTR. |
+| 5 | `apps/web/src/lib/i18n/strings/hi.ts` | **Translation template.** Use as format reference for new language files. |
 
 ### ── PROMPT FORMAT ──
 
-Copy everything between the `---` lines and fill in the `[TASK]` section:
-
----
-
 ```
-Project: Saubh.Tech — Phygital Gig Marketplace
-Repo: github.com/saubhtech/saubh-tech (public, branch: main)
+Project: Saubh.Tech — Phygital Gig Marketplace (pnpm monorepo)
+Repo: github.com/saubhtech/platform (public, branch: main)
 Server: 103.67.236.186:5104, path: /data/projects/saubh-gig
 
-BEFORE doing anything, read these files in order using github:get_file_contents (owner=saubhtech, repo=saubh-tech):
+BEFORE doing anything, read these files in order using github:get_file_contents (owner=saubhtech, repo=platform):
 
-1. path=PROJECT-INDEX.md — Full project context, architecture, i18n status, lessons learned
-2. path=src/lib/i18n/strings/en.ts — Master English strings (212 keys, source of truth)
-3. path=src/lib/i18n/TranslationProvider.tsx — Translation loading + LANG_LOADERS map
-4. path=src/lib/i18n/languages.ts — All 37 language definitions
+1. path=PROJECT-INDEX.md — Full project context, monorepo structure, i18n status, lessons learned
+2. path=apps/web/src/lib/i18n/strings/en.ts — Master English strings (212 keys, source of truth)
+3. path=apps/web/src/lib/i18n/TranslationProvider.tsx — Translation loading + LANG_LOADERS map
+4. path=apps/web/src/lib/i18n/languages.ts — All 37 language definitions
 
 For i18n translation tasks, also read:
-5. path=src/lib/i18n/strings/hi.ts — Reference translation (Hindi, use as template format)
+5. path=apps/web/src/lib/i18n/strings/hi.ts — Reference translation (Hindi, use as template format)
 
 TASK: [Describe your task here]
 
 RULES:
+- Monorepo: apps/web = @saubhtech/web, packages/shared = @saubhtech/shared
 - Never use translated text as React key (causes invisible sections)
 - Use TranslationStrings type for compile-time enforcement
 - Register new languages in LANG_LOADERS after pushing the .ts file
 - Never use smart quotes/curly apostrophes in translation strings
-- Deploy: cd /data/projects/saubh-gig && git pull origin main && pnpm build && pm2 restart saubh-gig
+- Deploy: make deploy (or manually via SSH)
 ```
-
----
