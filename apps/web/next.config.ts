@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   // ─── Self-hosted Node.js server (no Vercel, no static export) ─────
   // Next.js defaults to server mode — no `output` override needed.
 
+  // ─── Workspace packages ───────────────────────────────────────────
+  // @saubhtech/shared exports raw .ts — Next.js must transpile it.
+  transpilePackages: ['@saubhtech/shared'],
+
   // ─── Security ─────────────────────────────────────────────────────
   poweredByHeader: false,
   compress: true,
