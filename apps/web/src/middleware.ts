@@ -1,11 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// TODO S7: migrate to locale-in-URL routing (/hi-in/, /en-in/ etc.)
+// Current approach uses cookie-based locale without URL prefix.
+
 // ─── Supported language codes (must match languages.ts) ───
 const SUPPORTED = new Set([
   'en','hi','bn','ta','te','mr','gu','kn','ml','pa','or','as','ur','ne','sa',
   'mai','kok','doi','sd','ks','brx','sat','mni',
   'ar','zh','fr','de','ja','ko','pt','ru','es','th','vi','id','ms','tr',
 ]);
+
+// ─── Cloudflare country → default language mapping ───
+// Used as a fast first-pass before hitting the saubh-lang API.
+const CF_COUNTRY_TO_LANG: Record<string, string> = {
+  IN: 'hi', BD: 'bn', PK: 'ur', NP: 'ne', LK: 'ta',
+  SA: 'ar', AE: 'ar', EG: 'ar', QA: 'ar', KW: 'ar',
+  CN: 'zh', TW: 'zh', HK: 'zh',
+  JP: 'ja', KR: 'ko', TH: 'th', VN: 'vi', ID: 'id', MY: 'ms',
+  FR: 'fr', DE: 'de', ES: 'es', MX: 'es', AR: 'es', CO: 'es',
+  PT: 'pt', BR: 'pt', RU: 'ru', TR: 'tr', PL: 'pl',
+};
 
 // ─── Accept-Language → best language code ───
 function parseAcceptLanguage(header: string | null): string | null {
@@ -47,6 +61,18 @@ async function detectFromIP(ip: string): Promise<string | null> {
   return null;
 }
 
+// ─── Extract real client IP (Cloudflare → Caddy → Next.js) ───
+// Cloudflare sets cf-connecting-ip with the true client IP.
+// x-forwarded-for may contain multiple IPs when behind multiple proxies.
+function getClientIP(req: NextRequest): string {
+  return (
+    req.headers.get('cf-connecting-ip') ||
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    ''
+  );
+}
+
 // ─── Middleware ───
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
@@ -68,7 +94,7 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // ─── Detection priority: URL ?lang= > IP geo > Accept-Language > default ───
+  // ─── Detection priority: URL ?lang= > Cloudflare country > IP geo > Accept-Language > default ───
   let detected: string | null = null;
 
   // 1. URL parameter
@@ -77,22 +103,31 @@ export async function middleware(req: NextRequest) {
     detected = urlLang;
   }
 
-  // 2. IP-based geo-detection (via saubh-lang API)
+  // 2. Cloudflare cf-ipcountry header (fast, no API call needed)
   if (!detected) {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-      || req.headers.get('x-real-ip')
-      || '';
+    const cfCountry = req.headers.get('cf-ipcountry');
+    if (cfCountry && cfCountry !== 'XX' && cfCountry !== 'T1') {
+      const mapped = CF_COUNTRY_TO_LANG[cfCountry.toUpperCase()];
+      if (mapped && SUPPORTED.has(mapped)) {
+        detected = mapped;
+      }
+    }
+  }
+
+  // 3. IP-based geo-detection (via saubh-lang API — fallback if Cloudflare header missing)
+  if (!detected) {
+    const ip = getClientIP(req);
     if (ip && ip !== '127.0.0.1' && ip !== '::1') {
       detected = await detectFromIP(ip);
     }
   }
 
-  // 3. Accept-Language header
+  // 4. Accept-Language header
   if (!detected) {
     detected = parseAcceptLanguage(req.headers.get('accept-language'));
   }
 
-  // 4. Default
+  // 5. Default
   if (!detected) {
     detected = 'en';
   }
