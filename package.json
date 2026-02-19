@@ -1,23 +1,21 @@
 {
-  "name": "saubh-tech",
-  "version": "0.1.0",
+  "name": "saubhtech-platform",
+  "version": "0.0.0",
   "private": true,
+  "description": "Saubh.Tech — Phygital Gig Marketplace (monorepo root)",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "dev": "pnpm --filter @saubhtech/web dev",
+    "build": "pnpm --filter @saubhtech/web build",
+    "start": "pnpm --filter @saubhtech/web start",
+    "dev:web": "pnpm --filter @saubhtech/web dev",
+    "build:web": "pnpm --filter @saubhtech/web build",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r exec rm -rf .next node_modules dist",
+    "validate-i18n": "npx ts-node scripts/validate-i18n.ts"
   },
-  "dependencies": {
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
   },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+  "packageManager": "pnpm@10.6.2"
 }
