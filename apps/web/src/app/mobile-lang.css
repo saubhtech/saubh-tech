@@ -1,0 +1,91 @@
+/* ===== MOBILE LANGUAGE SWITCHER ===== */
+.mobile-lang-section {
+  margin-top: 8px;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 16px;
+}
+.mobile-lang-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: var(--radius);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text-light);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .3s;
+}
+.mobile-lang-toggle:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--green);
+}
+.mobile-lang-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mobile-lang-toggle-left i {
+  color: var(--green-light);
+  font-size: 1rem;
+}
+.mobile-lang-chevron {
+  font-size: .7rem;
+  color: var(--text-muted);
+  transition: transform .3s ease;
+}
+.mobile-lang-chevron.rotated {
+  transform: rotate(180deg);
+  color: var(--green-light);
+}
+.mobile-lang-grid {
+  display: none;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--green) transparent;
+}
+.mobile-lang-grid::-webkit-scrollbar { width: 4px; }
+.mobile-lang-grid::-webkit-scrollbar-track { background: transparent; }
+.mobile-lang-grid::-webkit-scrollbar-thumb { background: var(--green); border-radius: 2px; }
+.mobile-lang-grid.open {
+  display: grid;
+}
+.mobile-lang-item {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: .85rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all .25s ease;
+}
+.mobile-lang-item:hover {
+  background: var(--glass);
+  color: var(--text-light);
+  border-color: var(--glass-border);
+}
+.mobile-lang-item.active {
+  background: rgba(0,200,83,0.1);
+  color: var(--green-light);
+  font-weight: 700;
+  border-color: rgba(109,179,63,0.3);
+}
+
+@media (max-width: 480px) {
+  .mobile-lang-grid {
+    grid-template-columns: 1fr;
+  }
+}
