@@ -74,6 +74,15 @@ export default function proxy(req: NextRequest) {
     return res;
   }
 
+  // ─── Short lang code redirect: /en/login → /en-in/login ────────
+  const mappedLocale = LANG_TO_LOCALE[firstSegment];
+  if (mappedLocale && SUPPORTED_LOCALES_SET.has(mappedLocale)) {
+    const rest = pathname.slice(firstSegment.length + 1); // strip /en
+    const url = req.nextUrl.clone();
+    url.pathname = `/${mappedLocale}${rest || ''}`;
+    return NextResponse.redirect(url, 302);
+  }
+
   // ─── No locale in URL — detect and redirect ────────────────────
   const detected = detectLocale(req);
 
