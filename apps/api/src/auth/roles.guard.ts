@@ -12,6 +12,7 @@ import type { AuthenticatedUser } from './keycloak.strategy';
 // ─── Role Constants ────────────────────────────────────────────────────────
 export const SUPER_ADMIN = 'SUPER_ADMIN';
 export const ADMIN = 'ADMIN';
+export const MASTER_DATA_MANAGER = 'MASTER_DATA_MANAGER';
 
 // ─── @Roles() Decorator ────────────────────────────────────────────────────
 export const ROLES_KEY = 'roles';

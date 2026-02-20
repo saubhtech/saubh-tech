@@ -25,10 +25,11 @@ import {
   CreateSectorDto, UpdateSectorDto,
   CreateFieldDto, UpdateFieldDto,
 } from './dto';
-import { KeycloakAuthGuard } from '../auth';
+import { KeycloakAuthGuard, RolesGuard, Roles, MASTER_DATA_MANAGER } from '../auth';
 
 @Controller('master')
-@UseGuards(KeycloakAuthGuard)
+@UseGuards(KeycloakAuthGuard, RolesGuard)
+@Roles(MASTER_DATA_MANAGER)
 export class MasterController {
   constructor(private readonly svc: MasterService) {}
 
