@@ -141,10 +141,6 @@ const TABLE_CONFIG: Record<string, { label: string; idField: string; columns: { 
   },
 };
 
-const API_BASE = typeof window !== 'undefined'
-  ? `${window.location.protocol}//${window.location.hostname.replace('admin.', 'api.')}`
-  : 'https://api.saubh.tech';
-
 export default function MasterTablePage({ params }: { params: Promise<{ locale: string; table: string }> }) {
   const [resolvedParams, setResolvedParams] = useState<{ locale: string; table: string } | null>(null);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
@@ -166,7 +162,7 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}${config.endpoint}`, { credentials: 'include' });
+      const res = await fetch(config.endpoint);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setRows(Array.isArray(data) ? data : []);
@@ -210,9 +206,8 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
   const handleDelete = async (row: Record<string, unknown>) => {
     if (!confirm(`Delete ${config.label.slice(0, -1)} ${row[config.idField]}?`)) return;
     try {
-      const res = await fetch(`${API_BASE}${config.endpoint}/${row[config.idField]}`, {
+      const res = await fetch(`${config.endpoint}/${row[config.idField]}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       fetchRows();
@@ -235,16 +230,14 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
         else body[col.key] = val || undefined;
       });
 
-      // For create, include the PK field if it's a string type (like countryCode)
       if (!editingId && config.idField === 'countryCode') {
         body[config.idField] = formData[config.idField];
       }
 
-      const url = editingId ? `${API_BASE}${config.endpoint}/${editingId}` : `${API_BASE}${config.endpoint}`;
+      const url = editingId ? `${config.endpoint}/${editingId}` : config.endpoint;
       const res = await fetch(url, {
         method: editingId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -266,7 +259,7 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
             <a href={`/${resolvedParams.locale}/master`} style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: '13px' }}>
-              ← Master Data
+              \u2190 Master Data
             </a>
           </div>
           <h1 style={{ fontSize: '24px', fontWeight: 700, fontFamily: '"Syne", sans-serif', color: '#fff', margin: 0 }}>
