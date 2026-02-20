@@ -131,6 +131,25 @@ const TABLE_CONFIG: Record<string, {
 
 const PAGE_SIZES = [10, 20, 50, 100];
 
+/* ─── Flag image helper (CDN-based, works on all platforms) ─────────── */
+function FlagImg({ code, size = 24 }: { code: string; size?: number }) {
+  const lc = code?.toLowerCase();
+  if (!lc || lc.length !== 2) return <span style={{ opacity: 0.3 }}>—</span>;
+  const w = size;
+  const h = Math.round(size * 0.75);
+  return (
+    <img
+      src={`https://flagcdn.com/${w}x${h}/${lc}.png`}
+      srcSet={`https://flagcdn.com/${w * 2}x${h * 2}/${lc}.png 2x`}
+      width={w}
+      height={h}
+      alt={code}
+      style={{ display: 'inline-block', verticalAlign: 'middle', borderRadius: '2px', objectFit: 'cover' }}
+      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+    />
+  );
+}
+
 /* ─── Custom searchable dropdown with flags ─────────────────────────── */
 function CountrySelect({ countries, value, onChange }: {
   countries: { code: string; name: string; flag: string }[];
@@ -170,12 +189,12 @@ function CountrySelect({ countries, value, onChange }: {
       >
         {selected ? (
           <>
-            <span style={{ fontSize: '20px', lineHeight: '1' }}>{selected.flag}</span>
+            <FlagImg code={selected.code} size={24} />
             <span style={{ fontWeight: 500 }}>{selected.name}</span>
             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', marginLeft: '2px' }}>({selected.code})</span>
           </>
         ) : (
-          <span style={{ color: 'rgba(255,255,255,0.4)' }}>🌍 All Countries</span>
+          <span style={{ color: 'rgba(255,255,255,0.4)' }}>All Countries</span>
         )}
         <svg style={{ marginLeft: 'auto', opacity: 0.4, flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
           width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
@@ -220,7 +239,7 @@ function CountrySelect({ countries, value, onChange }: {
               onMouseEnter={e => { if (value) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
               onMouseLeave={e => { if (value) e.currentTarget.style.background = 'transparent'; }}
             >
-              <span style={{ fontSize: '18px' }}>🌍</span>
+              <span style={{ fontSize: '16px', lineHeight: '1' }}>🌐</span>
               <span style={{ fontWeight: 500, color: 'rgba(255,255,255,0.6)' }}>All Countries</span>
             </button>
             {filtered.map(c => (
@@ -236,7 +255,7 @@ function CountrySelect({ countries, value, onChange }: {
                 onMouseEnter={e => { if (c.code !== value) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                 onMouseLeave={e => { if (c.code !== value) e.currentTarget.style.background = 'transparent'; }}
               >
-                <span style={{ fontSize: '18px', lineHeight: '1' }}>{c.flag}</span>
+                <FlagImg code={c.code} size={20} />
                 <span style={{ fontWeight: 500 }}>{c.name}</span>
                 <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px' }}>{c.code}</span>
               </button>
@@ -251,6 +270,28 @@ function CountrySelect({ countries, value, onChange }: {
       )}
     </div>
   );
+}
+
+/* ─── Cell renderer (handles flag column specially) ──────────────────── */
+function CellValue({ row, col, tableName }: { row: Record<string, unknown>; col: { key: string; label: string }; tableName: string }) {
+  const val = row[col.key];
+  // Flag column in countries table → render as image using countryCode
+  if (col.key === 'flag' && col.label === 'Flag' && tableName === 'countries') {
+    const code = String(row['countryCode'] ?? '');
+    return <FlagImg code={code} size={28} />;
+  }
+  // Country code column in states/districts → show flag + code
+  if (col.key === 'countryCode' && tableName !== 'countries') {
+    const code = String(val ?? '');
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+        <FlagImg code={code} size={18} />
+        <span>{code}</span>
+      </span>
+    );
+  }
+  if (Array.isArray(val)) return <>{(val as number[]).join(', ')}</>;
+  return <>{String(val ?? '')}</>;
 }
 
 /* ─── Main Component ────────────────────────────────────────────────── */
@@ -274,6 +315,7 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
   useEffect(() => { params.then(setResolvedParams); }, [params]);
 
   const config = resolvedParams ? TABLE_CONFIG[resolvedParams.table] : null;
+  const tableName = resolvedParams?.table ?? '';
 
   // Fetch parent items (countries) when parentFilter config exists
   useEffect(() => {
@@ -349,7 +391,6 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
   const handleNew = () => {
     const empty: Record<string, string> = {};
     config.columns.forEach(c => { if (c.editable || c.key === config.idField) empty[c.key] = ''; });
-    // Pre-fill country if filter is active
     if (parentFilter && config.parentFilter) empty[config.parentFilter.key] = parentFilter;
     setFormData(empty); setEditingId(null); setShowForm(true);
   };
@@ -432,8 +473,8 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
           <h1 style={{ fontSize: '24px', fontWeight: 700, fontFamily: '"Syne", sans-serif', color: '#fff', margin: '4px 0 0' }}>
             {config.label}
             {selectedCountryInfo && (
-              <span style={{ fontSize: '16px', fontWeight: 400, color: 'rgba(255,255,255,0.4)', marginLeft: '12px' }}>
-                {selectedCountryInfo.flag} {selectedCountryInfo.name}
+              <span style={{ fontSize: '16px', fontWeight: 400, color: 'rgba(255,255,255,0.4)', marginLeft: '12px', verticalAlign: 'middle' }}>
+                <FlagImg code={selectedCountryInfo.code} size={20} /> {selectedCountryInfo.name}
               </span>
             )}
           </h1>
@@ -547,9 +588,9 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
                     {config.columns.map((col, ci) => (
                       <td key={`${col.key}-${ci}`} style={{
                         ...tdStyle,
-                        ...(col.key === 'flag' && col.label === 'Flag' ? { fontSize: '26px', textAlign: 'center', lineHeight: '1', padding: '6px 16px' } : {}),
+                        ...(col.key === 'flag' && col.label === 'Flag' ? { textAlign: 'center', padding: '6px 16px' } : {}),
                       }}>
-                        {Array.isArray(row[col.key]) ? (row[col.key] as number[]).join(', ') : String(row[col.key] ?? '')}
+                        <CellValue row={row} col={col} tableName={tableName} />
                       </td>
                     ))}
                     <td style={{ ...tdStyle, whiteSpace: 'nowrap', textAlign: 'center' }}>
