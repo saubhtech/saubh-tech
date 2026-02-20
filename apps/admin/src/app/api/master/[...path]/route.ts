@@ -3,13 +3,16 @@ import { getSession } from '@/lib/auth';
 
 const API_URL = process.env.API_INTERNAL_URL || 'http://localhost:3001';
 
-async function proxyRequest(req: NextRequest, params: Promise<{ path: string[] }>) {
+async function proxyRequest(
+  req: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  const { path } = await params;
+  const { path } = await context.params;
   const target = `${API_URL}/api/master/${path.join('/')}`;
   const url = new URL(target);
 
