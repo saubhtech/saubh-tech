@@ -3,25 +3,28 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 /* ═══════════════════════════════════════════════════════════════════════
-   TABLE CONFIGURATION — mirrors the HTML's TABLES array with full
-   FK references, cascading dependencies, and horizontal grouping.
+   TABLE CONFIGURATION
    ═══════════════════════════════════════════════════════════════════════ */
 
 type FieldDef = {
   name: string; label: string; editable?: boolean;
   type?: 'char2' | 'char3' | 'varchar' | 'int' | 'bigint' | 'intarray' | 'fk' | 'fk_multi';
   required?: boolean; hideInForm?: boolean;
-  // FK config
   ref?: string; refPk?: string; refLabel?: string;
   dependsOn?: string; horizontalGroup?: string;
-  // special
   pincodeValidation?: boolean;
+};
+
+type FilterDef = {
+  key: string; label: string; ref: string; refPk: string; refLabel: string;
+  dependsOn?: string; isCountry?: boolean; isText?: boolean;
 };
 
 type TableDef = {
   key: string; label: string; singular: string; idField: string;
   autoPk: boolean; endpoint: string; icon: string;
   fields: FieldDef[];
+  filters?: FilterDef[];
 };
 
 const TABLES: Record<string, TableDef> = {
@@ -46,6 +49,9 @@ const TABLES: Record<string, TableDef> = {
       { name: 'stateCode', label: 'State Code', type: 'char2', editable: true },
       { name: 'region', label: 'Region', type: 'varchar', editable: true },
     ],
+    filters: [
+      { key: 'countryCode', label: 'Country', ref: 'countries', refPk: 'countryCode', refLabel: 'country', isCountry: true },
+    ],
   },
   districts: {
     key: 'districts', label: 'Districts', singular: 'District', idField: 'districtid',
@@ -55,6 +61,10 @@ const TABLES: Record<string, TableDef> = {
       { name: 'countryCode', label: 'Country', type: 'fk', ref: 'countries', refPk: 'countryCode', refLabel: 'country', required: true, editable: true, horizontalGroup: 'geo' },
       { name: 'stateid', label: 'State', type: 'fk', ref: 'states', refPk: 'stateid', refLabel: 'state', required: true, editable: true, dependsOn: 'countryCode', horizontalGroup: 'geo' },
       { name: 'district', label: 'District', type: 'varchar', required: true, editable: true },
+    ],
+    filters: [
+      { key: 'countryCode', label: 'Country', ref: 'countries', refPk: 'countryCode', refLabel: 'country', isCountry: true },
+      { key: 'stateid', label: 'State', ref: 'states', refPk: 'stateid', refLabel: 'state', dependsOn: 'countryCode' },
     ],
   },
   postals: {
@@ -68,6 +78,11 @@ const TABLES: Record<string, TableDef> = {
       { name: 'pincode', label: 'Pincode', type: 'varchar', required: true, editable: true },
       { name: 'postoffice', label: 'Post Office', type: 'varchar', required: true, editable: true },
     ],
+    filters: [
+      { key: 'countryCode', label: 'Country', ref: 'countries', refPk: 'countryCode', refLabel: 'country', isCountry: true },
+      { key: 'stateid', label: 'State', ref: 'states', refPk: 'stateid', refLabel: 'state', dependsOn: 'countryCode' },
+      { key: 'districtid', label: 'District', ref: 'districts', refPk: 'districtid', refLabel: 'district', dependsOn: 'stateid' },
+    ],
   },
   places: {
     key: 'places', label: 'Places', singular: 'Place', idField: 'placeid',
@@ -79,6 +94,12 @@ const TABLES: Record<string, TableDef> = {
       { name: 'districtid', label: 'District', type: 'fk', ref: 'districts', refPk: 'districtid', refLabel: 'district', required: true, editable: true, dependsOn: 'stateid', horizontalGroup: 'geo3' },
       { name: 'pincode', label: 'Pincode', type: 'varchar', editable: true, pincodeValidation: true },
       { name: 'place', label: 'Place', type: 'varchar', required: true, editable: true },
+    ],
+    filters: [
+      { key: 'countryCode', label: 'Country', ref: 'countries', refPk: 'countryCode', refLabel: 'country', isCountry: true },
+      { key: 'stateid', label: 'State', ref: 'states', refPk: 'stateid', refLabel: 'state', dependsOn: 'countryCode' },
+      { key: 'districtid', label: 'District', ref: 'districts', refPk: 'districtid', refLabel: 'district', dependsOn: 'stateid' },
+      { key: 'pincode', label: 'Pincode', ref: '', refPk: '', refLabel: '', isText: true },
     ],
   },
   localities: {
@@ -148,6 +169,9 @@ const TABLES: Record<string, TableDef> = {
       { name: 'sectorid', label: 'Sector', type: 'fk', ref: 'sectors', refPk: 'sectorid', refLabel: 'sector', editable: true, horizontalGroup: 'sf' },
       { name: 'field', label: 'Field', type: 'varchar', required: true, editable: true, horizontalGroup: 'sf' },
     ],
+    filters: [
+      { key: 'sectorid', label: 'Sector', ref: 'sectors', refPk: 'sectorid', refLabel: 'sector' },
+    ],
   },
 };
 
@@ -170,7 +194,7 @@ function FlagImg({ code, size = 24 }: { code: string; size?: number }) {
   );
 }
 
-/* Searchable FK dropdown */
+/* ─── Searchable FK dropdown (used in forms) ────────────────────────── */
 function FKSelect({ label, options, value, onChange, disabled, placeholder }: {
   label: string;
   options: { value: string; label: string; code?: string }[];
@@ -237,18 +261,12 @@ function FKSelect({ label, options, value, onChange, disabled, placeholder }: {
                 style={{ ...S.input, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', padding: '6px 10px' }} />
             </div>
             <div style={{ overflowY: 'auto', flex: 1 }}>
-              {/* Clear option */}
               <button type="button" onClick={() => { onChange(''); setOpen(false); }}
-                style={{ ...S.dropOption, color: 'rgba(255,255,255,0.35)' }}>
-                — None —
-              </button>
+                style={{ ...S.dropOption, color: 'rgba(255,255,255,0.35)' }}>— None —</button>
               {filtered.map(o => (
                 <button key={o.value} type="button"
                   onClick={() => { onChange(String(o.value)); setOpen(false); }}
-                  style={{
-                    ...S.dropOption,
-                    background: String(o.value) === String(value) ? 'rgba(99,102,241,0.15)' : 'transparent',
-                  }}
+                  style={{ ...S.dropOption, background: String(o.value) === String(value) ? 'rgba(99,102,241,0.15)' : 'transparent' }}
                   onMouseEnter={e => { if (String(o.value) !== String(value)) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                   onMouseLeave={e => { if (String(o.value) !== String(value)) e.currentTarget.style.background = 'transparent'; }}>
                   {o.code && <FlagImg code={o.code} size={16} />}
@@ -257,14 +275,110 @@ function FKSelect({ label, options, value, onChange, disabled, placeholder }: {
                 </button>
               ))}
               {filtered.length === 0 && (
-                <div style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '12px' }}>
-                  No results
-                </div>
+                <div style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '12px' }}>No results</div>
               )}
             </div>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ─── Compact filter dropdown (used in filter bar) ──────────────────── */
+function FilterDropdown({ label, options, value, onChange, disabled, isCountry }: {
+  label: string;
+  options: { value: string; text: string; code?: string }[];
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  isCountry?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const selected = options.find(o => String(o.value) === String(value));
+  const filtered = q.trim()
+    ? options.filter(o => o.text.toLowerCase().includes(q.toLowerCase()) || String(o.value).toLowerCase().includes(q.toLowerCase()))
+    : options;
+
+  const isActive = !!value;
+
+  return (
+    <div ref={ref} style={{ position: 'relative', minWidth: '150px', maxWidth: '220px', flex: '1 1 150px' }}>
+      <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px', paddingLeft: '2px' }}>
+        {label}
+      </div>
+      <button type="button" disabled={disabled}
+        onClick={() => { if (!disabled) { setOpen(!open); setQ(''); } }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
+          padding: '6px 10px', borderRadius: '8px', fontSize: '12px', textAlign: 'left',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          background: isActive ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.03)',
+          border: isActive ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(255,255,255,0.08)',
+          color: '#fff', opacity: disabled ? 0.35 : 1,
+          transition: 'all 0.15s',
+        }}>
+        {selected ? (
+          <>
+            {isCountry && <FlagImg code={selected.value} size={14} />}
+            <span style={{ flex: 1, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.text}</span>
+            <span onClick={e => { e.stopPropagation(); onChange(''); }} style={{ cursor: 'pointer', opacity: 0.4, fontSize: '14px', lineHeight: 1, marginLeft: '2px' }}>×</span>
+          </>
+        ) : (
+          <>
+            <span style={{ flex: 1, color: 'rgba(255,255,255,0.3)' }}>{disabled ? 'Select above first' : `All ${label}s`}</span>
+            <svg style={{ opacity: 0.25, flexShrink: 0 }} width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M6 9l6 6 6-6" /></svg>
+          </>
+        )}
+      </button>
+
+      {open && !disabled && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 3px)', left: 0, zIndex: 70,
+          minWidth: '240px', maxWidth: '320px', borderRadius: '10px', overflow: 'hidden',
+          background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.12)',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.6)', maxHeight: '280px',
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ padding: '6px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <input autoFocus value={q} onChange={e => setQ(e.target.value)}
+              placeholder={`Search ${label.toLowerCase()}...`} onClick={e => e.stopPropagation()}
+              style={{ width: '100%', padding: '6px 10px', borderRadius: '7px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            <button type="button" onClick={() => { onChange(''); setOpen(false); }}
+              style={{ ...S.dropOption, fontSize: '11px', padding: '7px 12px', color: 'rgba(255,255,255,0.35)' }}>
+              All {label}s
+            </button>
+            {filtered.map(o => (
+              <button key={o.value} type="button"
+                onClick={() => { onChange(String(o.value)); setOpen(false); }}
+                style={{
+                  ...S.dropOption, fontSize: '11px', padding: '7px 12px',
+                  background: String(o.value) === String(value) ? 'rgba(99,102,241,0.15)' : 'transparent',
+                }}
+                onMouseEnter={e => { if (String(o.value) !== String(value)) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseLeave={e => { if (String(o.value) !== String(value)) e.currentTarget.style.background = 'transparent'; }}>
+                {isCountry && <FlagImg code={o.value} size={14} />}
+                <span style={{ flex: 1, fontWeight: 500 }}>{o.text}</span>
+                <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)' }}>{o.value}</span>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '11px' }}>No results</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -292,9 +406,15 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
   // FK reference data cache
   const [refCache, setRefCache] = useState<Record<string, Record<string, unknown>[]>>({});
 
+  // Filter state
+  const [filters, setFilters] = useState<Record<string, string>>({});
+
   useEffect(() => { params.then(setResolvedParams); }, [params]);
 
   const config = resolvedParams ? TABLES[resolvedParams.table] : null;
+
+  // Reset filters when table changes
+  useEffect(() => { setFilters({}); }, [resolvedParams?.table]);
 
   // Auto-clear status
   useEffect(() => {
@@ -303,11 +423,14 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
     return () => clearTimeout(t);
   }, [statusMsg]);
 
-  // Fetch FK reference data for tables that need it
+  // Fetch FK reference data (for both form dropdowns and filter bar)
   useEffect(() => {
     if (!config) return;
     const refs = new Set<string>();
+    // From field FK references
     config.fields.forEach(f => { if (f.ref) refs.add(f.ref); });
+    // From filter references
+    config.filters?.forEach(f => { if (f.ref) refs.add(f.ref); });
     if (refs.size === 0) return;
 
     const fetchRefs = async () => {
@@ -355,19 +478,15 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
     return String(row[labelField?.name || refCfg.idField] ?? pkVal);
   }, [refCache]);
 
-  // FK options resolver with cascading dependency
+  // FK options resolver with cascading dependency (for forms)
   const getOptions = useCallback((field: FieldDef): { value: string; label: string; code?: string }[] => {
     if (!field.ref || !field.refPk || !field.refLabel) return [];
     let source = refCache[field.ref] || [];
-
-    // Apply cascade filter
     if (field.dependsOn) {
       const depVal = formData[field.dependsOn];
       if (!depVal && depVal !== 0) return [];
-      // Filter by the dependency field
       source = source.filter(r => String(r[field.dependsOn!]) === String(depVal));
     }
-
     return source.map(r => ({
       value: String(r[field.refPk!] ?? ''),
       label: String(r[field.refLabel!] ?? ''),
@@ -375,17 +494,68 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
     })).sort((a, b) => a.label.localeCompare(b.label));
   }, [refCache, formData]);
 
-  // Filtered + paginated rows
+  // Filter options resolver with cascading (for filter bar)
+  const getFilterOptions = useCallback((filterDef: FilterDef): { value: string; text: string; code?: string }[] => {
+    if (filterDef.isText || !filterDef.ref) return [];
+    let source = refCache[filterDef.ref] || [];
+    // Cascade: filter options by parent filter value
+    if (filterDef.dependsOn) {
+      const parentVal = filters[filterDef.dependsOn];
+      if (!parentVal) return [];
+      source = source.filter(r => String(r[filterDef.dependsOn!]) === String(parentVal));
+    }
+    return source.map(r => ({
+      value: String(r[filterDef.refPk] ?? ''),
+      text: String(r[filterDef.refLabel] ?? ''),
+      code: filterDef.isCountry ? String(r['countryCode'] ?? '') : undefined,
+    })).sort((a, b) => a.text.localeCompare(b.text));
+  }, [refCache, filters]);
+
+  // Update filter with cascade clear
+  const updateFilter = useCallback((key: string, value: string) => {
+    setFilters(prev => {
+      const next = { ...prev, [key]: value };
+      // Clear all dependent filters
+      if (config?.filters) {
+        const clearDependents = (parentKey: string) => {
+          config.filters?.forEach(f => {
+            if (f.dependsOn === parentKey) {
+              next[f.key] = '';
+              clearDependents(f.key);
+            }
+          });
+        };
+        clearDependents(key);
+      }
+      return next;
+    });
+  }, [config]);
+
+  // Filtered + paginated rows (filters → then search)
   const filteredRows = useMemo(() => {
     if (!config) return [];
     let rows = allRows;
+
+    // Apply filter bar filters
+    if (config.filters) {
+      config.filters.forEach(f => {
+        const val = filters[f.key];
+        if (!val) return;
+        if (f.isText) {
+          rows = rows.filter(row => String(row[f.key] ?? '').toLowerCase().includes(val.toLowerCase()));
+        } else {
+          rows = rows.filter(row => String(row[f.key]) === val);
+        }
+      });
+    }
+
+    // Apply text search
     if (search.trim()) {
       const q = search.toLowerCase();
       rows = rows.filter(row =>
         config.fields.some(f => {
           const val = row[f.name];
           if (val == null) return false;
-          // Also search FK display names
           if (f.ref && f.refPk && f.refLabel) {
             const name = lookupName(f.ref, f.refPk, val);
             if (name.toLowerCase().includes(q)) return true;
@@ -395,7 +565,7 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
       );
     }
     return rows;
-  }, [allRows, search, config, lookupName]);
+  }, [allRows, filters, search, config, lookupName]);
 
   const totalFiltered = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
@@ -405,7 +575,13 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
     return filteredRows.slice(start, start + pageSize);
   }, [filteredRows, safePage, pageSize]);
 
-  useEffect(() => { setCurrentPage(1); }, [search, pageSize]);
+  useEffect(() => { setCurrentPage(1); }, [search, pageSize, filters]);
+
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    if (!config?.filters) return 0;
+    return config.filters.filter(f => filters[f.key]).length;
+  }, [config, filters]);
 
   if (!resolvedParams) return <div style={{ color: 'rgba(255,255,255,0.3)', padding: '40px' }}>Loading...</div>;
   if (!config) return <div style={{ color: '#ef4444', padding: '40px' }}>Unknown table: {resolvedParams.table}</div>;
@@ -417,6 +593,12 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
       if (f.type === 'intarray') empty[f.name] = [];
       else empty[f.name] = '';
     });
+    // Pre-fill from active filters
+    if (config.filters) {
+      config.filters.forEach(f => {
+        if (filters[f.key] && !f.isText) empty[f.key] = filters[f.key];
+      });
+    }
     setFormData(empty); setEditingId(null); setShowForm(true);
   };
 
@@ -482,7 +664,6 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
   const updateField = (name: string, value: unknown) => {
     setFormData(prev => {
       const next = { ...prev, [name]: value };
-      // Clear dependent fields when parent changes
       config.fields.forEach(f => {
         if (f.dependsOn === name) {
           next[f.name] = f.type === 'intarray' ? [] : '';
@@ -517,14 +698,12 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
       if (!f.editable && f.name !== config.idField) return;
       if (editingId && !f.editable) return;
 
-      // Horizontal group
       if (f.horizontalGroup) {
         const groupKey = `__grp__${f.horizontalGroup}`;
         if (rendered.has(groupKey)) return;
         rendered.add(groupKey);
         const groupFields = config.fields.filter(gf => gf.horizontalGroup === f.horizontalGroup && !gf.hideInForm);
         groupFields.forEach(gf => rendered.add(gf.name));
-
         elements.push(
           <div key={groupKey} style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: `repeat(${groupFields.length}, 1fr)`, gap: '10px' }}>
             {groupFields.map(gf => renderSingleField(gf))}
@@ -541,64 +720,37 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
   };
 
   const renderSingleField = (f: FieldDef) => {
-    // FK field → searchable dropdown
     if (f.type === 'fk') {
       const opts = getOptions(f);
       const disabled = !!f.dependsOn && !formData[f.dependsOn];
-      return (
-        <FKSelect
-          key={f.name}
-          label={f.label}
-          options={opts}
-          value={String(formData[f.name] ?? '')}
-          onChange={v => updateField(f.name, v)}
-          disabled={disabled}
-        />
-      );
+      return <FKSelect key={f.name} label={f.label} options={opts} value={String(formData[f.name] ?? '')} onChange={v => updateField(f.name, v)} disabled={disabled} />;
     }
-
-    // Array/multi fields
     if (f.type === 'intarray') {
       const val = formData[f.name];
       const display = Array.isArray(val) ? val.join(', ') : String(val ?? '');
       return (
         <div key={f.name}>
           <label style={S.label}>{f.label}</label>
-          <input value={display}
-            onChange={e => updateField(f.name, e.target.value)}
-            placeholder="1, 2, 3" style={S.input} />
+          <input value={display} onChange={e => updateField(f.name, e.target.value)} placeholder="1, 2, 3" style={S.input} />
         </div>
       );
     }
-
-    // Regular input
     return (
       <div key={f.name}>
         <label style={S.label}>{f.label}{f.required && <span style={{ color: '#f43f5e' }}> *</span>}</label>
-        <input
-          value={String(formData[f.name] ?? '')}
-          onChange={e => updateField(f.name, e.target.value)}
-          placeholder={f.label}
-          maxLength={f.type === 'char2' ? 2 : f.type === 'char3' ? 3 : undefined}
-          style={{
-            ...S.input,
-            ...(f.type === 'char2' || f.type === 'char3' ? { textTransform: 'uppercase' as const, fontFamily: 'monospace', letterSpacing: '0.1em' } : {}),
-          }}
-        />
+        <input value={String(formData[f.name] ?? '')} onChange={e => updateField(f.name, e.target.value)}
+          placeholder={f.label} maxLength={f.type === 'char2' ? 2 : f.type === 'char3' ? 3 : undefined}
+          style={{ ...S.input, ...(f.type === 'char2' || f.type === 'char3' ? { textTransform: 'uppercase' as const, fontFamily: 'monospace', letterSpacing: '0.1em' } : {}) }} />
       </div>
     );
   };
 
-  /* ─── Render cell value with FK name lookups + flag images ────── */
+  /* ─── Render cell value ─────────────────────────────────────────── */
   const renderCell = (row: Record<string, unknown>, f: FieldDef) => {
     const val = row[f.name];
-
-    // Flag column → CDN image from countryCode
     if (f.name === 'flag' && f.label === 'Flag' && config.key === 'countries') {
       return <FlagImg code={String(row['countryCode'] ?? '')} size={28} />;
     }
-
-    // FK single → display name
     if (f.type === 'fk' && f.ref && f.refPk && f.refLabel) {
       const name = lookupName(f.ref, f.refPk, val);
       const isCountry = f.ref === 'countries';
@@ -610,13 +762,82 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
         </span>
       );
     }
-
-    // FK multi / int array
-    if (f.type === 'intarray' && Array.isArray(val)) {
-      return <span>{(val as number[]).join(', ')}</span>;
-    }
-
+    if (f.type === 'intarray' && Array.isArray(val)) return <span>{(val as number[]).join(', ')}</span>;
     return <span>{String(val ?? '')}</span>;
+  };
+
+  /* ─── Render filter bar ─────────────────────────────────────────── */
+  const renderFilterBar = () => {
+    if (!config.filters || config.filters.length === 0) return null;
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap',
+        padding: '10px 14px', marginBottom: '12px',
+        borderRadius: '12px', background: 'rgba(255,255,255,0.02)',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'center', paddingBottom: '2px' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+            Filters
+          </span>
+        </div>
+
+        {config.filters.map(f => {
+          if (f.isText) {
+            return (
+              <div key={f.key} style={{ minWidth: '130px', maxWidth: '180px', flex: '1 1 130px' }}>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px', paddingLeft: '2px' }}>
+                  {f.label}
+                </div>
+                <input
+                  value={filters[f.key] || ''}
+                  onChange={e => updateFilter(f.key, e.target.value)}
+                  placeholder={`All ${f.label}s`}
+                  style={{
+                    width: '100%', padding: '6px 10px', borderRadius: '8px', fontSize: '12px',
+                    background: filters[f.key] ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.03)',
+                    border: filters[f.key] ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                    color: '#fff', outline: 'none', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+            );
+          }
+          const disabled = !!f.dependsOn && !filters[f.dependsOn];
+          return (
+            <FilterDropdown
+              key={f.key}
+              label={f.label}
+              options={getFilterOptions(f)}
+              value={filters[f.key] || ''}
+              onChange={v => updateFilter(f.key, v)}
+              disabled={disabled}
+              isCountry={f.isCountry}
+            />
+          );
+        })}
+
+        {activeFilterCount > 0 && (
+          <button onClick={() => setFilters({})}
+            style={{
+              padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 500,
+              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+              color: '#fca5a5', cursor: 'pointer', whiteSpace: 'nowrap', alignSelf: 'flex-end',
+            }}>
+            Clear all
+          </button>
+        )}
+
+        {activeFilterCount > 0 && (
+          <div style={{ fontSize: '11px', color: 'rgba(99,102,241,0.6)', alignSelf: 'center', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+            {totalFiltered} result{totalFiltered !== 1 ? 's' : ''}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -624,9 +845,7 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <div>
-          <a href={`/${resolvedParams.locale}/master`} style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: '13px' }}>
-            &#8592; Master Data
-          </a>
+          <a href={`/${resolvedParams.locale}/master`} style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: '13px' }}>&#8592; Master Data</a>
           <h1 style={{ fontSize: '24px', fontWeight: 700, fontFamily: '"Syne", sans-serif', color: '#fff', margin: '4px 0 0' }}>
             <span style={{ marginRight: '10px' }}>{config.icon}</span>
             {config.label}
@@ -638,7 +857,7 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
         <button onClick={handleNew} style={S.btnPrimary}>+ Add {config.singular}</button>
       </div>
 
-      {/* Status message */}
+      {/* Status */}
       {statusMsg && (
         <div style={{
           ...S.statusBar,
@@ -649,10 +868,9 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
           {statusMsg.error ? '✕' : '✓'} {statusMsg.text}
         </div>
       )}
-
       {error && <div style={S.statusBar}>{error}</div>}
 
-      {/* ── Form Card ──────────────────────────────────────────────── */}
+      {/* Form Card */}
       {showForm && (
         <div style={S.card}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
@@ -665,11 +883,9 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
             Primary key: <code style={{ color: 'rgba(99,102,241,0.7)' }}>{config.idField}</code>
             {config.autoPk ? ' (auto-generated)' : ' (manual entry)'}
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
             {renderFormFields()}
           </div>
-
           <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
             <button onClick={handleSave} disabled={saving} style={S.btnPrimary}>
               {saving ? 'Saving...' : editingId ? `Update ${config.singular}` : `Add ${config.singular}`}
@@ -679,8 +895,8 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
         </div>
       )}
 
-      {/* ── Toolbar ────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' }}>
+      {/* Toolbar: Show + Search */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', gap: '12px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)' }}>Show</span>
           <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} style={S.select}>
@@ -697,7 +913,10 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
         </div>
       </div>
 
-      {/* ── Records Table ──────────────────────────────────────────── */}
+      {/* ── Filter Bar (between toolbar and table) ─────────────────── */}
+      {renderFilterBar()}
+
+      {/* Records Table */}
       <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -705,10 +924,7 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
               <tr>
                 <th style={{ ...S.th, width: '50px', textAlign: 'center' }}>#</th>
                 {config.fields.map((f, i) => (
-                  <th key={`${f.name}-${i}`} style={{
-                    ...S.th,
-                    ...(f.name === 'flag' ? { width: '56px', textAlign: 'center' } : {}),
-                  }}>{f.label}</th>
+                  <th key={`${f.name}-${i}`} style={{ ...S.th, ...(f.name === 'flag' ? { width: '56px', textAlign: 'center' } : {}) }}>{f.label}</th>
                 ))}
                 <th style={{ ...S.th, width: '120px', textAlign: 'center' }}>Actions</th>
               </tr>
@@ -718,7 +934,7 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
                 <tr><td colSpan={config.fields.length + 2} style={{ ...S.td, textAlign: 'center', color: 'rgba(255,255,255,0.3)', padding: '40px' }}>Loading...</td></tr>
               ) : paginatedRows.length === 0 ? (
                 <tr><td colSpan={config.fields.length + 2} style={{ ...S.td, textAlign: 'center', color: 'rgba(255,255,255,0.25)', padding: '40px' }}>
-                  {search ? 'No matching records.' : `No ${config.label.toLowerCase()} yet. Click "+ Add ${config.singular}" to create one.`}
+                  {search || activeFilterCount > 0 ? 'No matching records.' : `No ${config.label.toLowerCase()} yet. Click "+ Add ${config.singular}" to create one.`}
                 </td></tr>
               ) : paginatedRows.map((row, i) => (
                 <tr key={String(row[config.idField] ?? i)}
@@ -727,10 +943,7 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   <td style={S.sn}>{globalIndex(i)}</td>
                   {config.fields.map((f, ci) => (
-                    <td key={`${f.name}-${ci}`} style={{
-                      ...S.td,
-                      ...(f.name === 'flag' ? { textAlign: 'center', padding: '6px 12px' } : {}),
-                    }}>
+                    <td key={`${f.name}-${ci}`} style={{ ...S.td, ...(f.name === 'flag' ? { textAlign: 'center', padding: '6px 12px' } : {}) }}>
                       {renderCell(row, f)}
                     </td>
                   ))}
@@ -745,7 +958,7 @@ export default function MasterTablePage({ params }: { params: Promise<{ locale: 
         </div>
       </div>
 
-      {/* ── Pagination Footer ──────────────────────────────────────── */}
+      {/* Pagination */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)' }}>
           {totalFiltered > 0
