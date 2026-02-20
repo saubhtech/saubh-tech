@@ -431,7 +431,8 @@ model Sector {
   sectorid Int    @id @default(autoincrement())
   sector   String @db.VarChar(200)
 
-  fields Field[]
+  fields  Field[]
+  markets Market[]
 
   @@map("sector")
   @@schema("master")
@@ -442,9 +443,27 @@ model Field {
   field    String @db.VarChar(200)
   sectorid Int
 
-  sector Sector @relation(fields: [sectorid], references: [sectorid], onDelete: Cascade)
+  sector  Sector   @relation(fields: [sectorid], references: [sectorid], onDelete: Cascade)
+  markets Market[]
 
   @@index([sectorid])
   @@map("field")
+  @@schema("master")
+}
+
+model Market {
+  marketid BigInt @id @default(autoincrement())
+  sectorid Int
+  fieldid  Int
+  p_s_ps   String @map("p_s_ps") @db.Char(2)
+  item     String @db.VarChar(200)
+
+  sector Sector @relation(fields: [sectorid], references: [sectorid], onDelete: Cascade)
+  field  Field  @relation(fields: [fieldid], references: [fieldid], onDelete: Cascade)
+
+  @@index([sectorid])
+  @@index([fieldid])
+  @@index([p_s_ps])
+  @@map("market")
   @@schema("master")
 }

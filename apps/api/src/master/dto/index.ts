@@ -5,6 +5,7 @@ import {
   IsArray,
   Length,
   MaxLength,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -421,4 +422,48 @@ export class UpdateFieldDto {
   @IsInt()
   @Type(() => Number)
   sectorid?: number;
+}
+
+// ─── Market ─────────────────────────────────────────────────────────────────
+
+export class CreateMarketDto {
+  @IsInt()
+  @Type(() => Number)
+  sectorid: number;
+
+  @IsInt()
+  @Type(() => Number)
+  fieldid: number;
+
+  @IsString()
+  @Length(1, 2)
+  @Matches(/^(P|S|PS)$/, { message: 'p_s_ps must be P, S, or PS' })
+  p_s_ps: string;
+
+  @IsString()
+  @MaxLength(200)
+  item: string;
+}
+
+export class UpdateMarketDto {
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sectorid?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  fieldid?: number;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 2)
+  @Matches(/^(P|S|PS)$/, { message: 'p_s_ps must be P, S, or PS' })
+  p_s_ps?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  item?: string;
 }

@@ -24,6 +24,7 @@ import {
   CreateZoneDto, UpdateZoneDto,
   CreateSectorDto, UpdateSectorDto,
   CreateFieldDto, UpdateFieldDto,
+  CreateMarketDto, UpdateMarketDto,
 } from './dto';
 import { KeycloakAuthGuard, RolesGuard, Roles, MASTER_DATA_MANAGER } from '../auth';
 
@@ -378,5 +379,40 @@ export class MasterController {
   @Delete('fields/:id')
   deleteField(@Param('id', ParseIntPipe) id: number) {
     return this.svc.deleteField(id);
+  }
+
+  // ─── Market ─────────────────────────────────────────────────────────────
+
+  @Get('markets')
+  listMarkets(
+    @Query('sectorid') sectorid?: string,
+    @Query('fieldid') fieldid?: string,
+    @Query('p_s_ps') p_s_ps?: string,
+  ) {
+    return this.svc.findAllMarkets({
+      sectorid: sectorid ? +sectorid : undefined,
+      fieldid: fieldid ? +fieldid : undefined,
+      p_s_ps,
+    });
+  }
+
+  @Get('markets/:id')
+  getMarket(@Param('id') id: string) {
+    return this.svc.findMarket(BigInt(id));
+  }
+
+  @Post('markets')
+  createMarket(@Body() dto: CreateMarketDto) {
+    return this.svc.createMarket(dto);
+  }
+
+  @Patch('markets/:id')
+  updateMarket(@Param('id') id: string, @Body() dto: UpdateMarketDto) {
+    return this.svc.updateMarket(BigInt(id), dto);
+  }
+
+  @Delete('markets/:id')
+  deleteMarket(@Param('id') id: string) {
+    return this.svc.deleteMarket(BigInt(id));
   }
 }

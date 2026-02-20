@@ -13,6 +13,7 @@ import {
   CreateZoneDto, UpdateZoneDto,
   CreateSectorDto, UpdateSectorDto,
   CreateFieldDto, UpdateFieldDto,
+  CreateMarketDto, UpdateMarketDto,
 } from './dto';
 
 @Injectable()
@@ -472,5 +473,57 @@ export class MasterService {
   async deleteField(id: number) {
     await this.findField(id);
     return this.prisma.field.delete({ where: { fieldid: id } });
+  }
+
+  // ─── Market ─────────────────────────────────────────────────────────────
+
+  findAllMarkets(filters: { sectorid?: number; fieldid?: number; p_s_ps?: string }) {
+    return this.prisma.market.findMany({
+      where: {
+        ...(filters.sectorid && { sectorid: filters.sectorid }),
+        ...(filters.fieldid && { fieldid: filters.fieldid }),
+        ...(filters.p_s_ps && { p_s_ps: filters.p_s_ps.toUpperCase() }),
+      },
+      orderBy: { item: 'asc' },
+      include: { sector: true, field: true },
+    });
+  }
+
+  async findMarket(id: bigint) {
+    const row = await this.prisma.market.findUnique({
+      where: { marketid: id },
+      include: { sector: true, field: true },
+    });
+    if (!row) throw new NotFoundException(`Market ${id} not found`);
+    return row;
+  }
+
+  createMarket(dto: CreateMarketDto) {
+    return this.prisma.market.create({
+      data: {
+        sectorid: dto.sectorid,
+        fieldid: dto.fieldid,
+        p_s_ps: dto.p_s_ps.toUpperCase(),
+        item: dto.item,
+      },
+    });
+  }
+
+  async updateMarket(id: bigint, dto: UpdateMarketDto) {
+    await this.findMarket(id);
+    return this.prisma.market.update({
+      where: { marketid: id },
+      data: {
+        ...(dto.sectorid !== undefined && { sectorid: dto.sectorid }),
+        ...(dto.fieldid !== undefined && { fieldid: dto.fieldid }),
+        ...(dto.p_s_ps !== undefined && { p_s_ps: dto.p_s_ps.toUpperCase() }),
+        ...(dto.item !== undefined && { item: dto.item }),
+      },
+    });
+  }
+
+  async deleteMarket(id: bigint) {
+    await this.findMarket(id);
+    return this.prisma.market.delete({ where: { marketid: id } });
   }
 }
