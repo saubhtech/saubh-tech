@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ContactsService } from '../contacts/contacts.service';
+import { BotService } from '../bot/bot.service';
 
 export interface InboundMessage {
   senderWhatsapp: string;  // e.g. '918800607598'
@@ -19,6 +20,7 @@ export class WebhookService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly contactsService: ContactsService,
+    private readonly botService: BotService,
   ) {}
 
   // ─── Process inbound message (shared by both providers) ───────────────────
@@ -71,6 +73,13 @@ export class WebhookService {
     this.logger.log(
       `Inbound ${msg.senderWhatsapp} → conv ${conversation.id}: ${msg.body?.substring(0, 50) || '[media]'}`,
     );
+
+    // 5. Trigger bot auto-reply (async — do not block webhook response)
+    if (msg.body && conversation.isBot) {
+      this.botService.autoReply(conversation.id, msg.body).catch(err => {
+        this.logger.error(`Bot auto-reply failed: ${err.message}`);
+      });
+    }
 
     return { contact, conversation, message };
   }
