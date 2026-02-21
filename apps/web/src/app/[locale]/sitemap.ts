@@ -14,12 +14,12 @@ export async function generateStaticParams() {
   return SUPPORTED_LOCALES.map((locale) => ({ locale }));
 }
 
-export default function sitemap({
+export default async function sitemap({
   params,
 }: {
-  params: { locale: string };
-}): MetadataRoute.Sitemap {
-  const { locale } = params;
+  params: Promise<{ locale: string }>;
+}): Promise<MetadataRoute.Sitemap> {
+  const { locale } = await params;
 
   return PAGES.map(({ path, changeFrequency, priority }) => ({
     url: `${BASE_URL}/${locale}${path}`,
