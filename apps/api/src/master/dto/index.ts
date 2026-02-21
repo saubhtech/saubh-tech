@@ -2,6 +2,7 @@ import {
   IsString,
   IsOptional,
   IsInt,
+  IsBoolean,
   IsArray,
   Length,
   MaxLength,
@@ -474,6 +475,25 @@ export class CreateLanguageDto {
   @IsString()
   @MaxLength(200)
   language: string;
+
+  @IsString()
+  @MaxLength(10)
+  locale: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isRtl?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isActive?: boolean;
 }
 
 export class UpdateLanguageDto {
@@ -481,4 +501,24 @@ export class UpdateLanguageDto {
   @IsString()
   @MaxLength(200)
   language?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  locale?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isRtl?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isActive?: boolean;
 }
