@@ -80,10 +80,11 @@ for (const [lang, locale] of Object.entries(LANG_TO_LOCALE)) {
 
 // ─── Cloudflare cf-ipcountry → URL locale ───────────────────────────
 // Fast first-pass geo-detection without hitting any API.
-// India defaults to 'en-in' (state-level mapping not needed).
+// India defaults to Hindi; regional languages are detected via
+// Accept-Language in the proxy before this fallback is reached.
 
 const CF_COUNTRY_TO_LOCALE: Record<string, string> = {
-  IN: 'en-in',   // India → English (user picks their language via banner)
+  IN: 'hi-in',   // India → Hindi (regional users detected via Accept-Language)
   BD: 'bn-in',   // Bangladesh → Bengali
   NP: 'ne-in',   // Nepal → Nepali
   PK: 'ur-in',   // Pakistan → Urdu
