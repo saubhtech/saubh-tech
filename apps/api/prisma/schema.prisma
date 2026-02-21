@@ -460,8 +460,12 @@ model Market {
 // ─── Master Schema: Reference Data ────────────────────────────────────────
 
 model Language {
-  langid    Int    @id @default(autoincrement()) @db.SmallInt
-  language  String @unique @db.VarChar(200)
+  langid    Int     @id @default(autoincrement()) @db.SmallInt
+  language  String  @unique @db.VarChar(200)
+  locale    String  @unique @db.VarChar(10)
+  isActive  Boolean @default(true) @map("is_active")
+  isRtl     Boolean @default(false) @map("is_rtl")
+  sortOrder Int     @default(0) @map("sort_order")
 
   @@map("language")
   @@schema("master")
