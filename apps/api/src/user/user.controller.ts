@@ -15,10 +15,10 @@ export class UserController {
 
   /**
    * GET /api/me
-   * Returns current user profile + preferredLocale.
+   * Returns current user profile.
    *
-   * Auth stub: reads x-user-id and x-business-id from headers.
-   * TODO: Replace with Keycloak JWT guard in S8.
+   * Auth stub: reads x-user-id (bigint) and x-business-id from headers.
+   * TODO: Replace with WhatsApp auth / JWT guard.
    */
   @Get()
   async getMe(
@@ -30,15 +30,15 @@ export class UserController {
         'Missing x-user-id or x-business-id header',
       );
     }
-    return this.userService.getMe(userId, businessId);
+    return this.userService.getMe(BigInt(userId), businessId);
   }
 
   /**
    * PATCH /api/me/preferences
-   * Updates user preferred locale.
+   * Updates user preferences.
    *
-   * Auth stub: reads x-user-id and x-business-id from headers.
-   * TODO: Replace with Keycloak JWT guard in S8.
+   * Auth stub: reads x-user-id (bigint) and x-business-id from headers.
+   * TODO: Replace with WhatsApp auth / JWT guard.
    */
   @Patch('preferences')
   async updatePreferences(
@@ -51,6 +51,6 @@ export class UserController {
         'Missing x-user-id or x-business-id header',
       );
     }
-    return this.userService.updatePreferences(userId, businessId, dto);
+    return this.userService.updatePreferences(BigInt(userId), businessId, dto);
   }
 }

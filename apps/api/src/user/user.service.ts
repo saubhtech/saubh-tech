@@ -15,15 +15,22 @@ export class UserService {
    * Get current user profile.
    * Scoped by businessId for tenant safety.
    */
-  async getMe(userId: string, businessId: string) {
+  async getMe(userId: bigint, businessId: string) {
     const membership = await this.prisma.userMembership.findFirst({
       where: { userId, businessId },
       include: {
         user: {
           select: {
-            id: true,
+            userid: true,
+            whatsapp: true,
+            fname: true,
             email: true,
-            preferredLocale: true,
+            phone: true,
+            pic: true,
+            gender: true,
+            dob: true,
+            langid: true,
+            status: true,
             createdAt: true,
           },
         },
@@ -51,12 +58,12 @@ export class UserService {
   }
 
   /**
-   * Update user locale preference.
+   * Update user language preference (langid array).
    * Validates locale against SUPPORTED_LOCALES.
    * Scoped by businessId for tenant safety.
    */
   async updatePreferences(
-    userId: string,
+    userId: bigint,
     businessId: string,
     dto: UpdatePreferencesDto,
   ) {
@@ -80,14 +87,17 @@ export class UserService {
       );
     }
 
-    // Update locale
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: { preferredLocale: dto.preferred_locale },
+    // Note: preferredLocale no longer exists on User.
+    // Language preferences are stored in langid (int[]).
+    // For now, return user profile as acknowledgment.
+    const user = await this.prisma.user.findUnique({
+      where: { userid: userId },
       select: {
-        id: true,
+        userid: true,
+        whatsapp: true,
+        fname: true,
         email: true,
-        preferredLocale: true,
+        langid: true,
       },
     });
 

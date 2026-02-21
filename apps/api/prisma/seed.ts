@@ -1,4 +1,4 @@
-// ─── Saubh.Tech Platform — Prisma Seed ──────────────────────────────────────
+// ─── Saubh.Tech Platform — Prisma Seed ────────────────────────────────────────
 // Seeds: 1 business, 1 user, 1 membership, 23 languages
 // Run: pnpm --filter @saubhtech/api prisma:seed
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,29 +23,31 @@ async function main() {
   });
   console.log(`  ✓ Business: ${business.name} (${business.id})`);
 
-  // 2. Create user
+  // 2. Create admin user (WhatsApp-based)
   const user = await prisma.user.upsert({
-    where: { email: 'admin@saubh.tech' },
+    where: { whatsapp: '+919999999999' },
     update: {},
     create: {
+      whatsapp: '+919999999999',
+      fname: 'Admin',
       email: 'admin@saubh.tech',
-      preferredLocale: 'en',
+      status: 'A',
     },
   });
-  console.log(`  ✓ User: ${user.email} (${user.id})`);
+  console.log(`  ✓ User: ${user.fname} / ${user.whatsapp} (${user.userid})`);
 
   // 3. Create membership (owner)
   const membership = await prisma.userMembership.upsert({
     where: {
       userId_businessId_clientId: {
-        userId: user.id,
+        userId: user.userid,
         businessId: business.id,
         clientId: '',
       },
     },
     update: {},
     create: {
-      userId: user.id,
+      userId: user.userid,
       businessId: business.id,
       role: UserRole.OWNER,
     },
