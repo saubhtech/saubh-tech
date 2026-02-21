@@ -4,9 +4,11 @@ import {
   IsInt,
   IsBoolean,
   IsArray,
+  IsEnum,
   Length,
   MaxLength,
   Matches,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -386,12 +388,54 @@ export class UpdateZoneDto {
   zoneAgency?: number;
 }
 
+// ─── I18n DTO (shared shape) ────────────────────────────────────────────────
+
+export class I18nEntryDto {
+  @IsString()
+  @MaxLength(10)
+  locale: string;
+
+  @IsString()
+  @MaxLength(200)
+  name: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isFallback?: boolean;
+}
+
 // ─── Sector ─────────────────────────────────────────────────────────────────
 
 export class CreateSectorDto {
   @IsString()
   @MaxLength(200)
   sector: string;
+
+  @IsString()
+  @MaxLength(50)
+  code: string;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => I18nEntryDto)
+  i18n?: I18nEntryDto[];
 }
 
 export class UpdateSectorDto {
@@ -399,6 +443,27 @@ export class UpdateSectorDto {
   @IsString()
   @MaxLength(200)
   sector?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  code?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => I18nEntryDto)
+  i18n?: I18nEntryDto[];
 }
 
 // ─── Field ──────────────────────────────────────────────────────────────────
@@ -411,6 +476,26 @@ export class CreateFieldDto {
   @IsInt()
   @Type(() => Number)
   sectorid: number;
+
+  @IsString()
+  @MaxLength(50)
+  code: string;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => I18nEntryDto)
+  i18n?: I18nEntryDto[];
 }
 
 export class UpdateFieldDto {
@@ -423,9 +508,36 @@ export class UpdateFieldDto {
   @IsInt()
   @Type(() => Number)
   sectorid?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  code?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => I18nEntryDto)
+  i18n?: I18nEntryDto[];
 }
 
 // ─── Market ─────────────────────────────────────────────────────────────────
+
+export enum DeliveryModeEnum {
+  PHYSICAL = 'PHYSICAL',
+  DIGITAL = 'DIGITAL',
+  PHYGITAL = 'PHYGITAL',
+}
 
 export class CreateMarketDto {
   @IsInt()
@@ -444,6 +556,30 @@ export class CreateMarketDto {
   @IsString()
   @MaxLength(200)
   item: string;
+
+  @IsString()
+  @MaxLength(50)
+  code: string;
+
+  @IsOptional()
+  @IsEnum(DeliveryModeEnum)
+  deliveryMode?: DeliveryModeEnum;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => I18nEntryDto)
+  i18n?: I18nEntryDto[];
 }
 
 export class UpdateMarketDto {
@@ -467,6 +603,31 @@ export class UpdateMarketDto {
   @IsString()
   @MaxLength(200)
   item?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  code?: string;
+
+  @IsOptional()
+  @IsEnum(DeliveryModeEnum)
+  deliveryMode?: DeliveryModeEnum;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => I18nEntryDto)
+  i18n?: I18nEntryDto[];
 }
 
 // ─── Language ───────────────────────────────────────────────────────────────

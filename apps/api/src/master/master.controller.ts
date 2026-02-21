@@ -214,10 +214,14 @@ export class MasterController {
   // ─── Sector ─────────────────────────────────────────────────────────────
 
   @Get('sectors')
-  listSectors() { return this.svc.findAllSectors(); }
+  listSectors(@Query('active') active?: string, @Query('locale') locale?: string) {
+    return this.svc.findAllSectors(active === 'true', locale);
+  }
 
   @Get('sectors/:id')
-  getSector(@Param('id', ParseIntPipe) id: number) { return this.svc.findSector(id); }
+  getSector(@Param('id', ParseIntPipe) id: number, @Query('locale') locale?: string) {
+    return this.svc.findSector(id, locale);
+  }
 
   @Post('sectors')
   createSector(@Body() dto: CreateSectorDto) { return this.svc.createSector(dto); }
@@ -231,10 +235,14 @@ export class MasterController {
   // ─── Field ──────────────────────────────────────────────────────────────
 
   @Get('fields')
-  listFields(@Query('sectorid') sectorid?: string) { return this.svc.findAllFields(sectorid ? +sectorid : undefined); }
+  listFields(@Query('sectorid') sectorid?: string, @Query('active') active?: string, @Query('locale') locale?: string) {
+    return this.svc.findAllFields(sectorid ? +sectorid : undefined, active === 'true', locale);
+  }
 
   @Get('fields/:id')
-  getField(@Param('id', ParseIntPipe) id: number) { return this.svc.findField(id); }
+  getField(@Param('id', ParseIntPipe) id: number, @Query('locale') locale?: string) {
+    return this.svc.findField(id, locale);
+  }
 
   @Post('fields')
   createField(@Body() dto: CreateFieldDto) { return this.svc.createField(dto); }
@@ -248,12 +256,26 @@ export class MasterController {
   // ─── Market ─────────────────────────────────────────────────────────────
 
   @Get('markets')
-  listMarkets(@Query('sectorid') sectorid?: string, @Query('fieldid') fieldid?: string, @Query('p_s_ps') p_s_ps?: string) {
-    return this.svc.findAllMarkets({ sectorid: sectorid ? +sectorid : undefined, fieldid: fieldid ? +fieldid : undefined, p_s_ps });
+  listMarkets(
+    @Query('sectorid') sectorid?: string,
+    @Query('fieldid') fieldid?: string,
+    @Query('p_s_ps') p_s_ps?: string,
+    @Query('active') active?: string,
+    @Query('locale') locale?: string,
+  ) {
+    return this.svc.findAllMarkets({
+      sectorid: sectorid ? +sectorid : undefined,
+      fieldid: fieldid ? +fieldid : undefined,
+      p_s_ps,
+      activeOnly: active === 'true',
+      locale,
+    });
   }
 
   @Get('markets/:id')
-  getMarket(@Param('id') id: string) { return this.svc.findMarket(BigInt(id)); }
+  getMarket(@Param('id') id: string, @Query('locale') locale?: string) {
+    return this.svc.findMarket(BigInt(id), locale);
+  }
 
   @Post('markets')
   createMarket(@Body() dto: CreateMarketDto) { return this.svc.createMarket(dto); }

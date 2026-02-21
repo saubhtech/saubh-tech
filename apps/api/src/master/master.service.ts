@@ -413,119 +413,248 @@ export class MasterService {
 
   // ─── Sector ─────────────────────────────────────────────────────────────
 
-  findAllSectors() {
+  findAllSectors(activeOnly = false, locale?: string) {
     return this.prisma.sector.findMany({
-      orderBy: { sector: 'asc' },
-      include: { fields: true },
+      where: activeOnly ? { isActive: true } : undefined,
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        fields: { where: activeOnly ? { isActive: true } : undefined, orderBy: { sortOrder: 'asc' } },
+        i18n: locale ? { where: { locale } } : true,
+      },
     });
   }
 
-  async findSector(id: number) {
+  async findSector(id: number, locale?: string) {
     const row = await this.prisma.sector.findUnique({
       where: { sectorid: id },
-      include: { fields: true },
+      include: {
+        fields: { orderBy: { sortOrder: 'asc' }, include: { i18n: locale ? { where: { locale } } : true } },
+        i18n: locale ? { where: { locale } } : true,
+      },
     });
     if (!row) throw new NotFoundException(`Sector ${id} not found`);
     return row;
   }
 
-  createSector(dto: CreateSectorDto) {
-    return this.prisma.sector.create({ data: dto });
+  async createSector(dto: CreateSectorDto) {
+    const { i18n, ...data } = dto;
+    return this.prisma.sector.create({
+      data: {
+        sector: data.sector,
+        code: data.code.toUpperCase(),
+        sortOrder: data.sortOrder ?? 0,
+        isActive: data.isActive ?? true,
+        ...(i18n?.length && {
+          i18n: {
+            createMany: { data: i18n.map((e) => ({ locale: e.locale, name: e.name, description: e.description, isFallback: e.isFallback ?? false })) },
+          },
+        }),
+      },
+      include: { i18n: true },
+    });
   }
 
   async updateSector(id: number, dto: UpdateSectorDto) {
     await this.findSector(id);
-    return this.prisma.sector.update({ where: { sectorid: id }, data: dto });
+    const { i18n, ...data } = dto;
+
+    // Upsert i18n entries if provided
+    if (i18n?.length) {
+      for (const entry of i18n) {
+        await this.prisma.sectorI18n.upsert({
+          where: { sectorid_locale: { sectorid: id, locale: entry.locale } },
+          update: { name: entry.name, description: entry.description, isFallback: entry.isFallback ?? false },
+          create: { sectorid: id, locale: entry.locale, name: entry.name, description: entry.description, isFallback: entry.isFallback ?? false },
+        });
+      }
+    }
+
+    return this.prisma.sector.update({
+      where: { sectorid: id },
+      data: {
+        ...(data.sector !== undefined && { sector: data.sector }),
+        ...(data.code !== undefined && { code: data.code.toUpperCase() }),
+        ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      },
+      include: { i18n: true },
+    });
   }
 
+  // Soft delete
   async deleteSector(id: number) {
     await this.findSector(id);
-    return this.prisma.sector.delete({ where: { sectorid: id } });
+    return this.prisma.sector.update({ where: { sectorid: id }, data: { isActive: false } });
   }
 
   // ─── Field ──────────────────────────────────────────────────────────────
 
-  findAllFields(sectorid?: number) {
+  findAllFields(sectorid?: number, activeOnly = false, locale?: string) {
     return this.prisma.field.findMany({
-      where: sectorid ? { sectorid } : undefined,
-      orderBy: { field: 'asc' },
-      include: { sector: true },
+      where: {
+        ...(sectorid && { sectorid }),
+        ...(activeOnly && { isActive: true }),
+      },
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        sector: true,
+        i18n: locale ? { where: { locale } } : true,
+      },
     });
   }
 
-  async findField(id: number) {
+  async findField(id: number, locale?: string) {
     const row = await this.prisma.field.findUnique({
       where: { fieldid: id },
-      include: { sector: true },
+      include: {
+        sector: true,
+        i18n: locale ? { where: { locale } } : true,
+      },
     });
     if (!row) throw new NotFoundException(`Field ${id} not found`);
     return row;
   }
 
-  createField(dto: CreateFieldDto) {
-    return this.prisma.field.create({ data: dto });
+  async createField(dto: CreateFieldDto) {
+    const { i18n, ...data } = dto;
+    return this.prisma.field.create({
+      data: {
+        field: data.field,
+        sectorid: data.sectorid,
+        code: data.code.toUpperCase(),
+        sortOrder: data.sortOrder ?? 0,
+        isActive: data.isActive ?? true,
+        ...(i18n?.length && {
+          i18n: {
+            createMany: { data: i18n.map((e) => ({ locale: e.locale, name: e.name, description: e.description, isFallback: e.isFallback ?? false })) },
+          },
+        }),
+      },
+      include: { i18n: true },
+    });
   }
 
   async updateField(id: number, dto: UpdateFieldDto) {
     await this.findField(id);
-    return this.prisma.field.update({ where: { fieldid: id }, data: dto });
+    const { i18n, ...data } = dto;
+
+    if (i18n?.length) {
+      for (const entry of i18n) {
+        await this.prisma.fieldI18n.upsert({
+          where: { fieldid_locale: { fieldid: id, locale: entry.locale } },
+          update: { name: entry.name, description: entry.description, isFallback: entry.isFallback ?? false },
+          create: { fieldid: id, locale: entry.locale, name: entry.name, description: entry.description, isFallback: entry.isFallback ?? false },
+        });
+      }
+    }
+
+    return this.prisma.field.update({
+      where: { fieldid: id },
+      data: {
+        ...(data.field !== undefined && { field: data.field }),
+        ...(data.sectorid !== undefined && { sectorid: data.sectorid }),
+        ...(data.code !== undefined && { code: data.code.toUpperCase() }),
+        ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      },
+      include: { i18n: true },
+    });
   }
 
+  // Soft delete
   async deleteField(id: number) {
     await this.findField(id);
-    return this.prisma.field.delete({ where: { fieldid: id } });
+    return this.prisma.field.update({ where: { fieldid: id }, data: { isActive: false } });
   }
 
   // ─── Market ─────────────────────────────────────────────────────────────
 
-  findAllMarkets(filters: { sectorid?: number; fieldid?: number; p_s_ps?: string }) {
+  findAllMarkets(filters: { sectorid?: number; fieldid?: number; p_s_ps?: string; activeOnly?: boolean; locale?: string }) {
     return this.prisma.market.findMany({
       where: {
         ...(filters.sectorid && { sectorid: filters.sectorid }),
         ...(filters.fieldid && { fieldid: filters.fieldid }),
         ...(filters.p_s_ps && { p_s_ps: filters.p_s_ps.toUpperCase() }),
+        ...(filters.activeOnly && { isActive: true }),
       },
-      orderBy: { item: 'asc' },
-      include: { sector: true, field: true },
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        sector: true,
+        field: true,
+        i18n: filters.locale ? { where: { locale: filters.locale } } : true,
+      },
     });
   }
 
-  async findMarket(id: bigint) {
+  async findMarket(id: bigint, locale?: string) {
     const row = await this.prisma.market.findUnique({
       where: { marketid: id },
-      include: { sector: true, field: true },
+      include: {
+        sector: true,
+        field: true,
+        i18n: locale ? { where: { locale } } : true,
+      },
     });
     if (!row) throw new NotFoundException(`Market ${id} not found`);
     return row;
   }
 
-  createMarket(dto: CreateMarketDto) {
+  async createMarket(dto: CreateMarketDto) {
+    const { i18n, ...data } = dto;
     return this.prisma.market.create({
       data: {
-        sectorid: dto.sectorid,
-        fieldid: dto.fieldid,
-        p_s_ps: dto.p_s_ps.toUpperCase(),
-        item: dto.item,
+        sectorid: data.sectorid,
+        fieldid: data.fieldid,
+        p_s_ps: data.p_s_ps.toUpperCase(),
+        item: data.item,
+        code: data.code.toUpperCase(),
+        deliveryMode: data.deliveryMode ?? 'PHYSICAL',
+        sortOrder: data.sortOrder ?? 0,
+        isActive: data.isActive ?? true,
+        ...(i18n?.length && {
+          i18n: {
+            createMany: { data: i18n.map((e) => ({ locale: e.locale, name: e.name, description: e.description, isFallback: e.isFallback ?? false })) },
+          },
+        }),
       },
+      include: { i18n: true },
     });
   }
 
   async updateMarket(id: bigint, dto: UpdateMarketDto) {
     await this.findMarket(id);
+    const { i18n, ...data } = dto;
+
+    if (i18n?.length) {
+      for (const entry of i18n) {
+        await this.prisma.marketI18n.upsert({
+          where: { marketid_locale: { marketid: id, locale: entry.locale } },
+          update: { name: entry.name, description: entry.description, isFallback: entry.isFallback ?? false },
+          create: { marketid: id, locale: entry.locale, name: entry.name, description: entry.description, isFallback: entry.isFallback ?? false },
+        });
+      }
+    }
+
     return this.prisma.market.update({
       where: { marketid: id },
       data: {
-        ...(dto.sectorid !== undefined && { sectorid: dto.sectorid }),
-        ...(dto.fieldid !== undefined && { fieldid: dto.fieldid }),
-        ...(dto.p_s_ps !== undefined && { p_s_ps: dto.p_s_ps.toUpperCase() }),
-        ...(dto.item !== undefined && { item: dto.item }),
+        ...(data.sectorid !== undefined && { sectorid: data.sectorid }),
+        ...(data.fieldid !== undefined && { fieldid: data.fieldid }),
+        ...(data.p_s_ps !== undefined && { p_s_ps: data.p_s_ps.toUpperCase() }),
+        ...(data.item !== undefined && { item: data.item }),
+        ...(data.code !== undefined && { code: data.code.toUpperCase() }),
+        ...(data.deliveryMode !== undefined && { deliveryMode: data.deliveryMode }),
+        ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
+      include: { i18n: true },
     });
   }
 
+  // Soft delete
   async deleteMarket(id: bigint) {
     await this.findMarket(id);
-    return this.prisma.market.delete({ where: { marketid: id } });
+    return this.prisma.market.update({ where: { marketid: id }, data: { isActive: false } });
   }
 
   // ─── Language ───────────────────────────────────────────────────────────
