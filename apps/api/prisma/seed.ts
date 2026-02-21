@@ -1,9 +1,10 @@
 // ─── Saubh.Tech Platform — Prisma Seed ──────────────────────────────────────
-// Seeds: 1 business, 1 user, 1 membership
+// Seeds: 1 business, 1 user, 1 membership, 23 languages
 // Run: pnpm --filter @saubhtech/api prisma:seed
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { PrismaClient, UserRole } from '@prisma/client';
+import { seedLanguages } from './seeds/language.seed';
 
 const prisma = new PrismaClient();
 
@@ -50,6 +51,9 @@ async function main() {
     },
   });
   console.log(`  ✓ Membership: ${membership.role} (${membership.id})`);
+
+  // 4. Seed master tables
+  await seedLanguages();
 
   console.log('✅ Seed complete.');
 }
