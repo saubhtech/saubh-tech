@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import './globals.css';
 import './mobile-lang.css';
+import './hero-video.css';
 
 export const metadata: Metadata = {
   title: 'Saubh.Tech — Phygital Gig Marketplace | UGC & Branding Platform',
@@ -24,9 +25,10 @@ export const metadata: Metadata = {
 const RTL_LANGS = new Set(['ar', 'ur', 'sd', 'ks']);
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Read language from cookie (set by middleware)
+  // Read locale from cookie set by middleware (saubh_locale = e.g. "ur-in")
   const cookieStore = await cookies();
-  const lang = cookieStore.get('saubh-lang')?.value || 'en';
+  const locale = cookieStore.get('saubh_locale')?.value || 'en-in';
+  const lang = locale.split('-')[0]; // e.g. "ur-in" → "ur"
   const dir = RTL_LANGS.has(lang) ? 'rtl' : 'ltr';
 
   return (
