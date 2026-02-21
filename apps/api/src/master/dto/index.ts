@@ -467,3 +467,18 @@ export class UpdateMarketDto {
   @MaxLength(200)
   item?: string;
 }
+
+// ─── Language ───────────────────────────────────────────────────────────────
+
+export class CreateLanguageDto {
+  @IsString()
+  @MaxLength(200)
+  language: string;
+}
+
+export class UpdateLanguageDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  language?: string;
+}

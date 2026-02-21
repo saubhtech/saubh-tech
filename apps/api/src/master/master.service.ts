@@ -14,6 +14,7 @@ import {
   CreateSectorDto, UpdateSectorDto,
   CreateFieldDto, UpdateFieldDto,
   CreateMarketDto, UpdateMarketDto,
+  CreateLanguageDto, UpdateLanguageDto,
 } from './dto';
 
 @Injectable()
@@ -525,5 +526,31 @@ export class MasterService {
   async deleteMarket(id: bigint) {
     await this.findMarket(id);
     return this.prisma.market.delete({ where: { marketid: id } });
+  }
+
+  // ─── Language ───────────────────────────────────────────────────────────
+
+  findAllLanguages() {
+    return this.prisma.language.findMany({ orderBy: { language: 'asc' } });
+  }
+
+  async findLanguage(id: number) {
+    const row = await this.prisma.language.findUnique({ where: { langid: id } });
+    if (!row) throw new NotFoundException(`Language ${id} not found`);
+    return row;
+  }
+
+  createLanguage(dto: CreateLanguageDto) {
+    return this.prisma.language.create({ data: dto });
+  }
+
+  async updateLanguage(id: number, dto: UpdateLanguageDto) {
+    await this.findLanguage(id);
+    return this.prisma.language.update({ where: { langid: id }, data: dto });
+  }
+
+  async deleteLanguage(id: number) {
+    await this.findLanguage(id);
+    return this.prisma.language.delete({ where: { langid: id } });
   }
 }

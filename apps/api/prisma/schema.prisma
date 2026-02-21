@@ -71,7 +71,6 @@ model Business {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
   clients          Client[]
   memberships      UserMembership[]
   conversations    Conversation[]
@@ -90,7 +89,6 @@ model Client {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  // Relations
   business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
   memberships      UserMembership[]
   conversations    Conversation[]
@@ -109,7 +107,6 @@ model User {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  // Relations
   memberships           UserMembership[]
   conversationMembers   ConversationMember[]
   sentMessages          Message[]
@@ -128,7 +125,6 @@ model UserMembership {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  // Relations
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client   Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
@@ -151,7 +147,6 @@ model Conversation {
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
 
-  // Relations
   business Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client   Client?              @relation(fields: [clientId], references: [id], onDelete: SetNull)
   members  ConversationMember[]
@@ -170,7 +165,6 @@ model ConversationMember {
   role           MemberRole @default(MEMBER)
   joinedAt       DateTime   @default(now())
 
-  // Relations
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -188,7 +182,6 @@ model Message {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  // Relations
   conversation Conversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User               @relation(fields: [senderId], references: [id], onDelete: Cascade)
   attachments  MessageAttachment[]
@@ -207,7 +200,6 @@ model MessageAttachment {
   size      Int
   createdAt DateTime @default(now())
 
-  // Relations
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
@@ -226,7 +218,6 @@ model TelephonyNumber {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  // Relations
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client   Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
@@ -251,7 +242,6 @@ model TelephonyCall {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  // Relations
   business Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client   Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
   events   TelephonyEvent[]
@@ -270,7 +260,6 @@ model TelephonyEvent {
   payload   Json     @default("{}")
   createdAt DateTime @default(now())
 
-  // Relations
   call TelephonyCall @relation(fields: [callId], references: [id], onDelete: Cascade)
 
   @@index([callId])
@@ -465,5 +454,15 @@ model Market {
   @@index([fieldid])
   @@index([p_s_ps])
   @@map("market")
+  @@schema("master")
+}
+
+// ─── Master Schema: Reference Data ────────────────────────────────────────
+
+model Language {
+  langid    Int    @id @default(autoincrement()) @db.SmallInt
+  language  String @unique @db.VarChar(200)
+
+  @@map("language")
   @@schema("master")
 }
