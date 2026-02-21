@@ -50,7 +50,7 @@ export class EvolutionWebhookController {
         msg?.videoMessage?.caption ||
         '';
 
-      const mediaUrl = msg?.imageMessage?.url || msg?.videoMessage?.url || msg?.audioMessage?.url || null;
+      const mediaUrl = msg?.imageMessage?.url || msg?.videoMessage?.url || msg?.audioMessage?.url || undefined;
       const mediaType = msg?.imageMessage
         ? 'image'
         : msg?.videoMessage
@@ -59,7 +59,7 @@ export class EvolutionWebhookController {
             ? 'audio'
             : msg?.documentMessage
               ? 'document'
-              : null;
+              : undefined;
 
       // Find SIM channel (EVOLUTION type)
       const channel = await this.prisma.waChannel.findFirst({

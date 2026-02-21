@@ -1,6 +1,5 @@
 import { Controller, Post, Get, Body, Query, Req, HttpCode, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Request } from 'express';
 import { WebhookService } from './webhook.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as crypto from 'crypto';
@@ -36,7 +35,7 @@ export class WabaWebhookController {
   // ─── Inbound message handler ──────────────────────────────────────────────
   @Post()
   @HttpCode(200)
-  async handleWabaWebhook(@Body() payload: any, @Req() req: Request) {
+  async handleWabaWebhook(@Body() payload: any, @Req() req: any) {
     try {
       // Verify signature
       if (!this.verifySignature(req)) {
@@ -87,12 +86,9 @@ export class WabaWebhookController {
               msg?.video?.caption ||
               '';
 
-            const mediaUrl =
-              msg?.image?.id || msg?.video?.id || msg?.audio?.id || msg?.document?.id
-                ? `waba-media:${msg?.image?.id || msg?.video?.id || msg?.audio?.id || msg?.document?.id}`
-                : null;
-
-            const mediaType = msg?.type === 'text' ? null : msg?.type || null;
+            const mediaId = msg?.image?.id || msg?.video?.id || msg?.audio?.id || msg?.document?.id;
+            const mediaUrl = mediaId ? `waba-media:${mediaId}` : undefined;
+            const mediaType = msg?.type === 'text' ? undefined : msg?.type || undefined;
 
             await this.webhookService.processInbound({
               senderWhatsapp,
@@ -115,14 +111,14 @@ export class WabaWebhookController {
   }
 
   // ─── Verify X-Hub-Signature-256 ───────────────────────────────────────────
-  private verifySignature(req: Request): boolean {
+  private verifySignature(req: any): boolean {
     const appSecret = this.config.get<string>('WABA_APP_SECRET', '');
     if (!appSecret) return true; // skip if not configured
 
-    const signature = req.headers['x-hub-signature-256'] as string;
+    const signature = req.headers?.['x-hub-signature-256'] as string;
     if (!signature) return false;
 
-    const rawBody = (req as any).rawBody;
+    const rawBody = req.rawBody;
     if (!rawBody) return true; // skip if raw body not available
 
     const expected = 'sha256=' + crypto
