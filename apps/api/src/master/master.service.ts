@@ -530,8 +530,18 @@ export class MasterService {
 
   // ─── Language ───────────────────────────────────────────────────────────
 
-  findAllLanguages() {
-    return this.prisma.language.findMany({ orderBy: { language: 'asc' } });
+  async findAllLanguages(page = 1, limit = 50, activeOnly = false) {
+    const where = activeOnly ? { isActive: true } : {};
+    const [data, total] = await Promise.all([
+      this.prisma.language.findMany({
+        where,
+        orderBy: { sortOrder: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.language.count({ where }),
+    ]);
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findLanguage(id: number) {
@@ -541,7 +551,15 @@ export class MasterService {
   }
 
   createLanguage(dto: CreateLanguageDto) {
-    return this.prisma.language.create({ data: dto });
+    return this.prisma.language.create({
+      data: {
+        language: dto.language,
+        locale: dto.locale,
+        isRtl: dto.isRtl ?? false,
+        sortOrder: dto.sortOrder ?? 0,
+        isActive: dto.isActive ?? true,
+      },
+    });
   }
 
   async updateLanguage(id: number, dto: UpdateLanguageDto) {
@@ -549,8 +567,12 @@ export class MasterService {
     return this.prisma.language.update({ where: { langid: id }, data: dto });
   }
 
+  // Soft delete — sets isActive=false
   async deleteLanguage(id: number) {
     await this.findLanguage(id);
-    return this.prisma.language.delete({ where: { langid: id } });
+    return this.prisma.language.update({
+      where: { langid: id },
+      data: { isActive: false },
+    });
   }
 }
