@@ -61,6 +61,32 @@ enum CallStatus {
   @@schema("public")
 }
 
+enum Gender {
+  M
+  F
+  T
+  O
+
+  @@schema("public")
+}
+
+enum VerifiedType {
+  D
+  P
+  PD
+
+  @@schema("public")
+}
+
+enum UserStatus {
+  A
+  S
+  B
+  D
+
+  @@schema("public")
+}
+
 enum DeliveryMode {
   PHYSICAL
   DIGITAL
@@ -107,33 +133,53 @@ model Client {
   @@schema("public")
 }
 
+/// User table — step 1: whatsapp + fname (registration)
+/// Fields marked (step 2) are nullable, filled during profile completion.
 model User {
-  id              String   @id @default(cuid())
-  email           String   @unique
-  keycloakId      String?  @unique
-  preferredLocale String   @default("en")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  userid        BigInt        @id @default(autoincrement())
+  whatsapp      String        @unique @db.VarChar(20)
+  passcode      String?       @db.VarChar(4)
+  fname         String        @db.VarChar(100)
+  email         String?       @unique @db.VarChar(255)
+  phone         String?       @db.VarChar(20)          /// (step 2)
+  pic           String?       @db.VarChar(500)
+  gender        Gender?                                 /// (step 2)
+  dob           DateTime?     @db.Date                  /// (step 2)
+  langid        Int[]         @default([])              /// (step 2) multi-language selection
+  qualification String?       @db.VarChar(200)          /// (step 2)
+  experience    String?       @db.VarChar(200)          /// (step 2)
+  countryCode   String?       @map("country_code") @db.Char(2)  /// (step 2)
+  stateid       Int?                                    /// (step 2)
+  districtid    Int?                                    /// (step 2)
+  pincode       String?       @db.VarChar(10)           /// (step 2)
+  placeid       Int?                                    /// (step 2)
+  verified      VerifiedType?
+  status        UserStatus    @default(A)
+  reason        String?       @db.VarChar(500)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at")
 
-  memberships           UserMembership[]
-  conversationMembers   ConversationMember[]
-  sentMessages          Message[]
+  memberships         UserMembership[]
+  conversationMembers ConversationMember[]
+  sentMessages        Message[]
 
+  @@index([whatsapp])
   @@index([email])
-  @@index([keycloakId])
+  @@index([status])
+  @@map("user")
   @@schema("public")
 }
 
 model UserMembership {
   id         String   @id @default(cuid())
-  userId     String
+  userId     BigInt   @map("user_id")
   businessId String
   clientId   String?
   role       UserRole @default(MEMBER)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [userid], onDelete: Cascade)
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client   Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
@@ -169,12 +215,12 @@ model Conversation {
 model ConversationMember {
   id             String     @id @default(cuid())
   conversationId String
-  userId         String
+  userId         BigInt     @map("user_id")
   role           MemberRole @default(MEMBER)
   joinedAt       DateTime   @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [userid], onDelete: Cascade)
 
   @@unique([conversationId, userId])
   @@index([conversationId])
@@ -185,13 +231,13 @@ model ConversationMember {
 model Message {
   id             String   @id @default(cuid())
   conversationId String
-  senderId       String
+  senderId       BigInt   @map("sender_id")
   content        String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   conversation Conversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User               @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  sender       User               @relation(fields: [senderId], references: [userid], onDelete: Cascade)
   attachments  MessageAttachment[]
 
   @@index([conversationId])
