@@ -1,0 +1,91 @@
+import { Controller, Post, Body, HttpCode, Logger } from '@nestjs/common';
+import { WebhookService } from './webhook.service';
+import { PrismaService } from '../../prisma/prisma.service';
+
+@Controller('crm/webhooks/evolution')
+export class EvolutionWebhookController {
+  private readonly logger = new Logger(EvolutionWebhookController.name);
+
+  constructor(
+    private readonly webhookService: WebhookService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  @Post()
+  @HttpCode(200)
+  async handleEvolutionWebhook(@Body() payload: any) {
+    try {
+      const event = payload?.event;
+
+      // Only process incoming messages
+      if (event !== 'messages.upsert') {
+        return { status: 'ignored', event };
+      }
+
+      const data = payload?.data;
+      if (!data) return { status: 'no_data' };
+
+      const messageData = data;
+      const key = messageData?.key;
+
+      // Skip outgoing messages
+      if (key?.fromMe) {
+        return { status: 'outgoing_ignored' };
+      }
+
+      // Extract sender number (remove @s.whatsapp.net)
+      const remoteJid = key?.remoteJid || '';
+      const senderWhatsapp = remoteJid.replace('@s.whatsapp.net', '');
+
+      if (!senderWhatsapp) {
+        return { status: 'no_sender' };
+      }
+
+      // Extract message content
+      const msg = messageData?.message;
+      const body =
+        msg?.conversation ||
+        msg?.extendedTextMessage?.text ||
+        msg?.imageMessage?.caption ||
+        msg?.videoMessage?.caption ||
+        '';
+
+      const mediaUrl = msg?.imageMessage?.url || msg?.videoMessage?.url || msg?.audioMessage?.url || null;
+      const mediaType = msg?.imageMessage
+        ? 'image'
+        : msg?.videoMessage
+          ? 'video'
+          : msg?.audioMessage
+            ? 'audio'
+            : msg?.documentMessage
+              ? 'document'
+              : null;
+
+      // Find SIM channel (EVOLUTION type)
+      const channel = await this.prisma.waChannel.findFirst({
+        where: { type: 'EVOLUTION', isActive: true },
+      });
+
+      if (!channel) {
+        this.logger.warn('No active EVOLUTION channel found');
+        return { status: 'no_channel' };
+      }
+
+      // Process inbound message
+      const result = await this.webhookService.processInbound({
+        senderWhatsapp,
+        senderName: messageData?.pushName || undefined,
+        body: body || undefined,
+        mediaUrl,
+        mediaType,
+        externalId: key?.id,
+        channelId: channel.id,
+      });
+
+      return { status: 'ok', conversationId: result.conversation.id };
+    } catch (err: any) {
+      this.logger.error(`Evolution webhook error: ${err.message}`, err.stack);
+      return { status: 'error' };
+    }
+  }
+}
