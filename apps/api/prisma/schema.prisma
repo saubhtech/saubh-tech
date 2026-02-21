@@ -135,29 +135,33 @@ model Client {
 
 /// User table — step 1: whatsapp + fname (registration)
 /// Fields marked (step 2) are nullable, filled during profile completion.
+/// UserType codes: BO=Business Owner, CL=Client, GW=Gig Worker, SA=Super Admin, AD=Admin
 model User {
-  userid        BigInt        @id @default(autoincrement())
-  whatsapp      String        @unique @db.VarChar(20)
-  passcode      String?       @db.VarChar(4)
-  fname         String        @db.VarChar(100)
-  email         String?       @unique @db.VarChar(255)
-  phone         String?       @db.VarChar(20)          /// (step 2)
-  pic           String?       @db.VarChar(500)
-  gender        Gender?                                 /// (step 2)
-  dob           DateTime?     @db.Date                  /// (step 2)
-  langid        Int[]         @default([])              /// (step 2) multi-language selection
-  qualification String?       @db.VarChar(200)          /// (step 2)
-  experience    String?       @db.VarChar(200)          /// (step 2)
-  countryCode   String?       @map("country_code") @db.Char(2)  /// (step 2)
-  stateid       Int?                                    /// (step 2)
-  districtid    Int?                                    /// (step 2)
-  pincode       String?       @db.VarChar(10)           /// (step 2)
-  placeid       Int?                                    /// (step 2)
-  verified      VerifiedType?
-  status        UserStatus    @default(A)
-  reason        String?       @db.VarChar(500)
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at")
+  userid         BigInt        @id @default(autoincrement())
+  whatsapp       String        @unique @db.VarChar(20)
+  passcode       String?       @db.VarChar(4)
+  passcodeExpiry DateTime?     @map("passcode_expiry")   /// OTP expiry timestamp
+  fname          String        @db.VarChar(100)
+  lname          String?       @db.VarChar(100)           /// (step 2) last name
+  email          String?       @unique @db.VarChar(255)
+  phone          String?       @db.VarChar(20)            /// (step 2)
+  pic            String?       @db.VarChar(500)
+  gender         Gender?                                   /// (step 2)
+  dob            DateTime?     @db.Date                    /// (step 2)
+  langid         Int[]         @default([])                /// (step 2) multi-language selection
+  qualification  String?       @db.VarChar(200)            /// (step 2)
+  experience     String?       @db.VarChar(200)            /// (step 2)
+  usertype       String        @default("GW") @map("usertype") @db.VarChar(2)  /// BO/CL/GW/SA/AD
+  countryCode    String?       @map("country_code") @db.Char(2)  /// (step 2)
+  stateid        Int?                                      /// (step 2)
+  districtid     Int?                                      /// (step 2)
+  pincode        String?       @db.VarChar(10)             /// (step 2)
+  placeid        Int?                                      /// (step 2)
+  verified       VerifiedType?
+  status         UserStatus    @default(A)
+  reason         String?       @db.VarChar(500)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at")
 
   memberships         UserMembership[]
   conversationMembers ConversationMember[]
@@ -309,10 +313,10 @@ model TelephonyCall {
 
 model TelephonyEvent {
   id        String   @id @default(cuid())
-  callId    String
   eventType String
   payload   Json     @default("{}")
   createdAt DateTime @default(now())
+  callId    String
 
   call TelephonyCall @relation(fields: [callId], references: [id], onDelete: Cascade)
 
