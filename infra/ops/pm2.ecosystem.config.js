@@ -75,5 +75,24 @@ module.exports = {
         PORT: 3003,
       },
     },
+
+    // ─── CRM WhatsApp (Next.js) ──────────────────────────────────────
+    {
+      name: 'crmwhats',
+      cwd: './apps/crmwhats',
+      script: 'node_modules/.bin/next',
+      args: 'start --port 3004',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      max_restarts: 10,
+      restart_delay: 5000,
+      watch: false,
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3004,
+        NEXT_PUBLIC_API_URL: 'https://api.saubh.tech',
+      },
+    },
   ],
 };
