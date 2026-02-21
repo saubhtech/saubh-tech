@@ -9,6 +9,9 @@ import {
 const COOKIE_NAME = 'saubh_locale';
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
 
+// ─── Protected routes that require auth ─────────────────────────────
+const PROTECTED_PATHS = ['/dashboard'];
+
 // ─── Proxy (Next.js 16 convention, replaces middleware.ts) ──────────
 // Locale-in-URL routing: every page lives under /{locale}/...
 //
@@ -23,6 +26,7 @@ const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
 //   - Path has no locale prefix → 302 redirect to /{locale}/path
 //   - Path has valid locale prefix → pass through, set cookie
 //   - API routes, static files, etc. → skip entirely
+//   - Protected paths → check saubh_token cookie, redirect to login if missing
 
 export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -45,6 +49,21 @@ export default function proxy(req: NextRequest) {
   const firstSegment = segments[1] ?? ''; // e.g. "hi-in"
 
   if (isValidLocale(firstSegment)) {
+    // ─── Auth check for protected routes ──────────────────────────
+    const restPath = '/' + segments.slice(2).join('/');
+    const isProtected = PROTECTED_PATHS.some(
+      (p) => restPath === p || restPath.startsWith(p + '/'),
+    );
+
+    if (isProtected) {
+      const token = req.cookies.get('saubh_token')?.value;
+      if (!token) {
+        const url = req.nextUrl.clone();
+        url.pathname = `/${firstSegment}/login`;
+        return NextResponse.redirect(url, 302);
+      }
+    }
+
     // Valid locale in URL — pass through and persist in cookie
     const res = NextResponse.next();
     res.cookies.set(COOKIE_NAME, firstSegment, {
