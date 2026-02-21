@@ -11,7 +11,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["public", "master"]
+  schemas  = ["public", "master", "crm"]
 }
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
@@ -598,4 +598,118 @@ model Language {
 
   @@map("language")
   @@schema("master")
+}
+
+// ─── CRM Schema: WhatsApp CRM ──────────────────────────────────────────────
+
+model WaChannel {
+  id           String   @id @default(cuid())
+  name         String   @db.VarChar(100)
+  phone        String   @unique @db.VarChar(20)
+  type         String   @db.VarChar(10)       /// EVOLUTION or WABA
+  instanceName String?  @map("instance_name") @db.VarChar(100)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  conversations WaConversation[]
+  broadcasts    WaBroadcast[]
+
+  @@map("wa_channel")
+  @@schema("crm")
+}
+
+model WaContact {
+  id        String   @id @default(cuid())
+  whatsapp  String   @unique @db.VarChar(20)
+  name      String?  @db.VarChar(200)
+  userId    BigInt?  @map("user_id")           /// links to public.user if exists
+  isBlocked Boolean  @default(false) @map("is_blocked")
+  optedOut  Boolean  @default(false) @map("opted_out")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  conversations WaConversation[]
+  recipients    WaBroadcastRecipient[]
+
+  @@index([userId])
+  @@map("wa_contact")
+  @@schema("crm")
+}
+
+model WaConversation {
+  id         String   @id @default(cuid())
+  channelId  String   @map("channel_id")
+  contactId  String   @map("contact_id")
+  status     String   @default("OPEN") @db.VarChar(10)  /// OPEN, ASSIGNED, RESOLVED
+  assignedTo BigInt?  @map("assigned_to")                /// user id of agent
+  isBot      Boolean  @default(false) @map("is_bot")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  channel  WaChannel  @relation(fields: [channelId], references: [id])
+  contact  WaContact  @relation(fields: [contactId], references: [id])
+  messages WaMessage[]
+
+  @@index([channelId])
+  @@index([contactId])
+  @@index([status])
+  @@index([assignedTo])
+  @@map("wa_conversation")
+  @@schema("crm")
+}
+
+model WaMessage {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  direction      String   @db.VarChar(3)           /// IN or OUT
+  body           String?
+  mediaUrl       String?  @map("media_url")
+  mediaType      String?  @map("media_type") @db.VarChar(50)
+  status         String   @default("SENT") @db.VarChar(10)  /// SENT, DELIVERED, READ, FAILED
+  externalId     String?  @map("external_id")       /// provider message id
+  sentAt         DateTime @default(now()) @map("sent_at")
+
+  conversation WaConversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId])
+  @@index([sentAt])
+  @@map("wa_message")
+  @@schema("crm")
+}
+
+model WaBroadcast {
+  id          String    @id @default(cuid())
+  name        String    @db.VarChar(200)
+  channelId   String    @map("channel_id")
+  body        String
+  scheduledAt DateTime? @map("scheduled_at")
+  sentAt      DateTime? @map("sent_at")
+  status      String    @default("DRAFT") @db.VarChar(10)  /// DRAFT, SCHEDULED, SENDING, DONE, FAILED
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  channel    WaChannel              @relation(fields: [channelId], references: [id])
+  recipients WaBroadcastRecipient[]
+
+  @@index([channelId])
+  @@index([status])
+  @@map("wa_broadcast")
+  @@schema("crm")
+}
+
+model WaBroadcastRecipient {
+  id          String    @id @default(cuid())
+  broadcastId String    @map("broadcast_id")
+  contactId   String    @map("contact_id")
+  status      String    @default("PENDING") @db.VarChar(10)  /// PENDING, SENT, DELIVERED, FAILED
+  sentAt      DateTime? @map("sent_at")
+
+  broadcast WaBroadcast @relation(fields: [broadcastId], references: [id])
+  contact   WaContact   @relation(fields: [contactId], references: [id])
+
+  @@index([broadcastId])
+  @@index([contactId])
+  @@map("wa_broadcast_recipient")
+  @@schema("crm")
 }
