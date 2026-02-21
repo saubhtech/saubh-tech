@@ -6,6 +6,8 @@ import { WebhookModule } from './webhook/webhook.module';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
 import { MasterModule } from './master/master.module';
+import { WhatsappModule } from './whatsapp/whatsapp.module';
+import { WhatsappAuthModule } from './auth/whatsapp-auth.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { MasterModule } from './master/master.module';
     AuthModule,
     AdminModule,
     MasterModule,
+    WhatsappModule,
+    WhatsappAuthModule,
   ],
 })
 export class AppModule {}
