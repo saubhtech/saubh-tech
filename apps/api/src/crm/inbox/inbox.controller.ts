@@ -6,7 +6,6 @@ import {
   Param,
   Query,
   Body,
-  UseGuards,
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
@@ -38,7 +37,7 @@ export class InboxController {
     return this.inboxService.listMessages(id, { page, limit });
   }
 
-  // POST /crm/conversations/:id/messages
+  // POST /crm/conversations/:id/messages — send text
   @Post(':id/messages')
   sendMessage(
     @Param('id') id: string,
@@ -46,6 +45,18 @@ export class InboxController {
     @Body('mediaUrl') mediaUrl?: string,
   ) {
     return this.inboxService.sendMessage(id, body, mediaUrl);
+  }
+
+  // POST /crm/conversations/:id/media — send media message
+  @Post(':id/media')
+  sendMediaMessage(
+    @Param('id') id: string,
+    @Body('mediaUrl') mediaUrl: string,
+    @Body('mediaType') mediaType: 'image' | 'video' | 'audio' | 'document',
+    @Body('caption') caption?: string,
+    @Body('filename') filename?: string,
+  ) {
+    return this.inboxService.sendMediaMessage(id, mediaUrl, mediaType, caption, filename);
   }
 
   // PATCH /crm/conversations/:id/assign
