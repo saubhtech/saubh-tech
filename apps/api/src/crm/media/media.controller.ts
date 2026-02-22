@@ -9,13 +9,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
 import { Response } from 'express';
 import { extname, join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { randomUUID } from 'crypto';
 
 const UPLOAD_DIR = '/data/uploads/crm';
+
+// Ensure upload dir exists
+try { mkdirSync(UPLOAD_DIR, { recursive: true }); } catch {}
 
 const MIME_TO_TYPE: Record<string, string> = {
   'image/jpeg': 'image',
@@ -40,16 +42,33 @@ export class MediaController {
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-        filename: (_req, file, cb) => {
+      storage: {
+        destination(_req: any, _file: any, cb: any) {
+          cb(null, UPLOAD_DIR);
+        },
+        filename(_req: any, file: any, cb: any) {
           const id = randomUUID();
           const ext = extname(file.originalname) || '.bin';
           cb(null, `${id}${ext}`);
         },
-      }),
+        _handleFile(_req: any, file: any, cb: any) {
+          const { createWriteStream } = require('fs');
+          const id = randomUUID();
+          const ext = extname(file.originalname) || '.bin';
+          const filename = `${id}${ext}`;
+          const filepath = join(UPLOAD_DIR, filename);
+          const ws = createWriteStream(filepath);
+          file.stream.pipe(ws);
+          ws.on('error', (err: any) => cb(err));
+          ws.on('finish', () => cb(null, { filename, path: filepath, size: ws.bytesWritten }));
+        },
+        _removeFile(_req: any, file: any, cb: any) {
+          const { unlink } = require('fs');
+          unlink(file.path, cb);
+        },
+      } as any,
       limits: { fileSize: 16 * 1024 * 1024 }, // 16 MB
-      fileFilter: (_req, file, cb) => {
+      fileFilter: (_req: any, file: any, cb: any) => {
         if (MIME_TO_TYPE[file.mimetype]) {
           cb(null, true);
         } else {
@@ -58,7 +77,7 @@ export class MediaController {
       },
     }),
   )
-  upload(@UploadedFile() file: Express.Multer.File) {
+  upload(@UploadedFile() file: any) {
     if (!file) throw new BadRequestException('No file uploaded');
 
     const mediaType = MIME_TO_TYPE[file.mimetype] || 'document';
@@ -77,7 +96,6 @@ export class MediaController {
   // GET /crm/media/:filename — serve uploaded file
   @Get(':filename')
   serve(@Param('filename') filename: string, @Res() res: Response) {
-    // Sanitize filename
     const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '');
     const filepath = join(UPLOAD_DIR, safe);
 
