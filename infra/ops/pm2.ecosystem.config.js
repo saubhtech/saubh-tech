@@ -94,5 +94,23 @@ module.exports = {
         NEXT_PUBLIC_API_URL: 'https://api.saubh.tech',
       },
     },
+
+    // ─── WhatsApp Service (Node.js) ──────────────────────────────────
+    {
+      name: 'whatsapp-service',
+      cwd: './apps/whatsapp-service',
+      script: 'src/index.js',
+      interpreter: 'node',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      max_restarts: 10,
+      restart_delay: 2000,
+      watch: false,
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3010,
+      },
+    },
   ],
 };
