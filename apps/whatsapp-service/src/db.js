@@ -17,7 +17,7 @@ export async function createUser(whatsapp, fname, passcode) {
   const result = await pool.query(
     `INSERT INTO public."user"
      (whatsapp, fname, usertype, status,
-      passcode, "passcodeExpiry", created, updated)
+      passcode, passcode_expiry, created, updated)
      VALUES ($1, $2, 'GW', 'A', $3,
       NULL, NOW(), NOW())
      RETURNING *`,
@@ -31,7 +31,7 @@ export async function updatePasscode(whatsapp, passcode, expiryMinutes = 2) {
   await pool.query(
     `UPDATE public."user"
      SET passcode = $1,
-         "passcodeExpiry" = $2,
+         passcode_expiry = $2,
          updated = NOW()
      WHERE whatsapp = $3`,
     [passcode, expiry, whatsapp]
