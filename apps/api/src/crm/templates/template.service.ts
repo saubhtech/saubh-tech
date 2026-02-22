@@ -18,6 +18,16 @@ export class TemplateService {
     this.wabaBizId = this.config.get<string>('WABA_BUSINESS_ID', '');
   }
 
+  // ─── List ALL templates across channels ─────────────────────────────────
+  async listAll(status?: string) {
+    return this.prisma.waTemplate.findMany({
+      where: {
+        ...(status && status !== 'ALL' ? { status } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   // ─── List templates for a channel ───────────────────────────────────────
   async list(channelId: string, status?: string) {
     return this.prisma.waTemplate.findMany({
