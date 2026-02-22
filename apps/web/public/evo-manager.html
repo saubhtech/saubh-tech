@@ -8,15 +8,17 @@
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'DM Sans',system-ui,sans-serif;background:#080b12;color:#f1f5f9;min-height:100vh;padding:20px;}
-    .wrap{max-width:720px;margin:0 auto;}
+    .wrap{max-width:760px;margin:0 auto;}
     h1{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.6rem;text-align:center;margin-bottom:6px;}
     h1 span{background:linear-gradient(135deg,#22c55e,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
     .sub{text-align:center;color:rgba(255,255,255,.4);font-size:.85rem;margin-bottom:24px;}
-    .btn{height:42px;border:none;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;font-family:'Outfit',sans-serif;transition:.2s;letter-spacing:.2px;width:100%;}
+    .btn{height:42px;border:none;border-radius:10px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:'Outfit',sans-serif;transition:.2s;letter-spacing:.2px;padding:0 16px;}
     .btn:active{transform:scale(.97);}
     .btn-green{color:#fff;background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 16px rgba(34,197,94,.25);}
     .btn-blue{color:#fff;background:linear-gradient(135deg,#3b82f6,#6366f1);box-shadow:0 4px 16px rgba(99,102,241,.25);}
     .btn-orange{color:#fff;background:linear-gradient(135deg,#f97316,#ef4444);box-shadow:0 4px 16px rgba(249,115,22,.25);}
+    .btn-purple{color:#fff;background:linear-gradient(135deg,#8b5cf6,#a855f7);box-shadow:0 4px 16px rgba(139,92,246,.25);}
+    .btn-sm{height:34px;font-size:.78rem;padding:0 12px;}
     .btn:hover{transform:translateY(-1px);}
     .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden;}
     .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#22c55e,#06b6d4,#8b5cf6);}
@@ -32,9 +34,11 @@
     .qr-area .code{font-family:monospace;font-size:1.8rem;font-weight:900;letter-spacing:8px;color:#22c55e;background:rgba(34,197,94,.08);padding:16px 24px;border-radius:12px;border:2px dashed rgba(34,197,94,.3);}
     .qr-msg{margin-top:10px;color:rgba(255,255,255,.4);font-size:.82rem;}
     .log{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px;font-family:monospace;font-size:.78rem;color:rgba(255,255,255,.5);max-height:200px;overflow-y:auto;white-space:pre-wrap;margin-top:12px;}
-    .inst{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px;margin-bottom:8px;}
+    .inst{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+    .inst-left{flex:1;min-width:200px;}
     .inst-name{font-weight:800;font-size:.95rem;}
     .inst-info{font-size:.8rem;color:rgba(255,255,255,.4);margin-top:4px;}
+    .inst-actions{display:flex;gap:6px;flex-wrap:wrap;}
     .loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#22c55e;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle;}
     @keyframes spin{to{transform:rotate(360deg);}}
     .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;text-transform:uppercase;}
@@ -43,43 +47,69 @@
     .tag-connecting{background:rgba(245,158,11,.15);color:#fde68a;}
     .refresh-row{display:flex;gap:8px;margin-bottom:12px;}
     .refresh-row .btn{flex:1;}
+    input.field{height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);padding:0 12px;color:#f1f5f9;font-size:.88rem;font-family:inherit;width:100%;}
+    input.field:focus{outline:none;border-color:rgba(34,197,94,.4);box-shadow:0 0 0 3px rgba(34,197,94,.1);}
+    .form-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:16px;}
+    .form-row label{font-size:.8rem;color:rgba(255,255,255,.5);font-weight:600;display:block;margin-bottom:4px;}
+    .form-row .btn{height:40px;}
+    @media(max-width:600px){.form-row{grid-template-columns:1fr;}}
   </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Saubh<span>.</span>Tech — WhatsApp Manager</h1>
-  <p class="sub">Connect, monitor, and manage Evolution API instances</p>
+  <p class="sub">Multi-tenant Evolution API instance manager</p>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
-    <button class="btn btn-green" onclick="fetchStatus()">🔄 Status</button>
-    <button class="btn btn-blue" onclick="connectInstance()">📱 QR Code</button>
-    <button class="btn btn-orange" onclick="fetchInstances()">📋 Instances</button>
+  <!-- Create New Instance -->
+  <div class="card">
+    <h2>➕ Create New Instance</h2>
+    <div class="form-row">
+      <div>
+        <label>Instance Name</label>
+        <input class="field" id="newInstName" placeholder="e.g. saubh-waba2"/>
+      </div>
+      <div>
+        <label>Phone Number (optional)</label>
+        <input class="field" id="newInstPhone" placeholder="e.g. 918130960040"/>
+      </div>
+      <button class="btn btn-purple" onclick="createInstance()">Create</button>
+    </div>
+    <div id="createResult"></div>
   </div>
 
+  <!-- All Instances -->
   <div class="card">
-    <h2>📊 Instance Status</h2>
-    <div id="statusContent"><span class="loader"></span> Loading...</div>
+    <h2>📋 All Instances <button class="btn btn-green btn-sm" onclick="fetchInstances()" style="margin-left:10px;">🔄 Refresh</button></h2>
+    <div id="instancesList"><span class="loader"></span> Loading...</div>
   </div>
 
+  <!-- QR Code / Connect -->
   <div class="card">
-    <h2>📱 QR Code / Pairing Code</h2>
+    <h2>📱 QR Code — <span id="qrInstLabel">select instance</span></h2>
     <div class="qr-area" id="qrArea">
-      <p style="color:rgba(255,255,255,.3);font-size:.88rem;">Click "📱 QR Code" above to connect WhatsApp</p>
+      <p style="color:rgba(255,255,255,.3);font-size:.88rem;">Click "📱 Connect" on any instance above</p>
     </div>
     <div class="refresh-row" id="qrRefreshRow" style="display:none;">
-      <button class="btn btn-blue" onclick="connectInstance()">🔄 Refresh QR</button>
-      <button class="btn btn-green" onclick="fetchStatus()">✅ Check if Connected</button>
+      <button class="btn btn-blue" id="qrRefreshBtn">🔄 Refresh QR</button>
+      <button class="btn btn-green" onclick="fetchInstances()">✅ Check Status</button>
     </div>
   </div>
 
+  <!-- Webhook Config -->
   <div class="card">
-    <h2>📋 All Instances</h2>
-    <div id="instancesList"></div>
-  </div>
-
-  <div class="card">
-    <h2>🔗 Webhook Config</h2>
-    <div id="webhookContent"><p style="color:rgba(255,255,255,.3);font-size:.88rem;">Loaded with status check.</p></div>
+    <h2>🔗 Set Webhook</h2>
+    <div class="form-row">
+      <div>
+        <label>Instance</label>
+        <input class="field" id="whInstName" placeholder="saubh-sim"/>
+      </div>
+      <div>
+        <label>Webhook URL</label>
+        <input class="field" id="whUrl" value="http://172.16.2.1:3001/api/crm/webhooks/evolution"/>
+      </div>
+      <button class="btn btn-orange" onclick="setWebhook()">Set</button>
+    </div>
+    <div id="webhookResult"></div>
   </div>
 
   <div class="log" id="log">Ready.
@@ -89,7 +119,7 @@
 <script>
 var EVO_BASE = '/whats';
 var EVO_KEY = 'eec4e150ae057851d1f1d690d371d3844373fa963191e01a09064dc105c35540';
-var EVO_INST = 'saubh-sim';
+var currentQrInst = '';
 
 function log(msg) {
   var el = document.getElementById('log');
@@ -100,102 +130,45 @@ function log(msg) {
 
 async function api(path, method, body) {
   method = method || 'GET';
-  var opts = {
-    method: method,
-    headers: { 'apikey': EVO_KEY, 'Content-Type': 'application/json' },
-  };
+  var opts = { method: method, headers: { 'apikey': EVO_KEY, 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
   var res = await fetch(EVO_BASE + path, opts);
   return await res.json();
 }
 
-async function fetchStatus() {
-  var el = document.getElementById('statusContent');
-  el.innerHTML = '<span class="loader"></span> Loading...';
-  log('Fetching status...');
-  try {
-    var state = await api('/instance/connectionState/' + EVO_INST);
-    var s = (state && state.instance && state.instance.state) || 'unknown';
-    var dotClass = s === 'open' ? 'dot-green' : s === 'connecting' ? 'dot-yellow' : 'dot-red';
-    var tagClass = s === 'open' ? 'tag-open' : s === 'connecting' ? 'tag-connecting' : 'tag-close';
-    var html = '<div class="status-row"><div class="dot ' + dotClass + '"></div> Connection: <span class="tag ' + tagClass + '">' + s + '</span></div>';
-
-    try {
-      var instances = await api('/instance/fetchInstances');
-      var me = null;
-      for (var i = 0; i < instances.length; i++) { if (instances[i].name === EVO_INST) { me = instances[i]; break; } }
-      if (me) {
-        html += '<div class="detail">Owner: ' + (me.ownerJid || 'N/A') + '</div>';
-        html += '<div class="detail">Profile: ' + (me.profileName || 'N/A') + '</div>';
-        html += '<div class="detail">Integration: ' + (me.integration || 'N/A') + '</div>';
-        html += '<div class="detail">Messages: ' + ((me._count && me._count.Message) || 0) + '</div>';
-        if (me.disconnectionReasonCode) html += '<div class="detail" style="color:#fca5a5;">Disconnect code: ' + me.disconnectionReasonCode + '</div>';
-      }
-    } catch(e2) {}
-
-    try {
-      var wh = await api('/webhook/find/' + EVO_INST);
-      html += '<div class="status-row" style="margin-top:8px;"><div class="dot ' + (wh.enabled ? 'dot-green' : 'dot-red') + '"></div> Webhook: ' + (wh.enabled ? 'Enabled' : 'Disabled') + '</div>';
-      html += '<div class="detail">URL: ' + (wh.url || 'N/A') + '</div>';
-      html += '<div class="detail">Events: ' + ((wh.events || []).join(', ') || 'all') + '</div>';
-      document.getElementById('webhookContent').innerHTML =
-        '<div class="status-row"><div class="dot ' + (wh.enabled ? 'dot-green' : 'dot-red') + '"></div> ' + (wh.enabled ? 'Active' : 'Disabled') + '</div>' +
-        '<div class="detail">URL: ' + (wh.url || 'N/A') + '</div>' +
-        '<div class="detail">Events: ' + ((wh.events || []).join(', ') || 'all') + '</div>';
-    } catch(e3) {}
-
-    el.innerHTML = html;
-    log('Status: ' + s);
-  } catch(e) {
-    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
-    log('Error: ' + e.message);
-  }
+function stateTag(s) {
+  var c = s === 'open' ? 'tag-open' : s === 'connecting' ? 'tag-connecting' : 'tag-close';
+  return '<span class="tag ' + c + '">' + s + '</span>';
 }
 
-async function connectInstance() {
-  var el = document.getElementById('qrArea');
-  el.innerHTML = '<span class="loader"></span> Generating QR code...';
-  document.getElementById('qrRefreshRow').style.display = 'none';
-  log('Requesting QR...');
-  try {
-    var data = await api('/instance/connect/' + EVO_INST);
-    log('Response keys: ' + Object.keys(data).join(', '));
-    if (data && data.base64) {
-      el.innerHTML = '<img src="' + data.base64 + '" alt="QR Code"/>' +
-        '<p class="qr-msg">Scan with WhatsApp → Settings → Linked Devices → Link a Device</p>' +
-        '<p class="qr-msg">QR expires in ~45s. Click Refresh if expired.</p>';
-      document.getElementById('qrRefreshRow').style.display = 'flex';
-    } else if (data && data.pairingCode) {
-      el.innerHTML = '<div class="code">' + data.pairingCode + '</div>' +
-        '<p class="qr-msg">Enter this code in WhatsApp → Linked Devices → Link with phone number</p>';
-      document.getElementById('qrRefreshRow').style.display = 'flex';
-    } else if (data && data.instance && data.instance.state === 'open') {
-      el.innerHTML = '<div class="status-row"><div class="dot dot-green"></div> Already connected!</div>' +
-        '<p class="qr-msg">Instance is already paired. No QR needed.</p>';
-    } else {
-      el.innerHTML = '<pre style="color:rgba(255,255,255,.5);font-size:.75rem;text-align:left;max-width:100%;overflow:auto;">' + JSON.stringify(data, null, 2) + '</pre>';
-      document.getElementById('qrRefreshRow').style.display = 'flex';
-    }
-  } catch(e) {
-    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
-    log('Error: ' + e.message);
-  }
+function dotHtml(s) {
+  var c = s === 'open' ? 'dot-green' : s === 'connecting' ? 'dot-yellow' : 'dot-red';
+  return '<div class="dot ' + c + '"></div>';
 }
 
 async function fetchInstances() {
   var el = document.getElementById('instancesList');
   el.innerHTML = '<span class="loader"></span> Loading...';
-  log('Fetching all instances...');
+  log('Fetching instances...');
   try {
     var data = await api('/instance/fetchInstances');
-    if (!data || !data.length) { el.innerHTML = '<p style="color:rgba(255,255,255,.3);">No instances found.</p>'; return; }
+    if (!data || !data.length) { el.innerHTML = '<p style="color:rgba(255,255,255,.3);">No instances. Create one above.</p>'; return; }
     var html = '';
     for (var i = 0; i < data.length; i++) {
       var inst = data[i];
       var s = inst.connectionStatus || 'unknown';
-      var tagClass = s === 'open' ? 'tag-open' : s === 'connecting' ? 'tag-connecting' : 'tag-close';
-      html += '<div class="inst"><div class="inst-name">' + inst.name + ' <span class="tag ' + tagClass + '">' + s + '</span></div>' +
-        '<div class="inst-info">Owner: ' + (inst.ownerJid || 'N/A') + ' · ' + (inst.integration || '') + ' · Msgs: ' + ((inst._count && inst._count.Message) || 0) + '</div></div>';
+      var owner = (inst.ownerJid || '').replace('@s.whatsapp.net', '');
+      html += '<div class="inst">' +
+        '<div class="inst-left">' +
+          '<div class="inst-name">' + dotHtml(s) + ' ' + inst.name + ' ' + stateTag(s) + '</div>' +
+          '<div class="inst-info">Phone: ' + (owner || 'N/A') + ' · ' + (inst.integration || '') + ' · Msgs: ' + ((inst._count && inst._count.Message) || 0) + '</div>' +
+        '</div>' +
+        '<div class="inst-actions">' +
+          '<button class="btn btn-blue btn-sm" onclick="connectInstance(\'' + inst.name + '\')">📱 Connect</button>' +
+          '<button class="btn btn-orange btn-sm" onclick="setWebhookFor(\'' + inst.name + '\')">🔗 Webhook</button>' +
+          '<button class="btn btn-green btn-sm" onclick="checkStatus(\'' + inst.name + '\')">📊 Status</button>' +
+        '</div>' +
+        '</div>';
     }
     el.innerHTML = html;
     log('Found ' + data.length + ' instance(s).');
@@ -205,7 +178,121 @@ async function fetchInstances() {
   }
 }
 
-window.addEventListener('load', function() { fetchStatus(); });
+async function connectInstance(name) {
+  currentQrInst = name;
+  document.getElementById('qrInstLabel').textContent = name;
+  var el = document.getElementById('qrArea');
+  el.innerHTML = '<span class="loader"></span> Generating QR for ' + name + '...';
+  document.getElementById('qrRefreshRow').style.display = 'none';
+  log('QR request for ' + name + '...');
+  try {
+    var data = await api('/instance/connect/' + name);
+    log('Response keys: ' + Object.keys(data).join(', '));
+    if (data && data.base64) {
+      el.innerHTML = '<img src="' + data.base64 + '" alt="QR Code"/>' +
+        '<p class="qr-msg"><b>' + name + '</b> — Scan with WhatsApp → Linked Devices → Link a Device</p>' +
+        '<p class="qr-msg">QR expires in ~45s. Click Refresh if expired.</p>';
+      document.getElementById('qrRefreshRow').style.display = 'flex';
+      document.getElementById('qrRefreshBtn').onclick = function() { connectInstance(name); };
+    } else if (data && data.pairingCode) {
+      el.innerHTML = '<div class="code">' + data.pairingCode + '</div>' +
+        '<p class="qr-msg"><b>' + name + '</b> — Enter code in WhatsApp → Linked Devices → Link with phone number</p>';
+      document.getElementById('qrRefreshRow').style.display = 'flex';
+      document.getElementById('qrRefreshBtn').onclick = function() { connectInstance(name); };
+    } else if (data && data.instance && data.instance.state === 'open') {
+      el.innerHTML = '<div class="status-row">' + dotHtml('open') + ' <b>' + name + '</b> is already connected!</div>' +
+        '<p class="qr-msg">No QR needed.</p>';
+    } else {
+      el.innerHTML = '<pre style="color:rgba(255,255,255,.5);font-size:.75rem;text-align:left;max-width:100%;overflow:auto;">' + JSON.stringify(data, null, 2) + '</pre>';
+      document.getElementById('qrRefreshRow').style.display = 'flex';
+      document.getElementById('qrRefreshBtn').onclick = function() { connectInstance(name); };
+    }
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+    log('Error: ' + e.message);
+  }
+}
+
+async function createInstance() {
+  var name = document.getElementById('newInstName').value.trim();
+  var phone = document.getElementById('newInstPhone').value.trim();
+  var el = document.getElementById('createResult');
+  if (!name) { alert('Enter an instance name'); return; }
+  el.innerHTML = '<span class="loader"></span> Creating...';
+  log('Creating instance: ' + name);
+  try {
+    var body = {
+      instanceName: name,
+      integration: 'WHATSAPP-BAILEYS',
+      qrcode: true,
+      webhook: {
+        url: 'http://172.16.2.1:3001/api/crm/webhooks/evolution',
+        enabled: true,
+        webhookByEvents: false,
+        events: ['MESSAGES_UPSERT']
+      }
+    };
+    if (phone) body.number = phone;
+    var data = await api('/instance/create', 'POST', body);
+    log('Created: ' + JSON.stringify(data).slice(0, 200));
+    el.innerHTML = '<p style="color:#86efac;">✅ Instance <b>' + name + '</b> created!</p>';
+    document.getElementById('newInstName').value = '';
+    document.getElementById('newInstPhone').value = '';
+    fetchInstances();
+    // Auto-show QR
+    if (data && data.qrcode && data.qrcode.base64) {
+      currentQrInst = name;
+      document.getElementById('qrInstLabel').textContent = name;
+      document.getElementById('qrArea').innerHTML = '<img src="' + data.qrcode.base64 + '" alt="QR Code"/>' +
+        '<p class="qr-msg"><b>' + name + '</b> — Scan with WhatsApp → Linked Devices</p>';
+      document.getElementById('qrRefreshRow').style.display = 'flex';
+      document.getElementById('qrRefreshBtn').onclick = function() { connectInstance(name); };
+    }
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+    log('Error: ' + e.message);
+  }
+}
+
+async function checkStatus(name) {
+  log('Status check: ' + name);
+  try {
+    var state = await api('/instance/connectionState/' + name);
+    var s = (state && state.instance && state.instance.state) || 'unknown';
+    var wh = null;
+    try { wh = await api('/webhook/find/' + name); } catch(e) {}
+    var msg = name + ': ' + s;
+    if (wh) msg += ' | Webhook: ' + (wh.enabled ? '✅ ' + wh.url : '❌ disabled');
+    log(msg);
+    alert(msg);
+  } catch(e) { log('Error: ' + e.message); alert('Error: ' + e.message); }
+}
+
+function setWebhookFor(name) {
+  document.getElementById('whInstName').value = name;
+  document.getElementById('whInstName').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function setWebhook() {
+  var name = document.getElementById('whInstName').value.trim();
+  var url = document.getElementById('whUrl').value.trim();
+  var el = document.getElementById('webhookResult');
+  if (!name || !url) { alert('Enter instance name and URL'); return; }
+  el.innerHTML = '<span class="loader"></span> Setting webhook...';
+  log('Setting webhook for ' + name + ' → ' + url);
+  try {
+    var data = await api('/webhook/set/' + name, 'POST', {
+      webhook: { url: url, enabled: true, webhookByEvents: false, events: ['MESSAGES_UPSERT'] }
+    });
+    log('Webhook set: ' + JSON.stringify(data).slice(0, 200));
+    el.innerHTML = '<p style="color:#86efac;">✅ Webhook set for <b>' + name + '</b></p>';
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+    log('Error: ' + e.message);
+  }
+}
+
+window.addEventListener('load', function() { fetchInstances(); });
 </script>
 </body>
 </html>
