@@ -615,6 +615,7 @@ model WaChannel {
   conversations WaConversation[]
   broadcasts    WaBroadcast[]
   botConfig     BotConfig?
+  templates     WaTemplate[]
 
   @@map("wa_channel")
   @@schema("crm")
@@ -730,5 +731,31 @@ model BotConfig {
   channel WaChannel @relation(fields: [channelId], references: [id])
 
   @@map("bot_config")
+  @@schema("crm")
+}
+
+// ─── CRM Schema: WABA Message Templates ─────────────────────────────────────
+
+model WaTemplate {
+  id        String   @id @default(cuid())
+  channelId String   @map("channel_id")
+  name      String   @db.VarChar(100)           /// lowercase_with_underscores
+  category  String   @db.VarChar(20)            /// MARKETING, UTILITY, AUTHENTICATION
+  language  String   @default("en") @db.VarChar(10)
+  status    String   @default("PENDING") @db.VarChar(10)  /// PENDING, APPROVED, REJECTED
+  body      String                               /// Template body text
+  header    String?                              /// Optional header (text/image/doc)
+  footer    String?                              /// Optional footer text
+  variables String[] @default([])               /// e.g. ["{{1}}", "{{2}}"]
+  metaId    String?  @map("meta_id")            /// Meta template ID after approval
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  channel WaChannel @relation(fields: [channelId], references: [id])
+
+  @@index([channelId])
+  @@index([status])
+  @@map("wa_template")
   @@schema("crm")
 }
