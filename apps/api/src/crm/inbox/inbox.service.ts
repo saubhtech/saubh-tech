@@ -74,7 +74,7 @@ export class InboxService {
     return { data, total, page, limit, pages: Math.ceil(total / limit) };
   }
 
-  // ─── Send a message (outbound) ────────────────────────────────────────
+  // ─── Send a text message (outbound) ───────────────────────────────────
   async sendMessage(conversationId: string, body: string, mediaUrl?: string) {
     const conv = await this.getConversation(conversationId);
 
@@ -104,6 +104,47 @@ export class InboxService {
     });
 
     this.logger.log(`Message sent in ${conversationId}: ${result.success ? 'OK' : 'FAILED'}`);
+    return { message, sendResult: result };
+  }
+
+  // ─── Send a media message (outbound) ──────────────────────────────────
+  async sendMediaMessage(
+    conversationId: string,
+    mediaUrl: string,
+    mediaType: 'image' | 'video' | 'audio' | 'document',
+    caption?: string,
+    filename?: string,
+  ) {
+    const conv = await this.getConversation(conversationId);
+
+    // Send via provider
+    const result = await this.channelService.sendMediaMessage(conv.channelId, {
+      to: conv.contact.whatsapp,
+      mediaUrl,
+      mediaType,
+      caption,
+      filename,
+    });
+
+    // Save message record
+    const message = await this.prisma.waMessage.create({
+      data: {
+        conversationId,
+        direction: 'OUT',
+        body: caption || null,
+        mediaUrl,
+        mediaType,
+        status: result.success ? 'SENT' : 'FAILED',
+        externalId: result.externalId,
+      },
+    });
+
+    await this.prisma.waConversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    });
+
+    this.logger.log(`Media sent in ${conversationId} (${mediaType}): ${result.success ? 'OK' : 'FAILED'}`);
     return { message, sendResult: result };
   }
 
