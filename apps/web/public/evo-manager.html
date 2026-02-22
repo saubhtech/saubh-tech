@@ -29,14 +29,16 @@
     .dot-red{background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,.5);}
     .dot-yellow{background:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,.5);}
     .detail{color:rgba(255,255,255,.45);font-size:.82rem;margin-left:18px;margin-bottom:2px;}
-    .qr-area{text-align:center;padding:20px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .qr-area{text-align:center;padding:20px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
     .qr-area img{max-width:280px;border-radius:12px;background:#fff;padding:8px;}
-    .qr-area .code{font-family:monospace;font-size:1.8rem;font-weight:900;letter-spacing:8px;color:#22c55e;background:rgba(34,197,94,.08);padding:16px 24px;border-radius:12px;border:2px dashed rgba(34,197,94,.3);}
-    .qr-msg{margin-top:10px;color:rgba(255,255,255,.4);font-size:.82rem;}
+    .pairing-code{font-family:monospace;font-size:2rem;font-weight:900;letter-spacing:10px;color:#22c55e;background:rgba(34,197,94,.08);padding:16px 28px;border-radius:12px;border:2px dashed rgba(34,197,94,.3);display:inline-block;}
+    .pairing-label{font-size:.82rem;color:rgba(255,255,255,.5);margin-top:-8px;}
+    .or-divider{color:rgba(255,255,255,.25);font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;}
+    .qr-msg{color:rgba(255,255,255,.4);font-size:.82rem;}
     .log{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px;font-family:monospace;font-size:.78rem;color:rgba(255,255,255,.5);max-height:200px;overflow-y:auto;white-space:pre-wrap;margin-top:12px;}
     .inst{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
     .inst-left{flex:1;min-width:200px;}
-    .inst-name{font-weight:800;font-size:.95rem;}
+    .inst-name{font-weight:800;font-size:.95rem;display:flex;align-items:center;gap:6px;}
     .inst-info{font-size:.8rem;color:rgba(255,255,255,.4);margin-top:4px;}
     .inst-actions{display:flex;gap:6px;flex-wrap:wrap;}
     .loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#22c55e;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle;}
@@ -53,10 +55,32 @@
     .form-row label{font-size:.8rem;color:rgba(255,255,255,.5);font-weight:600;display:block;margin-bottom:4px;}
     .form-row .btn{height:40px;}
     @media(max-width:600px){.form-row{grid-template-columns:1fr;}}
+
+    /* Auth overlay */
+    .auth-overlay{position:fixed;inset:0;background:#080b12;z-index:999;display:flex;align-items:center;justify-content:center;}
+    .auth-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px;text-align:center;max-width:380px;width:90%;}
+    .auth-box h2{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.4rem;margin-bottom:8px;}
+    .auth-box p{color:rgba(255,255,255,.4);font-size:.85rem;margin-bottom:20px;}
+    .auth-box input{height:44px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);padding:0 14px;color:#f1f5f9;font-size:1rem;width:100%;font-family:inherit;margin-bottom:12px;text-align:center;letter-spacing:2px;}
+    .auth-box input:focus{outline:none;border-color:rgba(34,197,94,.4);box-shadow:0 0 0 3px rgba(34,197,94,.15);}
+    .auth-box .btn{width:100%;}
+    .auth-error{color:#fca5a5;font-size:.82rem;margin-bottom:8px;display:none;}
   </style>
 </head>
 <body>
-<div class="wrap">
+
+<!-- Auth Gate -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <h2>🔐 Admin Access</h2>
+    <p>Enter admin passcode to manage WhatsApp instances</p>
+    <div class="auth-error" id="authError">Invalid passcode. Try again.</div>
+    <input type="password" id="authPass" placeholder="Passcode" onkeydown="if(event.key==='Enter')doAuth()"/>
+    <button class="btn btn-green" onclick="doAuth()">Unlock</button>
+  </div>
+</div>
+
+<div class="wrap" id="mainApp" style="display:none;">
   <h1>Saubh<span>.</span>Tech — WhatsApp Manager</h1>
   <p class="sub">Multi-tenant Evolution API instance manager</p>
 
@@ -85,12 +109,12 @@
 
   <!-- QR Code / Connect -->
   <div class="card">
-    <h2>📱 QR Code — <span id="qrInstLabel">select instance</span></h2>
+    <h2>📱 Connect — <span id="qrInstLabel">select instance</span></h2>
     <div class="qr-area" id="qrArea">
       <p style="color:rgba(255,255,255,.3);font-size:.88rem;">Click "📱 Connect" on any instance above</p>
     </div>
     <div class="refresh-row" id="qrRefreshRow" style="display:none;">
-      <button class="btn btn-blue" id="qrRefreshBtn">🔄 Refresh QR</button>
+      <button class="btn btn-blue" id="qrRefreshBtn">🔄 Refresh QR / Code</button>
       <button class="btn btn-green" onclick="fetchInstances()">✅ Check Status</button>
     </div>
   </div>
@@ -119,7 +143,30 @@
 <script>
 var EVO_BASE = '/whats';
 var EVO_KEY = 'eec4e150ae057851d1f1d690d371d3844373fa963191e01a09064dc105c35540';
+var ADMIN_HASH = '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8'; // sha256 of 'password' — change below
 var currentQrInst = '';
+
+// Simple SHA-256 hash
+async function sha256(str) {
+  var buf = new TextEncoder().encode(str);
+  var hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+
+async function doAuth() {
+  var pass = document.getElementById('authPass').value;
+  var hash = await sha256(pass);
+  // Accept: sha256 matches OR raw passcode matches 'Saubh@2026!'
+  if (hash === 'a]REAL_HASH' || pass === 'Saubh@2026!') {
+    document.getElementById('authOverlay').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    fetchInstances();
+  } else {
+    document.getElementById('authError').style.display = 'block';
+    document.getElementById('authPass').value = '';
+    document.getElementById('authPass').focus();
+  }
+}
 
 function log(msg) {
   var el = document.getElementById('log');
@@ -140,10 +187,9 @@ function stateTag(s) {
   var c = s === 'open' ? 'tag-open' : s === 'connecting' ? 'tag-connecting' : 'tag-close';
   return '<span class="tag ' + c + '">' + s + '</span>';
 }
-
 function dotHtml(s) {
   var c = s === 'open' ? 'dot-green' : s === 'connecting' ? 'dot-yellow' : 'dot-red';
-  return '<div class="dot ' + c + '"></div>';
+  return '<div class="dot ' + c + '" style="display:inline-block;"></div>';
 }
 
 async function fetchInstances() {
@@ -182,31 +228,41 @@ async function connectInstance(name) {
   currentQrInst = name;
   document.getElementById('qrInstLabel').textContent = name;
   var el = document.getElementById('qrArea');
-  el.innerHTML = '<span class="loader"></span> Generating QR for ' + name + '...';
+  el.innerHTML = '<span class="loader"></span> Generating QR & pairing code for <b>' + name + '</b>...';
   document.getElementById('qrRefreshRow').style.display = 'none';
-  log('QR request for ' + name + '...');
+  log('Connect request for ' + name + '...');
   try {
     var data = await api('/instance/connect/' + name);
     log('Response keys: ' + Object.keys(data).join(', '));
-    if (data && data.base64) {
-      el.innerHTML = '<img src="' + data.base64 + '" alt="QR Code"/>' +
-        '<p class="qr-msg"><b>' + name + '</b> — Scan with WhatsApp → Linked Devices → Link a Device</p>' +
-        '<p class="qr-msg">QR expires in ~45s. Click Refresh if expired.</p>';
-      document.getElementById('qrRefreshRow').style.display = 'flex';
-      document.getElementById('qrRefreshBtn').onclick = function() { connectInstance(name); };
-    } else if (data && data.pairingCode) {
-      el.innerHTML = '<div class="code">' + data.pairingCode + '</div>' +
-        '<p class="qr-msg"><b>' + name + '</b> — Enter code in WhatsApp → Linked Devices → Link with phone number</p>';
-      document.getElementById('qrRefreshRow').style.display = 'flex';
-      document.getElementById('qrRefreshBtn').onclick = function() { connectInstance(name); };
-    } else if (data && data.instance && data.instance.state === 'open') {
-      el.innerHTML = '<div class="status-row">' + dotHtml('open') + ' <b>' + name + '</b> is already connected!</div>' +
-        '<p class="qr-msg">No QR needed.</p>';
-    } else {
-      el.innerHTML = '<pre style="color:rgba(255,255,255,.5);font-size:.75rem;text-align:left;max-width:100%;overflow:auto;">' + JSON.stringify(data, null, 2) + '</pre>';
-      document.getElementById('qrRefreshRow').style.display = 'flex';
-      document.getElementById('qrRefreshBtn').onclick = function() { connectInstance(name); };
+
+    if (data && data.instance && data.instance.state === 'open') {
+      el.innerHTML = '<div class="status-row" style="justify-content:center;">' + dotHtml('open') + ' <b>' + name + '</b> is already connected!</div>' +
+        '<p class="qr-msg">No QR needed. Instance is paired and active.</p>';
+      return;
     }
+
+    var html = '';
+    // Pairing code (show first — easier on mobile)
+    if (data && data.pairingCode) {
+      html += '<div class="pairing-code">' + data.pairingCode + '</div>';
+      html += '<p class="pairing-label">Enter this code in WhatsApp → Linked Devices → Link with phone number</p>';
+    }
+
+    // QR code
+    if (data && data.base64) {
+      if (html) html += '<div class="or-divider">— or scan QR —</div>';
+      html += '<img src="' + data.base64 + '" alt="QR Code"/>';
+      html += '<p class="qr-msg">Scan with WhatsApp → Settings → Linked Devices → Link a Device</p>';
+    }
+
+    if (!html) {
+      html = '<pre style="color:rgba(255,255,255,.5);font-size:.75rem;text-align:left;max-width:100%;overflow:auto;">' + JSON.stringify(data, null, 2) + '</pre>';
+    }
+
+    html += '<p class="qr-msg" style="margin-top:8px;">⏱ Expires in ~45s. Click Refresh if expired.</p>';
+    el.innerHTML = html;
+    document.getElementById('qrRefreshRow').style.display = 'flex';
+    document.getElementById('qrRefreshBtn').onclick = function() { connectInstance(name); };
   } catch(e) {
     el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
     log('Error: ' + e.message);
@@ -235,19 +291,12 @@ async function createInstance() {
     if (phone) body.number = phone;
     var data = await api('/instance/create', 'POST', body);
     log('Created: ' + JSON.stringify(data).slice(0, 200));
-    el.innerHTML = '<p style="color:#86efac;">✅ Instance <b>' + name + '</b> created!</p>';
+    el.innerHTML = '<p style="color:#86efac;">✅ Instance <b>' + name + '</b> created! Click Connect below to pair.</p>';
     document.getElementById('newInstName').value = '';
     document.getElementById('newInstPhone').value = '';
     fetchInstances();
-    // Auto-show QR
-    if (data && data.qrcode && data.qrcode.base64) {
-      currentQrInst = name;
-      document.getElementById('qrInstLabel').textContent = name;
-      document.getElementById('qrArea').innerHTML = '<img src="' + data.qrcode.base64 + '" alt="QR Code"/>' +
-        '<p class="qr-msg"><b>' + name + '</b> — Scan with WhatsApp → Linked Devices</p>';
-      document.getElementById('qrRefreshRow').style.display = 'flex';
-      document.getElementById('qrRefreshBtn').onclick = function() { connectInstance(name); };
-    }
+    // Auto-connect to show QR + pairing code
+    setTimeout(function() { connectInstance(name); }, 500);
   } catch(e) {
     el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
     log('Error: ' + e.message);
@@ -262,7 +311,7 @@ async function checkStatus(name) {
     var wh = null;
     try { wh = await api('/webhook/find/' + name); } catch(e) {}
     var msg = name + ': ' + s;
-    if (wh) msg += ' | Webhook: ' + (wh.enabled ? '✅ ' + wh.url : '❌ disabled');
+    if (wh) msg += ' | Webhook: ' + (wh.enabled ? 'ON → ' + wh.url : 'OFF');
     log(msg);
     alert(msg);
   } catch(e) { log('Error: ' + e.message); alert('Error: ' + e.message); }
@@ -292,7 +341,10 @@ async function setWebhook() {
   }
 }
 
-window.addEventListener('load', function() { fetchInstances(); });
+// Focus password input on load
+window.addEventListener('load', function() {
+  document.getElementById('authPass').focus();
+});
 </script>
 </body>
 </html>
