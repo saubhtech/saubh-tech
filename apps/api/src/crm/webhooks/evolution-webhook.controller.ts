@@ -1,6 +1,8 @@
 import { Controller, Post, Body, HttpCode, Logger } from '@nestjs/common';
 import { WebhookService } from './webhook.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuthCommandService } from '../../auth/auth-command.service';
+import { ChannelService } from '../channels/channel.service';
 
 @Controller('crm/webhooks/evolution')
 export class EvolutionWebhookController {
@@ -9,6 +11,8 @@ export class EvolutionWebhookController {
   constructor(
     private readonly webhookService: WebhookService,
     private readonly prisma: PrismaService,
+    private readonly authCommand: AuthCommandService,
+    private readonly channelService: ChannelService,
   ) {}
 
   @Post()
@@ -71,7 +75,28 @@ export class EvolutionWebhookController {
         return { status: 'no_channel' };
       }
 
-      // Process inbound message
+      // ── Auth command interception (Register / Passcode) ──────────────
+      if (body) {
+        try {
+          const cmdResult = await this.authCommand.handleCommand(
+            senderWhatsapp,
+            body,
+            messageData?.pushName,
+          );
+          if (cmdResult.handled && cmdResult.reply) {
+            const normalizedSender = this.authCommand.normalizeWhatsapp(senderWhatsapp);
+            await this.channelService.sendMessage(channel.id, {
+              to: normalizedSender,
+              body: cmdResult.reply,
+            });
+            this.logger.log(`Auth command handled for ${normalizedSender} via EVOLUTION`);
+          }
+        } catch (err: any) {
+          this.logger.error(`Auth command error: ${err.message}`);
+        }
+      }
+
+      // ── CRM processing (always — so message appears in inbox) ────────
       const result = await this.webhookService.processInbound({
         senderWhatsapp,
         senderName: messageData?.pushName || undefined,
