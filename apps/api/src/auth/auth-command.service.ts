@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OtpService } from './otp.service';
+import { normalizeWhatsApp } from './normalize-phone';
 
 export interface CommandResult {
   handled: boolean;
@@ -17,19 +18,16 @@ export class AuthCommandService {
   ) {}
 
   /**
-   * Normalize WhatsApp number: strip +, spaces, @s.whatsapp.net.
-   * Result: 91XXXXXXXXXX (never +91).
+   * Normalize WhatsApp number (delegates to shared utility).
+   * Kept as public method for backward compat with webhook controllers.
    */
   normalizeWhatsapp(raw: string): string {
-    let num = raw
-      .replace(/@s\.whatsapp\.net$/i, '')
-      .replace(/[+\s\-()]/g, '');
-    return num;
+    return normalizeWhatsApp(raw);
   }
 
   /**
-   * Check if inbound text is a Register or Passcode command.
-   * Returns { handled: true, reply } if command matched, { handled: false } otherwise.
+   * Check if inbound text is a Register, Passcode, Login, or OTP command.
+   * Returns { handled: true, reply } if matched, { handled: false } otherwise.
    */
   async handleCommand(
     rawWhatsapp: string,
@@ -39,28 +37,27 @@ export class AuthCommandService {
     const trimmed = (text || '').trim();
     if (!trimmed) return { handled: false };
 
-    const whatsapp = this.normalizeWhatsapp(rawWhatsapp);
+    const whatsapp = normalizeWhatsApp(rawWhatsapp);
+    const upper = trimmed.toUpperCase();
 
-    // ── "Register <Name>" command ──────────────────────────────────────
-    const registerMatch = trimmed.match(/^register\s+(.+)$/i);
-    if (registerMatch) {
-      const name = registerMatch[1].trim();
-      if (name) {
-        return this.handleRegister(whatsapp, name);
-      }
+    // ── "Register <name>" command ──────────────────────────────────
+    if (upper.startsWith('REGISTER')) {
+      const namePart = trimmed.slice(8).trim();
+      const name = namePart || pushName || 'Friend';
+      return this.handleRegister(whatsapp, name);
     }
 
-    // ── "Passcode" command ─────────────────────────────────────────────
-    if (trimmed.toLowerCase() === 'passcode') {
+    // ── "Passcode" / "Login" / "OTP" command ────────────────────────
+    if (upper === 'PASSCODE' || upper === 'LOGIN' || upper === 'OTP') {
       return this.handlePasscode(whatsapp, pushName);
     }
 
     return { handled: false };
   }
 
-  // ──────────────────────────────────────────────────────────────────────
-  // Register: user NOT found → create + welcome | found → welcome back
-  // ──────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────
+  // Register: new → create with static passcode | existing → Redis OTP
+  // ──────────────────────────────────────────────────────────────────
   private async handleRegister(
     whatsapp: string,
     name: string,
@@ -70,31 +67,45 @@ export class AuthCommandService {
     });
 
     if (!existing) {
-      // New user
+      // New user — static passcode = last 4 digits of whatsapp
+      const staticPasscode = whatsapp.slice(-4);
       await this.prisma.user.create({
-        data: { whatsapp, fname: name, usertype: 'GW', status: 'A' },
+        data: {
+          whatsapp,
+          fname: name,
+          usertype: 'GW',
+          status: 'A',
+          passcode: staticPasscode,
+          passcodeExpiry: null,
+        },
       });
-      const passcode = await this.otpService.generateOTP(whatsapp);
       this.logger.log(`Registered new user via WA: ${whatsapp} (${name})`);
       return {
         handled: true,
-        reply: this.welcomeMessage(name, whatsapp, passcode),
+        reply: this.welcomeMessage(name, whatsapp, staticPasscode),
       };
     }
 
-    // Existing user → send passcode
-    const passcode = await this.otpService.generateOTP(whatsapp);
+    // Existing user → generate Redis OTP
+    const allowed = await this.otpService.checkRateLimit(whatsapp);
+    if (!allowed) {
+      return {
+        handled: true,
+        reply: '\u23F3 Too many requests. Please try again in a minute.',
+      };
+    }
+    const otp = await this.otpService.generateOTP(whatsapp);
     const displayName = existing.fname || name;
     this.logger.log(`Register command from existing user: ${whatsapp}`);
     return {
       handled: true,
-      reply: this.welcomeBackMessage(displayName, passcode),
+      reply: this.welcomeBackMessage(displayName, otp),
     };
   }
 
-  // ──────────────────────────────────────────────────────────────────────
-  // Passcode: user found → welcome back | NOT found → create + welcome
-  // ──────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────
+  // Passcode: existing → Redis OTP | new → register with static
+  // ──────────────────────────────────────────────────────────────────
   private async handlePasscode(
     whatsapp: string,
     pushName?: string,
@@ -104,30 +115,28 @@ export class AuthCommandService {
     });
 
     if (existing) {
-      // Existing user → send passcode
-      const passcode = await this.otpService.generateOTP(whatsapp);
+      const allowed = await this.otpService.checkRateLimit(whatsapp);
+      if (!allowed) {
+        return {
+          handled: true,
+          reply: '\u23F3 Too many requests. Please try again in a minute.',
+        };
+      }
+      const otp = await this.otpService.generateOTP(whatsapp);
       const displayName = existing.fname || 'User';
       this.logger.log(`Passcode command from existing user: ${whatsapp}`);
       return {
         handled: true,
-        reply: this.welcomeBackMessage(displayName, passcode),
+        reply: this.welcomeBackMessage(displayName, otp),
       };
     }
 
-    // New user → create with pushName then welcome
-    const name = pushName || 'User';
-    await this.prisma.user.create({
-      data: { whatsapp, fname: name, usertype: 'GW', status: 'A' },
-    });
-    const passcode = await this.otpService.generateOTP(whatsapp);
-    this.logger.log(`Auto-registered user via Passcode command: ${whatsapp} (${name})`);
-    return {
-      handled: true,
-      reply: this.welcomeMessage(name, whatsapp, passcode),
-    };
+    // New user → register with static passcode
+    const name = pushName || 'Friend';
+    return this.handleRegister(whatsapp, name);
   }
 
-  // ── Message templates ─────────────────────────────────────────────────
+  // ── Message templates ─────────────────────────────────────────────
   private welcomeMessage(name: string, whatsapp: string, passcode: string): string {
     return [
       `Welcome to Saubh.Tech, ${name}!\u{1F44B}`,
@@ -135,13 +144,16 @@ export class AuthCommandService {
       `\u{1F517} URL: https://saubh.tech`,
       `\u{1F464} Login: ${whatsapp}`,
       `\u{1F510} Passcode: ${passcode}`,
+      ``,
+      `This is your permanent passcode.`,
+      `You can also type \"Passcode\" anytime to get a temporary OTP.`,
     ].join('\n');
   }
 
-  private welcomeBackMessage(name: string, passcode: string): string {
+  private welcomeBackMessage(name: string, otp: string): string {
     return [
       `\u{1F44B} Welcome back, ${name}!`,
-      `\u{1F522} Your one-time passcode is: ${passcode}`,
+      `\u{1F522} Your one-time passcode is: ${otp}`,
       `\u{23F0} Valid for 2 minutes only.`,
     ].join('\n');
   }

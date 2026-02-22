@@ -7,6 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { WhatsappAuthService } from './whatsapp-auth.service';
+import { normalizeWhatsApp } from './normalize-phone';
 
 @Controller('auth/whatsapp')
 export class WhatsappAuthController {
@@ -14,8 +15,7 @@ export class WhatsappAuthController {
 
   /**
    * POST /auth/whatsapp/register
-   * Register a new user via WhatsApp number.
-   * Returns 201 on new registration, 200 with existing user if already registered.
+   * Register a new user. Static passcode = last 4 digits of number.
    */
   @Post('register')
   async register(
@@ -41,7 +41,7 @@ export class WhatsappAuthController {
     }
 
     const user = await this.authService.registerUser(
-      whatsapp.trim(),
+      normalizeWhatsApp(whatsapp),
       fname.trim(),
       ut,
     );
@@ -54,8 +54,7 @@ export class WhatsappAuthController {
 
   /**
    * POST /auth/whatsapp/request-otp
-   * Request OTP for an existing user.
-   * 200 on success, 404 if not registered, 429 if rate limited.
+   * Request OTP (Redis, 120s TTL). 404 if not registered, 429 if rate limited.
    */
   @Post('request-otp')
   @HttpCode(HttpStatus.OK)
@@ -66,7 +65,7 @@ export class WhatsappAuthController {
       throw new BadRequestException('WhatsApp number is required.');
     }
 
-    await this.authService.requestOTP(whatsapp.trim());
+    await this.authService.requestOTP(normalizeWhatsApp(whatsapp));
 
     return {
       success: true,
@@ -76,29 +75,32 @@ export class WhatsappAuthController {
 
   /**
    * POST /auth/whatsapp/verify-otp
-   * Verify OTP and return JWT token.
-   * 200 on success, 400 if invalid/expired OTP.
+   * Verify OTP (Redis) or static passcode (Prisma) and return JWT.
+   * Accepts BOTH: { otp: "1234" } and { passcode: "1234" }
    */
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() body: { whatsapp?: string; passcode?: string }) {
-    const { whatsapp, passcode } = body;
+  async verifyOtp(
+    @Body() body: { whatsapp?: string; otp?: string; passcode?: string },
+  ) {
+    const { whatsapp } = body;
+    const code = body.otp ?? body.passcode; // Frontend sends "otp", legacy sends "passcode"
 
     if (!whatsapp || !whatsapp.trim()) {
       throw new BadRequestException('WhatsApp number is required.');
     }
 
-    if (!passcode || !passcode.trim()) {
-      throw new BadRequestException('Passcode is required.');
+    if (!code || !code.trim()) {
+      throw new BadRequestException('OTP or passcode is required.');
     }
 
     const result = await this.authService.loginWithOTP(
-      whatsapp.trim(),
-      passcode.trim(),
+      normalizeWhatsApp(whatsapp),
+      code.trim(),
     );
 
     if (!result) {
-      throw new BadRequestException('Invalid or expired OTP.');
+      throw new BadRequestException('Invalid or expired OTP/passcode.');
     }
 
     return {
@@ -110,7 +112,6 @@ export class WhatsappAuthController {
 
   /**
    * POST /auth/whatsapp/logout
-   * Client handles cookie deletion. Server just confirms.
    */
   @Post('logout')
   @HttpCode(HttpStatus.OK)
