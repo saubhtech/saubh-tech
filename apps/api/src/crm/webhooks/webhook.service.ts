@@ -38,17 +38,31 @@ export class WebhookService {
         contactId: contact.id,
         status: { not: 'RESOLVED' },
       },
+      include: { channel: true },
     });
 
+    let isNewConversation = false;
+
     if (!conversation) {
+      // Check if channel has defaultBotEnabled
+      const channel = await this.prisma.waChannel.findUnique({
+        where: { id: msg.channelId },
+      });
+
+      const enableBot = channel?.defaultBotEnabled ?? false;
+
       conversation = await this.prisma.waConversation.create({
         data: {
           channelId: msg.channelId,
           contactId: contact.id,
           status: 'OPEN',
+          isBot: enableBot,
         },
+        include: { channel: true },
       });
-      this.logger.log(`New conversation ${conversation.id} for ${msg.senderWhatsapp}`);
+
+      isNewConversation = true;
+      this.logger.log(`New conversation ${conversation.id} for ${msg.senderWhatsapp} (bot: ${enableBot})`);
     }
 
     // 3. Save inbound message
@@ -74,8 +88,15 @@ export class WebhookService {
       `Inbound ${msg.senderWhatsapp} → conv ${conversation.id}: ${msg.body?.substring(0, 50) || '[media]'}`,
     );
 
-    // 5. Trigger bot auto-reply (async — do not block webhook response)
-    if (msg.body && conversation.isBot) {
+    // 5. Bot: send greeting on NEW conversation if bot enabled
+    if (isNewConversation && conversation.isBot) {
+      this.botService.sendGreeting(conversation.id).catch(err => {
+        this.logger.error(`Bot greeting failed: ${err.message}`);
+      });
+    }
+
+    // 6. Bot: auto-reply on existing conversation if bot enabled
+    if (!isNewConversation && msg.body && conversation.isBot) {
       this.botService.autoReply(conversation.id, msg.body).catch(err => {
         this.logger.error(`Bot auto-reply failed: ${err.message}`);
       });
