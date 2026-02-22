@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Saubh.Tech — WhatsApp Instance Manager</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',system-ui,sans-serif;background:#080b12;color:#f1f5f9;min-height:100vh;padding:20px;}
+    .wrap{max-width:720px;margin:0 auto;}
+    h1{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.6rem;text-align:center;margin-bottom:6px;}
+    h1 span{background:linear-gradient(135deg,#22c55e,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .sub{text-align:center;color:rgba(255,255,255,.4);font-size:.85rem;margin-bottom:24px;}
+
+    .config{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:16px;display:grid;gap:10px;}
+    .config label{font-size:.8rem;color:rgba(255,255,255,.5);font-weight:600;}
+    .config input{height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);padding:0 12px;color:#f1f5f9;font-size:.88rem;width:100%;font-family:inherit;}
+    .config input:focus{outline:none;border-color:rgba(34,197,94,.4);box-shadow:0 0 0 3px rgba(34,197,94,.1);}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .btn{height:42px;border:none;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;font-family:'Outfit',sans-serif;transition:.2s;letter-spacing:.2px;width:100%;}
+    .btn:active{transform:scale(.97);}
+    .btn-green{color:#fff;background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 16px rgba(34,197,94,.25);}
+    .btn-blue{color:#fff;background:linear-gradient(135deg,#3b82f6,#6366f1);box-shadow:0 4px 16px rgba(99,102,241,.25);}
+    .btn-orange{color:#fff;background:linear-gradient(135deg,#f97316,#ef4444);box-shadow:0 4px 16px rgba(249,115,22,.25);}
+    .btn-gray{color:#fff;background:linear-gradient(135deg,#475569,#334155);box-shadow:0 4px 16px rgba(71,85,105,.25);}
+    .btn:hover{transform:translateY(-1px);}
+
+    .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden;}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#22c55e,#06b6d4,#8b5cf6);}
+    .card h2{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.05rem;margin-bottom:12px;}
+
+    .status-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.9rem;}
+    .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+    .dot-green{background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.5);}
+    .dot-red{background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,.5);}
+    .dot-yellow{background:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,.5);}
+    .detail{color:rgba(255,255,255,.45);font-size:.82rem;margin-left:18px;margin-bottom:2px;}
+
+    .qr-area{text-align:center;padding:20px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .qr-area img{max-width:280px;border-radius:12px;background:#fff;padding:8px;}
+    .qr-area .code{font-family:monospace;font-size:1.8rem;font-weight:900;letter-spacing:8px;color:#22c55e;background:rgba(34,197,94,.08);padding:16px 24px;border-radius:12px;border:2px dashed rgba(34,197,94,.3);}
+    .qr-msg{margin-top:10px;color:rgba(255,255,255,.4);font-size:.82rem;}
+
+    .log{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px;font-family:monospace;font-size:.78rem;color:rgba(255,255,255,.5);max-height:200px;overflow-y:auto;white-space:pre-wrap;margin-top:12px;}
+
+    .inst{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px;margin-bottom:8px;}
+    .inst-name{font-weight:800;font-size:.95rem;}
+    .inst-info{font-size:.8rem;color:rgba(255,255,255,.4);margin-top:4px;}
+
+    .loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#22c55e;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;text-transform:uppercase;}
+    .tag-open{background:rgba(34,197,94,.15);color:#86efac;}
+    .tag-close{background:rgba(239,68,68,.15);color:#fca5a5;}
+    .tag-connecting{background:rgba(245,158,11,.15);color:#fde68a;}
+
+    .refresh-row{display:flex;gap:8px;margin-bottom:12px;}
+    .refresh-row .btn{flex:1;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Saubh<span>.</span>Tech — WhatsApp Manager</h1>
+  <p class="sub">Connect, monitor, and manage Evolution API instances</p>
+
+  <!-- Config -->
+  <div class="config">
+    <div>
+      <label>Evolution API URL</label>
+      <input id="apiUrl" value="https://evo.saubh.tech" placeholder="https://evo.saubh.tech"/>
+    </div>
+    <div>
+      <label>API Key</label>
+      <input id="apiKey" type="password" value=""/>
+    </div>
+    <div>
+      <label>Instance Name</label>
+      <input id="instName" value="saubh-sim"/>
+    </div>
+    <div class="row">
+      <button class="btn btn-green" onclick="fetchStatus()">🔄 Check Status</button>
+      <button class="btn btn-blue" onclick="connectInstance()">📱 Get QR Code</button>
+    </div>
+  </div>
+
+  <!-- Instance Status -->
+  <div class="card" id="statusCard">
+    <h2>📊 Instance Status</h2>
+    <div id="statusContent">
+      <p style="color:rgba(255,255,255,.3);font-size:.88rem;">Enter API Key and click "Check Status"</p>
+    </div>
+  </div>
+
+  <!-- QR Code -->
+  <div class="card" id="qrCard">
+    <h2>📱 QR Code / Pairing Code</h2>
+    <div class="qr-area" id="qrArea">
+      <p style="color:rgba(255,255,255,.3);font-size:.88rem;">Click "Get QR Code" to connect WhatsApp</p>
+    </div>
+    <div class="refresh-row" id="qrRefreshRow" style="display:none;">
+      <button class="btn btn-blue" onclick="connectInstance()">🔄 Refresh QR</button>
+      <button class="btn btn-green" onclick="fetchStatus()">✅ Check if Connected</button>
+    </div>
+  </div>
+
+  <!-- All Instances -->
+  <div class="card">
+    <h2>📋 All Instances</h2>
+    <button class="btn btn-orange" onclick="fetchInstances()" style="margin-bottom:12px;width:auto;padding:0 20px;">Load All Instances</button>
+    <div id="instancesList"></div>
+  </div>
+
+  <!-- Webhook Config -->
+  <div class="card">
+    <h2>🔗 Webhook Config</h2>
+    <div id="webhookContent">
+      <p style="color:rgba(255,255,255,.3);font-size:.88rem;">Loaded with status check above.</p>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="log" id="log">Ready.
+</div>
+</div>
+
+<script>
+function getConfig() {
+  return {
+    url: document.getElementById('apiUrl').value.replace(/\/+$/, ''),
+    key: document.getElementById('apiKey').value,
+    inst: document.getElementById('instName').value,
+  };
+}
+
+function log(msg) {
+  const el = document.getElementById('log');
+  const ts = new Date().toLocaleTimeString();
+  el.textContent += `[${ts}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function api(path, method, body) {
+  method = method || 'GET';
+  const c = getConfig();
+  if (!c.key) { alert('Please enter the API Key'); throw new Error('No API key'); }
+  const opts = {
+    method: method,
+    headers: { 'apikey': c.key, 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(c.url + path, opts);
+  return await res.json();
+}
+
+async function fetchStatus() {
+  var inst = getConfig().inst;
+  var el = document.getElementById('statusContent');
+  el.innerHTML = '<span class="loader"></span> Loading...';
+  log('Fetching status for ' + inst + '...');
+  try {
+    var state = await api('/instance/connectionState/' + inst);
+    var s = (state && state.instance && state.instance.state) || 'unknown';
+    var dotClass = s === 'open' ? 'dot-green' : s === 'connecting' ? 'dot-yellow' : 'dot-red';
+    var tagClass = s === 'open' ? 'tag-open' : s === 'connecting' ? 'tag-connecting' : 'tag-close';
+
+    var html = '<div class="status-row"><div class="dot ' + dotClass + '"></div> Connection: <span class="tag ' + tagClass + '">' + s + '</span></div>';
+
+    try {
+      var instances = await api('/instance/fetchInstances');
+      var me = null;
+      for (var i = 0; i < instances.length; i++) {
+        if (instances[i].name === inst) { me = instances[i]; break; }
+      }
+      if (me) {
+        html += '<div class="detail">Owner: ' + (me.ownerJid || 'N/A') + '</div>';
+        html += '<div class="detail">Profile: ' + (me.profileName || 'N/A') + '</div>';
+        html += '<div class="detail">Integration: ' + (me.integration || 'N/A') + '</div>';
+        html += '<div class="detail">Messages: ' + ((me._count && me._count.Message) || 0) + '</div>';
+        if (me.disconnectionReasonCode) {
+          html += '<div class="detail" style="color:#fca5a5;">Disconnect code: ' + me.disconnectionReasonCode + '</div>';
+        }
+      }
+    } catch(e2) {}
+
+    try {
+      var wh = await api('/webhook/find/' + inst);
+      html += '<div class="status-row" style="margin-top:8px;"><div class="dot ' + (wh.enabled ? 'dot-green' : 'dot-red') + '"></div> Webhook: ' + (wh.enabled ? 'Enabled' : 'Disabled') + '</div>';
+      html += '<div class="detail">URL: ' + (wh.url || 'N/A') + '</div>';
+      html += '<div class="detail">Events: ' + ((wh.events || []).join(', ') || 'all') + '</div>';
+      document.getElementById('webhookContent').innerHTML =
+        '<div class="status-row"><div class="dot ' + (wh.enabled ? 'dot-green' : 'dot-red') + '"></div> ' + (wh.enabled ? 'Active' : 'Disabled') + '</div>' +
+        '<div class="detail">URL: ' + (wh.url || 'N/A') + '</div>' +
+        '<div class="detail">Events: ' + ((wh.events || []).join(', ') || 'all') + '</div>';
+    } catch(e3) {}
+
+    el.innerHTML = html;
+    log('Status: ' + s);
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+    log('Error: ' + e.message);
+  }
+}
+
+async function connectInstance() {
+  var inst = getConfig().inst;
+  var el = document.getElementById('qrArea');
+  el.innerHTML = '<span class="loader"></span> Generating QR code...';
+  document.getElementById('qrRefreshRow').style.display = 'none';
+  log('Requesting QR for ' + inst + '...');
+  try {
+    var data = await api('/instance/connect/' + inst);
+    log('Response: ' + JSON.stringify(data).slice(0, 300));
+
+    if (data && data.base64) {
+      el.innerHTML = '<img src="' + data.base64 + '" alt="QR Code"/>' +
+        '<p class="qr-msg">Scan with WhatsApp → Settings → Linked Devices → Link a Device</p>' +
+        '<p class="qr-msg">QR expires in ~45s. Click Refresh if expired.</p>';
+      document.getElementById('qrRefreshRow').style.display = 'flex';
+    } else if (data && data.pairingCode) {
+      el.innerHTML = '<div class="code">' + data.pairingCode + '</div>' +
+        '<p class="qr-msg">Enter this code in WhatsApp → Settings → Linked Devices → Link with phone number</p>';
+      document.getElementById('qrRefreshRow').style.display = 'flex';
+    } else if (data && data.instance && data.instance.state === 'open') {
+      el.innerHTML = '<div class="status-row"><div class="dot dot-green"></div> Already connected!</div>' +
+        '<p class="qr-msg">Instance is already paired. No QR needed.</p>';
+    } else {
+      el.innerHTML = '<pre style="color:rgba(255,255,255,.5);font-size:.75rem;text-align:left;max-width:100%;overflow:auto;">' + JSON.stringify(data, null, 2) + '</pre>';
+      document.getElementById('qrRefreshRow').style.display = 'flex';
+    }
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+    log('Error: ' + e.message);
+  }
+}
+
+async function fetchInstances() {
+  var el = document.getElementById('instancesList');
+  el.innerHTML = '<span class="loader"></span> Loading...';
+  log('Fetching all instances...');
+  try {
+    var data = await api('/instance/fetchInstances');
+    if (!data || !data.length) {
+      el.innerHTML = '<p style="color:rgba(255,255,255,.3);">No instances found.</p>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < data.length; i++) {
+      var inst = data[i];
+      var s = inst.connectionStatus || 'unknown';
+      var tagClass = s === 'open' ? 'tag-open' : s === 'connecting' ? 'tag-connecting' : 'tag-close';
+      html += '<div class="inst">' +
+        '<div class="inst-name">' + inst.name + ' <span class="tag ' + tagClass + '">' + s + '</span></div>' +
+        '<div class="inst-info">Owner: ' + (inst.ownerJid || 'N/A') + ' · Integration: ' + (inst.integration || 'N/A') + ' · Messages: ' + ((inst._count && inst._count.Message) || 0) + '</div>' +
+        '</div>';
+    }
+    el.innerHTML = html;
+    log('Found ' + data.length + ' instance(s).');
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+    log('Error: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>
