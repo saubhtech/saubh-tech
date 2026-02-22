@@ -7,8 +7,7 @@ import ChannelBadge from '@/components/ui/ChannelBadge';
 import GlassCard from '@/components/ui/GlassCard';
 import GradientButton from '@/components/ui/GradientButton';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
-
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.saubh.tech';
+import api from '@/lib/api';
 
 interface WaContact {
   id: string;
@@ -45,8 +44,8 @@ export default function ContactsPage() {
 
   const fetchChannels = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/crm/channels`);
-      setChannels(await res.json() || []);
+      const data = await api.get<any[]>('/api/crm/channels');
+      setChannels(data || []);
     } catch (e) { console.error(e); }
   }, []);
 
@@ -58,8 +57,7 @@ export default function ContactsPage() {
         const ch = channels.find((c: any) => c.type === selectedChannel);
         if (ch) params.set('channelId', ch.id);
       }
-      const res = await fetch(`${API}/api/crm/contacts?${params}`);
-      const json = await res.json();
+      const json = await api.get<any>(`/api/crm/contacts?${params}`);
       setContacts(json.data || []);
       setTotal(json.total || 0);
     } catch (e) { console.error(e); }
@@ -69,8 +67,7 @@ export default function ContactsPage() {
   const fetchContactDetail = async (id: string) => {
     setDetailLoading(true);
     try {
-      const res = await fetch(`${API}/api/crm/contacts/${id}`);
-      const data = await res.json();
+      const data = await api.get<any>(`/api/crm/contacts/${id}`);
       setSelectedContact(data);
     } catch (e) { console.error(e); }
     finally { setDetailLoading(false); }
@@ -79,22 +76,14 @@ export default function ContactsPage() {
   const addContact = async () => {
     if (!newWhatsapp.trim()) return;
     try {
-      await fetch(`${API}/api/crm/contacts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ whatsapp: newWhatsapp.trim(), name: newName.trim() || undefined }),
-      });
+      await api.post('/api/crm/contacts', { whatsapp: newWhatsapp.trim(), name: newName.trim() || undefined });
       setNewWhatsapp(''); setNewName(''); setShowAdd(false);
       await fetchContacts();
     } catch (e) { console.error(e); }
   };
 
   const toggleBlock = async (id: string, current: boolean) => {
-    await fetch(`${API}/api/crm/contacts/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isBlocked: !current }),
-    });
+    await api.patch(`/api/crm/contacts/${id}`, { isBlocked: !current });
     await fetchContacts();
     if (selectedContact?.id === id) fetchContactDetail(id);
   };
