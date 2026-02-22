@@ -45,77 +45,157 @@ export default function LoginPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-        .lp{--bg:#f6f8ff;--card:rgba(255,255,255,0.82);--line:rgba(24,33,72,0.10);--text:#15192d;--muted:#65708d;--accent1:#8b5cf6;--accent2:#22c55e;--accent3:#06b6d4;--accent4:#f59e0b;--shadow:0 20px 60px rgba(32,44,96,0.10);--radius:24px;
-          min-height:100vh;padding:22px;font-family:'DM Sans',Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;color:var(--text);
-          background:radial-gradient(circle at 8% 10%,rgba(139,92,246,.18),transparent 28%),radial-gradient(circle at 92% 12%,rgba(34,197,94,.14),transparent 28%),radial-gradient(circle at 20% 90%,rgba(6,182,212,.12),transparent 30%),radial-gradient(circle at 85% 88%,rgba(245,158,11,.12),transparent 30%),var(--bg);
-          display:flex;flex-direction:column;align-items:center;justify-content:center;}
+        *{box-sizing:border-box;margin:0;padding:0;}
 
-        .lp-wrap{max-width:1120px;width:100%;margin:0 auto;}
+        .lp{
+          --lime:#a3e635;--green:#22c55e;--teal:#14b8a6;--orange:#f97316;--pink:#f43f5e;--violet:#8b5cf6;
+          min-height:100vh;padding:20px;
+          font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#f1f5f9;
+          background:#080b12;position:relative;overflow:hidden;
+          display:flex;align-items:center;justify-content:center;
+        }
 
-        /* logo bar */
-        .lp-logo-bar{display:flex;justify-content:center;margin-bottom:18px;}
-        .lp-logo{display:inline-flex;align-items:center;gap:10px;padding:8px 16px 8px 8px;border-radius:999px;background:rgba(255,255,255,0.75);border:1px solid var(--line);box-shadow:0 8px 24px rgba(35,42,86,0.06);backdrop-filter:blur(10px);font-weight:900;letter-spacing:.2px;text-decoration:none;color:var(--text);}
-        .lp-logo-img{width:32px;height:32px;border-radius:10px;object-fit:cover;}
-        .lp-logo-dot{color:var(--accent1);}
+        /* animated gradient mesh */
+        .lp-mesh{position:fixed;inset:0;z-index:0;pointer-events:none;}
+        .lp-mesh div{position:absolute;border-radius:50%;filter:blur(100px);opacity:.4;animation:drift 14s ease-in-out infinite alternate;}
+        .lp-m1{width:500px;height:500px;top:-10%;left:-8%;background:var(--green);}
+        .lp-m2{width:400px;height:400px;top:10%;right:-5%;background:var(--orange);animation-delay:-3s!important;animation-duration:16s!important;}
+        .lp-m3{width:350px;height:350px;bottom:-5%;left:30%;background:var(--violet);animation-delay:-7s!important;animation-duration:18s!important;opacity:.25;}
+        .lp-m4{width:280px;height:280px;bottom:15%;right:15%;background:var(--teal);animation-delay:-5s!important;opacity:.2;}
+        @keyframes drift{0%{transform:translate(0,0) scale(1);}50%{transform:translate(30px,-20px) scale(1.1);}100%{transform:translate(-15px,25px) scale(.95);}}
+
+        /* grid noise overlay */
+        .lp::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+          background-image:radial-gradient(rgba(255,255,255,.03) 1px,transparent 1px);
+          background-size:24px 24px;opacity:.6;}
+
+        .lp-inner{position:relative;z-index:1;width:100%;max-width:1000px;}
+
+        /* logo */
+        .lp-head{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px;}
+        .lp-logo-img{width:40px;height:40px;border-radius:12px;object-fit:cover;
+          box-shadow:0 0 20px rgba(34,197,94,.35),0 0 40px rgba(34,197,94,.15);}
+        .lp-brand{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.6rem;letter-spacing:-.5px;color:#fff;}
+        .lp-brand-dot{background:linear-gradient(135deg,var(--lime),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 
         /* grid */
         .lp-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 
-        /* cards */
-        .lp-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(14px);overflow:hidden;position:relative;}
-        .lp-card::before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:4px;opacity:.9;}
-        .lp-card-left::before{background:linear-gradient(90deg,var(--accent1),var(--accent3));}
-        .lp-card-right::before{background:linear-gradient(90deg,var(--accent4),#fb7185);}
+        /* glass card */
+        .lp-card{
+          position:relative;border-radius:22px;overflow:hidden;
+          background:rgba(255,255,255,.04);
+          border:1px solid rgba(255,255,255,.08);
+          backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+          transition:border-color .3s,box-shadow .3s;
+        }
+        .lp-card:hover{border-color:rgba(255,255,255,.14);}
 
-        .lp-card-inner{padding:20px;display:grid;gap:16px;}
+        /* top glow line */
+        .lp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+        .lp-card-left::before{background:linear-gradient(90deg,var(--green),var(--teal),var(--violet));}
+        .lp-card-left:hover{box-shadow:0 0 50px rgba(34,197,94,.08),0 20px 60px rgba(0,0,0,.3);}
+        .lp-card-right::before{background:linear-gradient(90deg,var(--orange),var(--pink));}
+        .lp-card-right:hover{box-shadow:0 0 50px rgba(249,115,22,.08),0 20px 60px rgba(0,0,0,.3);}
 
-        .lp-title{font-size:1.15rem;font-weight:900;letter-spacing:.2px;margin:0;}
-        .lp-mini{font-size:1rem;font-weight:800;margin:0 0 6px;}
+        /* inner glow on left card */
+        .lp-card-left::after{content:'';position:absolute;top:0;left:0;width:60%;height:40%;
+          background:radial-gradient(ellipse at top left,rgba(34,197,94,.06),transparent);pointer-events:none;}
+        .lp-card-right::after{content:'';position:absolute;top:0;right:0;width:60%;height:40%;
+          background:radial-gradient(ellipse at top right,rgba(249,115,22,.06),transparent);pointer-events:none;}
+
+        .lp-card-inner{padding:22px;display:grid;gap:16px;position:relative;z-index:1;}
+
+        .lp-title{font-family:'Outfit',sans-serif;font-size:1.12rem;font-weight:800;letter-spacing:.1px;}
+        .lp-mini{font-family:'Outfit',sans-serif;font-size:.95rem;font-weight:700;margin-bottom:4px;}
 
         /* steps */
-        .lp-steps{display:grid;gap:10px;border:1px dashed rgba(29,38,77,0.14);border-radius:16px;padding:14px;background:rgba(255,255,255,0.55);}
-        .lp-step{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;font-size:.95rem;line-height:1.35;}
-        .lp-num{width:22px;height:22px;border-radius:999px;border:1px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:800;background:#fff;}
-        .lp-hint{color:var(--muted);font-size:.85rem;line-height:1.35;margin-top:-2px;padding-left:30px;}
-        .lp-phones{font-weight:800;letter-spacing:.1px;}
+        .lp-steps{
+          display:grid;gap:9px;padding:14px;border-radius:14px;
+          background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.08);
+        }
+        .lp-step{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:center;font-size:.88rem;line-height:1.4;color:rgba(255,255,255,.65);}
+        .lp-num{
+          width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+          font-size:11px;font-weight:800;color:#fff;
+          background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+        }
+        .lp-hint{color:rgba(255,255,255,.35);font-size:.78rem;padding-left:30px;margin-top:-2px;}
+        .lp-phones{font-weight:800;color:rgba(255,255,255,.85);}
 
         /* form block */
-        .lp-block{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,0.75);padding:14px;}
-
+        .lp-block{padding:14px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);}
         .lp-form{display:grid;gap:10px;}
-        .lp-input{height:44px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:0 12px;font-size:.95rem;outline:none;transition:.2s ease;width:100%;box-sizing:border-box;font-family:inherit;}
-        .lp-input::placeholder{color:#9ca3af;}
-        .lp-input:focus{border-color:rgba(99,102,241,.35);box-shadow:0 0 0 4px rgba(99,102,241,.08);}
 
-        .lp-btn{height:46px;border:none;border-radius:12px;font-weight:800;font-size:.95rem;cursor:pointer;transition:.18s ease;letter-spacing:.1px;width:100%;font-family:inherit;}
-        .lp-btn:active{transform:translateY(1px);}
-        .lp-btn:disabled{opacity:.55;cursor:not-allowed;}
+        .lp-input{
+          height:44px;border-radius:12px;padding:0 14px;font-size:.9rem;width:100%;
+          font-family:'Plus Jakarta Sans',sans-serif;color:#f1f5f9;outline:none;
+          background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+          transition:.25s;
+        }
+        .lp-input::placeholder{color:rgba(255,255,255,.28);}
+        .lp-input:focus{border-color:rgba(163,230,53,.35);box-shadow:0 0 0 3px rgba(163,230,53,.08);background:rgba(255,255,255,.07);}
 
-        .lp-btn-wa{color:#fff;background:linear-gradient(135deg,#25D366,#128C7E);box-shadow:0 10px 20px rgba(37,211,102,.22);display:block;text-align:center;text-decoration:none;line-height:46px;}
-        .lp-btn-wa:hover{transform:translateY(-1px);box-shadow:0 14px 26px rgba(37,211,102,.28);}
+        /* buttons */
+        .lp-btn{
+          height:46px;border:none;border-radius:12px;font-weight:700;font-size:.92rem;
+          cursor:pointer;width:100%;font-family:'Outfit',sans-serif;letter-spacing:.2px;
+          transition:.2s;position:relative;overflow:hidden;
+        }
+        .lp-btn:active{transform:scale(.98);}
+        .lp-btn:disabled{opacity:.5;cursor:not-allowed;}
 
-        .lp-btn-continue{color:#fff;background:linear-gradient(135deg,var(--accent1),var(--accent3));box-shadow:0 10px 20px rgba(99,102,241,.20);}
-        .lp-btn-continue:hover{transform:translateY(-1px);box-shadow:0 14px 26px rgba(99,102,241,.28);}
+        .lp-btn-wa{
+          color:#fff;
+          background:linear-gradient(135deg,#25D366 0%,#128C7E 100%);
+          box-shadow:0 8px 24px rgba(37,211,102,.25);
+          display:block;text-align:center;text-decoration:none;line-height:46px;
+        }
+        .lp-btn-wa:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(37,211,102,.35);}
 
-        .lp-err{background:#fef2f2;color:#dc2626;padding:10px 14px;border-radius:8px;font-size:.88rem;}
+        .lp-btn-continue{
+          color:#fff;
+          background:linear-gradient(135deg,var(--violet) 0%,var(--teal) 100%);
+          box-shadow:0 8px 24px rgba(139,92,246,.2);
+        }
+        .lp-btn-continue:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(139,92,246,.3);}
 
-        @media(max-width:860px){
+        /* shimmer on buttons */
+        .lp-btn::after{
+          content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+          transition:.5s;
+        }
+        .lp-btn:hover::after{left:120%;}
+
+        .lp-err{background:rgba(244,63,94,.12);color:#fda4af;padding:10px 14px;border-radius:10px;font-size:.84rem;border:1px solid rgba(244,63,94,.15);}
+
+        @media(max-width:720px){
           .lp{padding:14px;}
-          .lp-grid{grid-template-columns:1fr;}
-          .lp-card-inner{padding:16px;}
+          .lp-grid{grid-template-columns:1fr;gap:14px;}
+          .lp-card-inner{padding:18px;}
+          .lp-brand{font-size:1.3rem;}
+          .lp-m1,.lp-m2{width:300px;height:300px;}
+          .lp-m3,.lp-m4{display:none;}
         }
       `}</style>
 
       <div className="lp">
-        <div className="lp-wrap">
+        {/* Animated mesh background */}
+        <div className="lp-mesh">
+          <div className="lp-m1" />
+          <div className="lp-m2" />
+          <div className="lp-m3" />
+          <div className="lp-m4" />
+        </div>
+
+        <div className="lp-inner">
           {/* Logo */}
-          <div className="lp-logo-bar">
-            <a href={`/${locale}`} className="lp-logo">
-              <Image src="/logo.jpg" alt="Saubh.Tech" width={32} height={32} className="lp-logo-img" />
-              <span>Saubh<span className="lp-logo-dot">.</span>Tech</span>
-            </a>
+          <div className="lp-head">
+            <Image src="/logo.jpg" alt="Saubh.Tech" width={40} height={40} className="lp-logo-img" />
+            <div className="lp-brand">Saubh<span className="lp-brand-dot">.</span>Tech</div>
           </div>
 
           <div className="lp-grid">
@@ -125,34 +205,17 @@ export default function LoginPage() {
                 <h2 className="lp-title">👤 Register</h2>
 
                 <div className="lp-steps">
-                  <div className="lp-step">
-                    <div className="lp-num">1</div>
-                    <div>Open your WhatsApp</div>
-                  </div>
-                  <div className="lp-step">
-                    <div className="lp-num">2</div>
-                    <div>Type: Register Your Name*</div>
-                  </div>
-                  <div className="lp-step">
-                    <div className="lp-num">3</div>
-                    <div>Send to: <span className="lp-phones">+918800607598</span> or <span className="lp-phones">+918130960040</span></div>
-                  </div>
+                  <div className="lp-step"><div className="lp-num">1</div><div>Open your WhatsApp</div></div>
+                  <div className="lp-step"><div className="lp-num">2</div><div>Type: Register Your Name*</div></div>
+                  <div className="lp-step"><div className="lp-num">3</div><div>Send to: <span className="lp-phones">+918800607598</span> or <span className="lp-phones">+918130960040</span></div></div>
                   <div className="lp-hint">* Replace &quot;Your Name&quot; with Your Real Name</div>
                 </div>
 
                 <div className="lp-block">
                   <h3 className="lp-mini">👤 Join Saubh.Tech</h3>
                   <div className="lp-form">
-                    <input
-                      className="lp-input"
-                      type="text"
-                      placeholder="Your name"
-                      value={regName}
-                      onChange={e => setRegName(e.target.value)}
-                    />
-                    <a href={waLink} target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-wa">
-                      WhatsApp to Register
-                    </a>
+                    <input className="lp-input" type="text" placeholder="Your name" value={regName} onChange={e => setRegName(e.target.value)} />
+                    <a href={waLink} target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-wa">WhatsApp to Register</a>
                   </div>
                 </div>
               </div>
@@ -164,47 +227,19 @@ export default function LoginPage() {
                 <h2 className="lp-title">🔐 Sign In</h2>
 
                 <div className="lp-steps">
-                  <div className="lp-step">
-                    <div className="lp-num">1</div>
-                    <div>Open your WhatsApp</div>
-                  </div>
-                  <div className="lp-step">
-                    <div className="lp-num">2</div>
-                    <div>Type: Passcode</div>
-                  </div>
-                  <div className="lp-step">
-                    <div className="lp-num">3</div>
-                    <div>Send to: <span className="lp-phones">+918800607598</span> or <span className="lp-phones">+918130960040</span></div>
-                  </div>
+                  <div className="lp-step"><div className="lp-num">1</div><div>Open your WhatsApp</div></div>
+                  <div className="lp-step"><div className="lp-num">2</div><div>Type: Passcode</div></div>
+                  <div className="lp-step"><div className="lp-num">3</div><div>Send to: <span className="lp-phones">+918800607598</span> or <span className="lp-phones">+918130960040</span></div></div>
                   <div className="lp-hint">You&apos;ll receive a 4-digit passcode</div>
                 </div>
 
                 <div className="lp-block">
                   <h3 className="lp-mini">🔐 Login</h3>
-
                   {error && <div className="lp-err">{error}</div>}
-
                   <form className="lp-form" onSubmit={handleLogin}>
-                    <input
-                      className="lp-input"
-                      type="tel"
-                      inputMode="numeric"
-                      placeholder="WhatsApp Number"
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                    />
-                    <input
-                      className="lp-input"
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={4}
-                      placeholder="Passcode"
-                      value={passcode}
-                      onChange={e => setPasscode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    />
-                    <button className="lp-btn lp-btn-continue" type="submit" disabled={loading}>
-                      {loading ? 'Verifying...' : 'Continue'}
-                    </button>
+                    <input className="lp-input" type="tel" inputMode="numeric" placeholder="WhatsApp Number" value={phone} onChange={e => setPhone(e.target.value)} />
+                    <input className="lp-input" type="password" inputMode="numeric" maxLength={4} placeholder="Passcode" value={passcode} onChange={e => setPasscode(e.target.value.replace(/\D/g, '').slice(0, 4))} />
+                    <button className="lp-btn lp-btn-continue" type="submit" disabled={loading}>{loading ? 'Verifying...' : 'Continue'}</button>
                   </form>
                 </div>
               </div>
