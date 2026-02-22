@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ContactsService } from '../contacts/contacts.service';
 import { BotService } from '../bot/bot.service';
@@ -22,11 +23,11 @@ export class WebhookService {
     private readonly prisma: PrismaService,
     private readonly contactsService: ContactsService,
     private readonly botService: BotService,
+    private readonly config: ConfigService,
   ) {
-    const redisUrl = process.env.REDIS_URL;
+    const redisUrl = this.config.get<string>('REDIS_URL');
     if (redisUrl) {
       try {
-        // Dynamic require to avoid TS module resolution when ioredis isn't installed
         const IORedis = require('ioredis');
         this.redis = new IORedis(redisUrl);
         this.redis.on('error', (err: any) =>
@@ -36,6 +37,8 @@ export class WebhookService {
       } catch (err: any) {
         this.logger.warn(`Redis not available for pub/sub: ${err.message}`);
       }
+    } else {
+      this.logger.warn('REDIS_URL not configured — real-time pub/sub disabled');
     }
   }
 
