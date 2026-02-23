@@ -1,79 +1,65 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class OtpService {
-  private readonly logger = new Logger(OtpService.name);
-
-  constructor(@Inject('REDIS') private readonly redis: any) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Generate a 4-digit OTP and store in Redis with 120s TTL.
-   * Returns the code string (zero-padded).
-   * NEVER writes to Prisma — OTP is Redis-only.
+   * Generate a 4-digit OTP for the given WhatsApp number.
+   * Stores passcode + passcode_expiry (NOW + 2 minutes) in public.user table.
+   * Throws NotFoundException if the WhatsApp number is not registered.
    */
   async generateOTP(whatsapp: string): Promise<string> {
+    // Generate 4-digit numeric code (0000–9999, zero-padded)
     const code = Math.floor(Math.random() * 10000)
       .toString()
       .padStart(4, '0');
 
-    try {
-      await this.redis.set(`otp:wa:${whatsapp}`, code, 'EX', 120);
-    } catch (err: any) {
-      this.logger.error(`Redis SET otp:wa:${whatsapp} failed: ${err.message}`);
-      // Don't throw — caller sends OTP via WhatsApp anyway,
-      // login will fall back to static passcode in Prisma
+    const expiry = new Date(Date.now() + 2 * 60 * 1000); // NOW + 2 minutes
+
+    const result = await this.prisma.user.updateMany({
+      where: { whatsapp },
+      data: {
+        passcode: code,
+        passcodeExpiry: expiry,
+      },
+    });
+
+    if (result.count === 0) {
+      throw new NotFoundException(
+        `User with WhatsApp number ${whatsapp} not found. Please register first.`,
+      );
     }
 
     return code;
   }
 
   /**
-   * Verify OTP from Redis. Returns true if valid, false otherwise.
-   * On success, deletes the key (one-time use).
+   * Verify OTP for the given WhatsApp number.
+   * If valid: clears passcode + passcode_expiry, returns true.
+   * If invalid or expired: returns false (never throws).
    */
   async verifyOTP(whatsapp: string, code: string): Promise<boolean> {
-    try {
-      const stored = await this.redis.get(`otp:wa:${whatsapp}`);
-      if (!stored) return false;
-      if (stored !== code) return false;
+    const user = await this.prisma.user.findUnique({
+      where: { whatsapp },
+      select: { userid: true, passcode: true, passcodeExpiry: true },
+    });
 
-      // Valid — delete to prevent reuse
-      await this.redis.del(`otp:wa:${whatsapp}`);
-      return true;
-    } catch (err: any) {
-      this.logger.error(`Redis OTP verify failed for ${whatsapp}: ${err.message}`);
-      return false; // fallback to static passcode in caller
-    }
-  }
+    if (!user) return false;
+    if (!user.passcode || !user.passcodeExpiry) return false;
+    if (user.passcode !== code) return false;
+    if (user.passcodeExpiry < new Date()) return false;
 
-  /**
-   * Rate limit: max 3 OTP requests per minute per number.
-   * Returns true if allowed, false if rate limited.
-   */
-  async checkRateLimit(whatsapp: string): Promise<boolean> {
-    const key = `ratelimit:otp:${whatsapp}`;
-    try {
-      const count = await this.redis.incr(key);
-      if (count === 1) {
-        await this.redis.expire(key, 60);
-      }
-      return count <= 3;
-    } catch (err: any) {
-      this.logger.error(`Redis rate limit check failed: ${err.message}`);
-      return true; // allow on Redis failure
-    }
-  }
+    // OTP valid — clear passcode fields
+    await this.prisma.user.update({
+      where: { whatsapp },
+      data: {
+        passcode: null,
+        passcodeExpiry: null,
+      },
+    });
 
-  /**
-   * Webhook dedupe: returns true if NEW message, false if duplicate.
-   */
-  async dedupeCheck(key: string): Promise<boolean> {
-    try {
-      const result = await this.redis.set(`dedupe:${key}`, '1', 'EX', 120, 'NX');
-      return result === 'OK';
-    } catch (err: any) {
-      this.logger.error(`Redis dedupe check failed: ${err.message}`);
-      return true; // process on Redis failure
-    }
+    return true;
   }
 }

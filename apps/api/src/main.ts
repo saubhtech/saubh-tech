@@ -28,9 +28,6 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // ─── Static file serving (profile photos) ──────────────────────────
-  (app as any).useStaticAssets('/data/uploads', { prefix: '/api/uploads' });
-
   // ─── Validation ─────────────────────────────────────────────────────
   app.useGlobalPipes(
     new ValidationPipe({

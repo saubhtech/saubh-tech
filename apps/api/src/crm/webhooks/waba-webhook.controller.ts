@@ -2,8 +2,6 @@ import { Controller, Post, Get, Body, Query, Req, HttpCode, Logger } from '@nest
 import { ConfigService } from '@nestjs/config';
 import { WebhookService } from './webhook.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AuthCommandService } from '../../auth/auth-command.service';
-import { ChannelService } from '../channels/channel.service';
 import * as crypto from 'crypto';
 
 @Controller('crm/webhooks/waba')
@@ -14,8 +12,6 @@ export class WabaWebhookController {
     private readonly webhookService: WebhookService,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-    private readonly authCommand: AuthCommandService,
-    private readonly channelService: ChannelService,
   ) {}
 
   // ─── Meta verification endpoint ───────────────────────────────────────────
@@ -94,28 +90,6 @@ export class WabaWebhookController {
             const mediaUrl = mediaId ? `waba-media:${mediaId}` : undefined;
             const mediaType = msg?.type === 'text' ? undefined : msg?.type || undefined;
 
-            // ── Auth command interception (Register / Passcode) ────────
-            if (body) {
-              try {
-                const cmdResult = await this.authCommand.handleCommand(
-                  senderWhatsapp,
-                  body,
-                  senderName,
-                );
-                if (cmdResult.handled && cmdResult.reply) {
-                  const normalizedSender = this.authCommand.normalizeWhatsapp(senderWhatsapp);
-                  await this.channelService.sendMessage(channel.id, {
-                    to: normalizedSender,
-                    body: cmdResult.reply,
-                  });
-                  this.logger.log(`Auth command handled for ${normalizedSender} via WABA`);
-                }
-              } catch (err: any) {
-                this.logger.error(`Auth command error (WABA): ${err.message}`);
-              }
-            }
-
-            // ── CRM processing (always) ───────────────────────────────
             await this.webhookService.processInbound({
               senderWhatsapp,
               senderName,

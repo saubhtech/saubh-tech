@@ -10,8 +10,6 @@ import { AdminModule } from './admin/admin.module';
 import { MasterModule } from './master/master.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { WhatsappAuthModule } from './auth/whatsapp-auth.module';
-import { ProfileModule } from './auth/profile.module';
-import { BackupModule } from './backup/backup.module';
 import { CrmModule } from './crm/crm.module';
 
 @Module({
@@ -33,8 +31,6 @@ import { CrmModule } from './crm/crm.module';
     MasterModule,
     WhatsappModule,
     WhatsappAuthModule,
-    ProfileModule,
-    BackupModule,
     CrmModule,
   ],
 })
