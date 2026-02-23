@@ -167,8 +167,10 @@ export class BackupService {
       // Step 2: Database dump
       this.logger.log(`[${id}] Step 2: Dumping database...`);
       const dbPath = path.join(dir, dbFile);
+      const dbUser = process.env.DB_USER || 'saubh_admin';
+      const dbName = process.env.DB_NAME || 'saubhtech';
       await this.exec(
-        `docker exec saubh-postgres pg_dump -U postgres saubhtech > ${dbPath}`,
+        `docker exec saubh-postgres pg_dump -U ${dbUser} ${dbName} > ${dbPath}`,
       );
 
       // Step 3: Get file sizes
@@ -325,7 +327,9 @@ export class BackupService {
       // Step 3: Restore database
       job.step = 'restoring-db'; job.pct = 50;
       this.logger.log(`[${jobId}] Restoring database...`);
-      await this.exec(`docker exec -i saubh-postgres psql -U postgres saubhtech < ${path.join(dir, status.dbFile)}`);
+      const dbUser = process.env.DB_USER || 'saubh_admin';
+      const dbName = process.env.DB_NAME || 'saubhtech';
+      await this.exec(`docker exec -i saubh-postgres psql -U ${dbUser} ${dbName} < ${path.join(dir, status.dbFile)}`);
 
       // Step 4: Install dependencies
       job.step = 'installing'; job.pct = 65;
