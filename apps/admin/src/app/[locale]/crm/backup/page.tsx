@@ -718,7 +718,7 @@ function ScheduleTab({ password }: { password: string }) {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 function DriveTab({ password }: { password: string }) {
-  const [status, setStatus] = useState<{ connected: boolean; email: string; folderId: string } | null>(null);
+  const [status, setStatus] = useState<{ connected: boolean; hasCredentials: boolean; hasToken: boolean; folderId: string } | null>(null);
   const [files, setFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -779,26 +779,36 @@ function DriveTab({ password }: { password: string }) {
         </div>
         {status?.connected && (
           <div style={{ marginTop: '12px', padding: '12px 16px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>
-            <div>Service Account: <strong style={{ color: '#a78bfa' }}>{status.email}</strong></div>
-            <div style={{ marginTop: '4px' }}>Folder ID: <code style={{ color: '#a78bfa' }}>{status.folderId}</code></div>
+            <div>Folder ID: <code style={{ color: '#a78bfa' }}>{status.folderId}</code></div>
+            <div style={{ marginTop: '4px' }}>Auth: <span style={{ color: '#34d399' }}>OAuth2 token stored</span></div>
           </div>
         )}
-        {!status?.connected && (
+        {status?.hasCredentials && !status?.hasToken && (
+          <div style={{ marginTop: '16px' }}>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '12px', marginTop: 0 }}>OAuth credentials configured. Click below to authorize Google Drive access.</p>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await apiFetch('/drive/auth-url', password);
+                  if (res.ok) {
+                    const data = await res.json();
+                    window.location.href = data.url;
+                  }
+                } catch { /* ignore */ }
+              }}
+              style={{ ...primaryBtnStyle, background: 'linear-gradient(135deg, #34d399, #059669)' }}
+            >Connect Google Drive</button>
+          </div>
+        )}
+        {!status?.hasCredentials && (
           <div style={{ marginTop: '16px', padding: '20px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#a78bfa', marginBottom: '12px', marginTop: 0 }}>Setup Instructions</h4>
+            <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#a78bfa', marginBottom: '12px', marginTop: 0 }}>Setup Required</h4>
             <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.8 }}>
-              <div style={{ marginBottom: '4px' }}>1. Create a <strong>Service Account</strong> in Google Cloud Console</div>
-              <div style={{ marginBottom: '4px' }}>2. Enable <strong>Google Drive API</strong></div>
-              <div style={{ marginBottom: '4px' }}>3. Download the JSON key file</div>
-              <div style={{ marginBottom: '4px' }}>4. Place it at:</div>
-              <code style={{ display: 'block', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', fontSize: '12px', color: '#a78bfa', marginBottom: '8px', marginLeft: '16px' }}>
-                /data/backups/google-service-account.json
-              </code>
-              <div style={{ marginBottom: '4px' }}>5. Add to server <strong>.env</strong>:</div>
-              <code style={{ display: 'block', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', fontSize: '12px', color: '#a78bfa', marginLeft: '16px' }}>
-                GDRIVE_FOLDER_ID=your_folder_id
-              </code>
-              <div style={{ marginTop: '8px' }}>6. Share Drive folder with service account email</div>
+              <div style={{ marginBottom: '4px' }}>Add these env vars to the API <strong>.env</strong> file:</div>
+              <code style={{ display: 'block', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', fontSize: '12px', color: '#a78bfa', marginLeft: '16px', whiteSpace: 'pre' as const }}>{`GDRIVE_CLIENT_ID=your_client_id
+GDRIVE_CLIENT_SECRET=your_client_secret
+GDRIVE_FOLDER_ID=your_folder_id`}</code>
+              <div style={{ marginTop: '8px' }}>Then restart the API and click Connect.</div>
             </div>
           </div>
         )}

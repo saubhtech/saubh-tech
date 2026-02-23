@@ -4,7 +4,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const BACKUP_DIR = '/data/backups';
-const SERVICE_ACCOUNT_PATH = '/data/backups/google-service-account.json';
+const TOKEN_PATH = '/data/backups/gdrive-token.json';
+const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 
 export interface DriveFileInfo {
   id: string;
@@ -25,32 +26,58 @@ export interface UploadProgress {
 }
 
 /**
- * BackupDriveService — uploads backups to Google Drive using a service account.
+ * BackupDriveService — uploads backups to Google Drive using OAuth2.
  *
- * Requires:
- *   - /data/backups/google-service-account.json (service account key)
- *   - GDRIVE_FOLDER_ID env var (shared folder ID)
+ * Flow:
+ *   1. Admin clicks "Connect Google Drive" → redirected to Google consent
+ *   2. Google redirects back with auth code → exchanged for refresh token
+ *   3. Refresh token stored at /data/backups/gdrive-token.json
+ *   4. All future uploads use refresh token (auto-refreshes access token)
+ *
+ * Requires env vars:
+ *   - GDRIVE_CLIENT_ID
+ *   - GDRIVE_CLIENT_SECRET
+ *   - GDRIVE_FOLDER_ID
  */
 @Injectable()
 export class BackupDriveService {
   private readonly logger = new Logger(BackupDriveService.name);
   private uploadJobs = new Map<string, UploadProgress>();
 
-  // ─── Auth ───────────────────────────────────────────────────────────────
+  // ─── OAuth2 Client ──────────────────────────────────────────────────────
 
-  private getDrive(): drive_v3.Drive | null {
+  private getOAuth2Client(): any | null {
+    const clientId = process.env.GDRIVE_CLIENT_ID;
+    const clientSecret = process.env.GDRIVE_CLIENT_SECRET;
+    const redirectUri = process.env.GDRIVE_REDIRECT_URI || 'https://admin.saubh.tech/api/auth/gdrive/callback';
+
+    if (!clientId || !clientSecret) {
+      return null;
+    }
+
+    return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  }
+
+  private async getAuthedDrive(): Promise<drive_v3.Drive | null> {
+    const oauth2 = this.getOAuth2Client();
+    if (!oauth2) return null;
+
+    // Load stored token
+    if (!fs.existsSync(TOKEN_PATH)) return null;
+
     try {
-      if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
-        this.logger.warn('Service account key not found at ' + SERVICE_ACCOUNT_PATH);
-        return null;
+      const tokens = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'));
+      oauth2.setCredentials(tokens);
+
+      // Auto-refresh if expired
+      const { credentials } = await oauth2.getAccessToken();
+      if (credentials && credentials !== tokens.access_token) {
+        // Token was refreshed — save new tokens
+        const updatedTokens = oauth2.credentials;
+        fs.writeFileSync(TOKEN_PATH, JSON.stringify(updatedTokens, null, 2));
       }
 
-      const auth = new google.auth.GoogleAuth({
-        keyFile: SERVICE_ACCOUNT_PATH,
-        scopes: ['https://www.googleapis.com/auth/drive.file'],
-      });
-
-      return google.drive({ version: 'v3', auth });
+      return google.drive({ version: 'v3', auth: oauth2 });
     } catch (err: any) {
       this.logger.error(`Drive auth error: ${err.message}`);
       return null;
@@ -61,23 +88,47 @@ export class BackupDriveService {
     return process.env.GDRIVE_FOLDER_ID || '';
   }
 
-  // ─── Status ─────────────────────────────────────────────────────────────
+  // ─── OAuth Flow ─────────────────────────────────────────────────────────
 
-  getConnectionStatus(): { connected: boolean; email: string; folderId: string } {
-    const hasKey = fs.existsSync(SERVICE_ACCOUNT_PATH);
-    const folderId = this.getFolderId();
-    let email = '';
+  getAuthUrl(): string | null {
+    const oauth2 = this.getOAuth2Client();
+    if (!oauth2) return null;
 
-    if (hasKey) {
-      try {
-        const key = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf-8'));
-        email = key.client_email || '';
-      } catch { /* ignore */ }
+    return oauth2.generateAuthUrl({
+      access_type: 'offline',
+      prompt: 'consent',
+      scope: SCOPES,
+    });
+  }
+
+  async handleCallback(code: string): Promise<void> {
+    const oauth2 = this.getOAuth2Client();
+    if (!oauth2) {
+      throw new BadRequestException('OAuth2 not configured.');
     }
 
+    const { tokens } = await oauth2.getToken(code);
+    if (!tokens.refresh_token) {
+      this.logger.warn('No refresh_token received — user may have already granted access. Re-prompting with consent.');
+    }
+
+    // Save tokens
+    fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2));
+    this.logger.log('Google Drive OAuth tokens saved.');
+  }
+
+  // ─── Status ─────────────────────────────────────────────────────────────
+
+  getConnectionStatus(): { connected: boolean; hasCredentials: boolean; hasToken: boolean; folderId: string } {
+    const oauth2 = this.getOAuth2Client();
+    const hasCredentials = !!oauth2;
+    const hasToken = fs.existsSync(TOKEN_PATH);
+    const folderId = this.getFolderId();
+
     return {
-      connected: hasKey && !!folderId,
-      email,
+      connected: hasCredentials && hasToken && !!folderId,
+      hasCredentials,
+      hasToken,
       folderId,
     };
   }
@@ -85,9 +136,9 @@ export class BackupDriveService {
   // ─── Upload ─────────────────────────────────────────────────────────────
 
   async uploadBackup(backupId: string): Promise<{ jobKey: string; message: string }> {
-    const drive = this.getDrive();
+    const drive = await this.getAuthedDrive();
     if (!drive) {
-      throw new BadRequestException('Google Drive not configured. Place service account JSON at ' + SERVICE_ACCOUNT_PATH);
+      throw new BadRequestException('Google Drive not connected. Please authorize first.');
     }
 
     const folderId = this.getFolderId();
@@ -196,7 +247,7 @@ export class BackupDriveService {
   // ─── List files in Drive folder ─────────────────────────────────────────
 
   async listFiles(): Promise<DriveFileInfo[]> {
-    const drive = this.getDrive();
+    const drive = await this.getAuthedDrive();
     if (!drive) return [];
 
     const folderId = this.getFolderId();
@@ -227,8 +278,8 @@ export class BackupDriveService {
   // ─── Delete file from Drive ─────────────────────────────────────────────
 
   async deleteFile(fileId: string): Promise<void> {
-    const drive = this.getDrive();
-    if (!drive) throw new BadRequestException('Drive not configured.');
+    const drive = await this.getAuthedDrive();
+    if (!drive) throw new BadRequestException('Drive not connected.');
 
     try {
       await drive.files.delete({ fileId });

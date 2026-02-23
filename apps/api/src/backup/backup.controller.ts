@@ -172,6 +172,36 @@ export class BackupController {
     return this.driveService.getConnectionStatus();
   }
 
+  // ─── GET /api/backup/drive/auth-url ────────────────────────────────────
+
+  @Get('drive/auth-url')
+  getDriveAuthUrl(@Req() req: Request) {
+    this.checkPassword(req);
+    const url = this.driveService.getAuthUrl();
+    if (!url) throw new BadRequestException('GDRIVE_CLIENT_ID / GDRIVE_CLIENT_SECRET not configured.');
+    return { url };
+  }
+
+  // ─── GET /api/backup/drive/callback ────────────────────────────────────
+  // Google redirects here after user consent. No password check (redirect flow).
+
+  @Get('drive/callback')
+  async driveCallback(@Req() req: Request, @Res() res: Response) {
+    const code = (req.query as any).code;
+    if (!code) {
+      (res as any).status(400).send('Missing code parameter.');
+      return;
+    }
+    try {
+      await this.driveService.handleCallback(code as string);
+      // Redirect back to backup page
+      (res as any).redirect('https://admin.saubh.tech/en-in/crm/backup?drive=connected');
+    } catch (err: any) {
+      this.logger.error(`Drive callback error: ${err.message}`);
+      (res as any).status(500).send(`Drive auth failed: ${err.message}`);
+    }
+  }
+
   // ─── POST /api/backup/drive/upload/:id ─────────────────────────────────
 
   @Post('drive/upload/:id')
