@@ -1,372 +1,661 @@
-# OPUS_CONTEXT.md — Session Context for Claude/Opus
-> Last updated: February 22, 2026
-
-## Quick Reference
-
-| Item | Value |
-|------|-------|
-| **Repo** | github.com/saubhtech/platform (public, branch: main) |
-| **Local Path** | `C:\Users\Rishutosh Kumar\Documents\platform` |
-| **Server Path** | `/data/projects/platform` (only project folder on server) |
-| **SSH** | `ssh -p 5104 admin1@103.67.236.186` |
-| **API Domain** | api.saubh.tech |
-| **Admin Domain** | admin.saubh.tech |
-| **Web Domain** | saubh.tech |
-| **CRM WhatsApp** | saubh.tech/crmwhats |
-| **Realtime WS** | realtime.saubh.tech |
-| **Package Manager** | pnpm (never npm) |
-
-## Server Layout (Current)
-
-| Item | Details |
-|------|---------| 
-| **Filesystem** | ~41G used / 379G total (11%) |
-| **Docker containers** | saubh-keycloak (8080), saubh-postgres (5432), saubh-redis (6379), saubh-evolution (8081) |
-| **PM2 apps** | web (3000), api (3001), realtime (3002), admin (3003), crmwhats (3004) |
-| **Projects** | `/data/projects/platform` — only project remaining |
-| **Redis password** | `Red1sSecure2026` |
-| **Media uploads** | `/data/uploads/crm/` |
-
-## What's Been Built
-
-### Apps in Monorepo (PM2)
-| App | Path | Stack | Port | Status |
-|-----|------|-------|------|--------|
-| web | `apps/web` | Next.js 16, Tailwind v4, i18n (13 active languages) | 3000 | ✅ Live |
-| api | `apps/api` | NestJS, Prisma 7, PostgreSQL, Keycloak + WhatsApp OTP + CRM + Bot + Templates + Media | 3001 | ✅ Live |
-| admin | `apps/admin` | Next.js, Tailwind, Keycloak SSO, CRM UI with channel switcher | 3003 | ✅ Live |
-| realtime | `apps/realtime` | WebSocket server, Socket.io, Redis pub/sub, CRM gateway | 3002 | ✅ Live |
-| crmwhats | `apps/crmwhats` | Next.js 16, dark glassmorphism UI, JWT auth (BO/GW only), WebSocket real-time, **FULLY WIRED to backend API** ✅ | 3004 | ✅ Live |
-
-### Docker Services
-| Container | Image | Port | Role |
-|-----------|-------|------|------|
-| saubh-keycloak | keycloak/keycloak | 8080 | SSO/Auth |
-| saubh-postgres | postgres:16 | 5432 | Main DB (`saubhtech` + `evolution`) |
-| saubh-redis | redis:7 | 6379 | Cache + BullMQ queues + CRM pub/sub |
-| saubh-evolution | atendai/evolution-api:v2.2.0 | 8081 | WhatsApp API (v2.3.7) |
+# Saubh.Tech Platform — OPUS_CONTEXT.md
+## Complete Feature Summary & Architecture Reference
+### Date: 23 February 2026
 
 ---
 
-### Completed: P3 — WhatsApp OTP Login ✅ (Feb 21, 2026)
+## Table of Contents
 
-**Users Table** (`public.user`):
-- Unified table for all user types (BO/CL/GW/SA/AD)
-- Key fields: `userid` (BigInt PK), `whatsapp` (unique), `passcode`, `passcodeExpiry`, `fname`, `lname`, `usertype`, `email`, `status`
-
-**WhatsApp Auth Endpoints** (all under `/api/` prefix):
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/auth/whatsapp/register` | POST | Register user (whatsapp, fname, usertype) |
-| `/api/auth/whatsapp/request-otp` | POST | Send 4-digit OTP via WhatsApp (rate limited: 3/hr) |
-| `/api/auth/whatsapp/verify-otp` | POST | Verify OTP, return JWT (24hr expiry) |
-| `/api/auth/whatsapp/logout` | POST | Client-side cookie clear |
-| `/api/webhooks/whatsapp` | POST | Evolution API webhook (Register/Login commands) |
-
----
-
-### Completed: P4 — WhatsApp CRM Audit ✅ (Feb 21, 2026)
-
-Audited old WhatsApp CRM at `/opt/whatsapp-ai-platform/` (now removed in P5):
-- Was: 8 Docker containers, 81 DB tables, 19 API modules, 12 frontend pages
-- Integration plan created: `docs/crm-integration-plan.md`
+1. [Platform Overview](#platform-overview)
+2. [Infrastructure & Services](#infrastructure--services)
+3. [Session 1: Evolution API Restoration](#session-1-evolution-api-restoration)
+4. [Session 2: WhatsApp Authentication System](#session-2-whatsapp-authentication-system)
+5. [Session 3: Production Hardening & Security](#session-3-production-hardening--security)
+6. [Session 4: Dashboard UI Development & Deployment](#session-4-dashboard-ui-development--deployment)
+7. [Session 5: WhatsApp Failover, CRM Realtime Sync](#session-5-whatsapp-failover-crm-realtime-sync)
+8. [Architecture Diagrams](#architecture-diagrams)
+9. [Environment Variables Reference](#environment-variables-reference)
+10. [Key Files Reference](#key-files-reference)
+11. [Runbooks & Emergency Procedures](#runbooks--emergency-procedures)
+12. [Pending / Future Work](#pending--future-work)
 
 ---
 
-### Completed: P5 — Remove Old WhatsApp Platform + Free Disk Space ✅ (Feb 21, 2026)
+## Platform Overview
 
-Old CRM removed entirely (architecturally incompatible). Disk freed: 52G.
+**Saubh.Tech** is a phygital gig marketplace platform bridging physical and digital services across India. The platform consists of:
 
----
+- **Web App** — Next.js multilingual marketplace (37 languages)
+- **API** — NestJS backend with Prisma + PostgreSQL
+- **Admin** — CRM dashboard at admin.saubh.tech
+- **Realtime** — WebSocket gateway for live updates
+- **WhatsApp Service** — Standalone bot/auth service
+- **Evolution API** — WhatsApp Baileys bridge (unofficial API)
+- **WABA** — Meta WhatsApp Business API (official)
 
-### Completed: P6 — Fresh CRM WhatsApp Inside Monorepo ✅ (Feb 21, 2026)
-
-**Evolution API Setup**:
-- Container `saubh-evolution` running v2.3.7 on port 8081
-- Instance `saubh-sim` connected to +918800607598 via QR
-- Separate `evolution` database on saubh-postgres
-- API Key: `eec4e150ae057851d1f1d690d371d3844373fa963191e01a09064dc105c35540`
-- Webhook: `https://api.saubh.tech/api/crm/webhooks/evolution` (must use public URL — Docker can't reach localhost)
-- Docker config: `infra/compose/evolution/docker-compose.yml`
-
-**CRM Database** (`crm` schema in `saubhtech` DB — 9 tables):
-| Model | Purpose |
-|-------|---------|
-| `WaChannel` | Phone numbers + provider type (EVOLUTION/WABA) + `defaultBotEnabled` |
-| `WaContact` | WhatsApp contacts, links to `public.user` |
-| `WaConversation` | Threads (OPEN/ASSIGNED/RESOLVED), bot toggle |
-| `WaMessage` | Messages (IN/OUT), media, delivery status |
-| `WaBroadcast` | Bulk message campaigns |
-| `WaBroadcastRecipient` | Per-recipient delivery tracking |
-| `BotConfig` | Per-channel bot settings (systemPrompt, greetingMessage, handoffKeywords) |
-| `WaTemplate` | WABA message templates (MARKETING/UTILITY/AUTHENTICATION) |
-
-**Seeded Channels**:
-- Saubh SIM (+918800607598) → EVOLUTION, instance: `saubh-sim`
-- Saubh Business (+918130960040) → WABA, instance: null
-
-**CRM Backend Modules** (`apps/api/src/crm/`):
-| Module | Key Files | Endpoints |
-|--------|-----------|-----------|
-| channels | `channel.service.ts`, `channels.controller.ts` | `GET /crm/channels`, dual-provider routing (Evolution + WABA), `sendMediaMessage()` |
-| inbox | `inbox.controller.ts`, `inbox.service.ts` | `GET/POST /crm/conversations`, messages, assign, resolve, toggle-bot, send media |
-| contacts | `contacts.controller.ts`, `contacts.service.ts` | `GET/POST/PATCH /crm/contacts`, findOrCreate, auto-link to user |
-| broadcast | `broadcast.controller.ts`, `broadcast.service.ts`, `broadcast.processor.ts` | `GET/POST /crm/broadcasts`, BullMQ queue `crm-broadcast`, 1msg/sec throttle |
-| webhooks | `evolution-webhook.controller.ts`, `waba-webhook.controller.ts`, `webhook.service.ts` | Inbound message processing, auto-create contacts + conversations, Redis pub/sub |
-| bot | `bot.service.ts`, `bot.controller.ts`, `bot.module.ts` | AI auto-reply (Claude Haiku), greeting, handoff, per-channel config |
-| templates | `template.service.ts`, `template.controller.ts`, `template.module.ts` | WABA template CRUD, Meta Graph API sync, listAll |
-| media | `media.controller.ts`, `media.module.ts` | File upload (16MB max), serve uploaded files |
-
-**CRM API Endpoints** (all under `/api/crm/`):
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/crm/channels` | GET | List all channels |
-| `/api/crm/conversations` | GET | List conversations (filter: channelId, status) |
-| `/api/crm/conversations/:id/messages` | GET | Message thread (paginated) |
-| `/api/crm/conversations/:id/messages` | POST | Send message via channel |
-| `/api/crm/conversations/:id/media` | POST | Send media message (image/video/audio/document) |
-| `/api/crm/conversations/:id/assign` | PATCH | Assign to agent |
-| `/api/crm/conversations/:id/resolve` | PATCH | Mark resolved |
-| `/api/crm/conversations/:id/toggle-bot` | PATCH | Toggle bot on/off |
-| `/api/crm/contacts` | GET | List contacts (search, channelId filter) |
-| `/api/crm/contacts` | POST | Create contact |
-| `/api/crm/contacts/:id` | GET | Contact detail + conversations |
-| `/api/crm/contacts/:id` | PATCH | Update contact |
-| `/api/crm/broadcasts` | GET | List broadcasts |
-| `/api/crm/broadcasts/:id` | GET | Broadcast detail + recipients |
-| `/api/crm/broadcasts` | POST | Create broadcast (immediate or scheduled) |
-| `/api/crm/bot/config/:channelId` | GET | Get bot config for channel |
-| `/api/crm/bot/config/:channelId` | PATCH | Update bot config (isEnabled, systemPrompt, greetingMessage, handoffKeywords) |
-| `/api/crm/bot/status` | GET | All channels with bot status |
-| `/api/crm/templates` | GET | List all templates (optional ?status=) |
-| `/api/crm/templates/channel/:channelId` | GET | Templates for channel |
-| `/api/crm/templates/detail/:id` | GET | Single template |
-| `/api/crm/templates` | POST | Create template (submits to Meta for WABA) |
-| `/api/crm/templates/:id` | PATCH | Update template |
-| `/api/crm/templates/:id` | DELETE | Delete template (+ Meta cleanup) |
-| `/api/crm/templates/sync/:channelId` | POST | Sync templates from Meta |
-| `/api/crm/media/upload` | POST | Upload file (multipart, 16MB max) |
-| `/api/crm/media/:filename` | GET | Serve uploaded file |
-| `/api/crm/webhooks/evolution` | POST | Evolution inbound webhook |
-| `/api/crm/webhooks/waba` | GET/POST | WABA verification + inbound webhook |
+### Domains
+| Domain | Purpose |
+|--------|---------|
+| saubh.tech | Main web app |
+| api.saubh.tech | NestJS API |
+| admin.saubh.tech | CRM Admin Panel |
+| saubh.cloud | Infrastructure |
+| saubh.in | Alternate domain |
 
 ---
 
-### Completed: P7 — WABA Activation + AI Bot ✅ (Feb 21, 2026)
+## Infrastructure & Services
 
-**WABA (WhatsApp Business Cloud API)**:
-- +918130960040 activated via Meta Graph API
-- Webhook registered: `https://api.saubh.tech/api/crm/webhooks/waba`
-- Meta webhook verified with `hub.challenge` ✅
-- Subscribed to: `messages` field
-- Outbound test: message delivered via Graph API ✅
-- Inbound test: webhook received, contact + conversation auto-created ✅
-- HMAC SHA256 signature verification implemented (skipped if `WABA_APP_SECRET` not set)
+### PM2 Process Manager
+| ID | Name | Port | Description |
+|----|------|------|-------------|
+| 0 | web | 3000 | Next.js web app |
+| 1 | api | 3001 | NestJS API |
+| 2 | realtime | 3002 | WebSocket gateway (Socket.IO) |
+| 3 | admin | 3003 | Admin panel (Next.js) |
+| 6 | crmwhats | — | CRM WhatsApp processes |
+| 7 | whatsapp-service | 3010 | Standalone WhatsApp bot/auth |
 
-**WABA Env Vars** (apps/api/.env):
-- `WABA_PHONE_NUMBER_ID=135600659640001`
-- `WABA_BUSINESS_ACCOUNT_ID=124563407414910`
-- `WABA_ACCESS_TOKEN=EAAImsV1nxWk...` (long-lived token)
-- `WABA_VERIFY_TOKEN=a7f3c9e1b2d4068f5a9c7e3b1d204f68`
+### External Services
+| Service | Location | Purpose |
+|---------|----------|---------|
+| Evolution API | localhost:8081 | WhatsApp Baileys bridge |
+| PostgreSQL | localhost:5432 | Primary database |
+| Redis | localhost:6379 | OTP, rate limiting, pub/sub |
+| Caddy | :80/:443 | Reverse proxy, SSL |
 
-**Channel Switcher**:
-- `GET /api/crm/channels` endpoint added
-- Inbox + Contacts pages now have channel tabs (SIM vs WABA)
-- Conversations and contacts filtered by selected channel
-- Purple tabs for Evolution/SIM, green tabs for WABA
-
-**Dependencies Added** (apps/api):
-- `@anthropic-ai/sdk ^0.78.0`
-
----
-
-### Completed: P8 — CRM WhatsApp App (crmwhats) ✅ (Feb 21, 2026)
-
-**Standalone Next.js app** for Business Owners + Gig Workers (not admins).
-- URL: `saubh.tech/crmwhats/[locale]/inbox|contacts|broadcast|settings`
-- Auth: WhatsApp JWT (`saubh_token` cookie from P3), only BO/GW usertypes allowed
-- Port: 3004 (Caddy reverse proxy via `handle /crmwhats*`)
-- Design: Dark glassmorphism Gen-Z/Alpha UI
-
-**Design System**:
-- Background: #0A0A0F, #13131A, #1C1C27
-- Primary: #7C3AED (violet), Secondary: #EC4899 (pink), Accent: #F97316 (orange)
-- Glass cards: `rgba(255,255,255,0.05)` + `backdrop-filter: blur(12px)`
-- Gradient buttons: `linear-gradient(135deg, #7C3AED, #EC4899)`
-
-**App Structure** (`apps/crmwhats/src/`):
-| Component | Description |
-|-----------|-------------|
-| `middleware.ts` | Locale detection (`saubh_locale` cookie), JWT auth, BO/GW gate, expiry check |
-| `components/Sidebar.tsx` | Desktop collapsible sidebar + mobile bottom nav, channel switcher pills, user footer |
-| `context/UserContext.tsx` | Decodes JWT, provides userid/fname/usertype/whatsapp + logout |
-| `context/ChannelContext.tsx` | ALL/EVOLUTION/WABA filter, persists to localStorage, fetches real channels from API |
-| `lib/api.ts` | Typed fetch wrapper — reads JWT from cookie, Bearer auth, 401 redirect, get/post/patch/delete/upload |
-| `lib/types.ts` | WaChannel, WaContact, WaConversation, WaMessage, WaBroadcast, BotConfig, PaginatedResponse |
-| `components/ui/*` | GlassCard, GradientButton, Avatar, ChannelBadge, StatusDot, UnreadBadge, SkeletonLoader |
-
-**Pages**:
-| Page | Route | Features |
-|------|-------|----------|
-| Inbox | `/[locale]/inbox` | Two-panel (list + thread), search, status filters, channel filter, gradient chat bubbles, bot banner + take over, media display + upload, WebSocket real-time (fallback: 30s polling), Live/Polling indicator |
-| Contacts | `/[locale]/contacts` | Grid/list toggle, search, add contact, detail panel (hero, info, recent conversations), block/unblock |
-| Broadcast | `/[locale]/broadcast` | List with status pills (DRAFT/SCHEDULED/SENDING/DONE/FAILED), detail panel with recipients |
-| Broadcast Create | `/[locale]/broadcast/create` | 4-step wizard: Channel → Message (live preview) → Recipients (checkbox list) → Confirm (send now/schedule) |
-| Templates | `/[locale]/templates` | Template Studio: list with channel/status filters, create form (channel, category, name, language, header, body, footer, variables), WhatsApp-style preview, delete with Meta cleanup |
-| Settings | `/[locale]/settings` | Profile, channel status cards, notification toggles, default channel filter, AI Bot Configuration (per-channel toggle, greeting, system prompt, handoff keywords), bot activity stats, sign out |
-| Health | `/api/healthz` | `{ status: ok, app: crmwhats }` |
-
-**Infrastructure**:
-- Caddy: `handle /crmwhats*` → localhost:3004 (added inside saubh.tech block)
-- PM2: `crmwhats` process, cwd `apps/crmwhats`, Next.js start --port 3004
-- basePath: `/crmwhats` in next.config.ts
+### Tech Stack
+- **Runtime:** Node.js v24, pnpm (preferred over npm)
+- **Backend:** NestJS, Prisma ORM, PostgreSQL
+- **Frontend:** Next.js, React, Tailwind CSS
+- **Realtime:** Socket.IO, Redis pub/sub
+- **WhatsApp:** Evolution API (Baileys) + Meta WABA Cloud API
+- **Infra:** Docker, PM2, Caddy, Bare metal server
 
 ---
 
-### Completed: P9 — Bot Activation + Templates + Media + Real-time ✅ (Feb 22, 2026)
+## Session 1: Evolution API Restoration
 
-**Bot Activation** (Tasks 1-6):
-- `ANTHROPIC_API_KEY` added to `apps/api/.env`
-- `BotConfig` model: per-channel settings (systemPrompt, greetingMessage, handoffKeywords)
-- `defaultBotEnabled` field on `WaChannel`
-- `BotService` enhanced: dynamic system prompts from DB, greeting on new conversations, handoff detection
-- Bot API: `GET/PATCH /api/crm/bot/config/:channelId`, `GET /api/crm/bot/status`
-- Bot Settings UI in crmwhats Settings page: per-channel toggle, greeting message, system prompt, handoff keywords tag input, bot activity stats
+### Problem
+Evolution API instance `saubh-sim` (918800607598) was completely disconnected from WhatsApp due to session corruption. Docker container networking issues prevented reconnection.
 
-**WABA Templates** (Tasks 7-9):
-- `WaTemplate` model: name, category (MARKETING/UTILITY/AUTHENTICATION), language, status (PENDING/APPROVED/REJECTED), body, header, footer, variables, metaId
-- Template API: full CRUD + Meta Graph API sync for WABA channels, auto-approve for non-WABA
-- Template Studio UI: list with channel/status filters, create form with WhatsApp preview, delete
+### Fixes Implemented
 
-**Media Messages** (Tasks 10-12):
-- `ChannelService.sendMediaMessage()`: routes to Evolution or WABA Graph API
-- `MediaModule`: upload endpoint (Multer, 16MB max, image/video/audio/document), serve endpoint
-- Storage: `/data/uploads/crm/`
-- `InboxService.sendMediaMessage()`: sends via channel + saves to DB
-- Inbox UI: `MediaBubble` component (inline images, video player, audio player, document download), 📎 attachment button with file upload
+1. **Docker Network Fix**
+   - Root cause: Evolution API Docker container couldn't reach external WhatsApp servers
+   - Fix: Switched to `network_mode: host` in docker-compose
+   - File: `/data/docker/evolution-api/docker-compose.yml`
 
-**Real-time WebSocket** (Tasks 13-14):
-- `CrmGateway` in realtime app (`/crm` namespace)
-  - Client events: `crm:join` (conversation room), `crm:leave`, `crm:join:all` (inbox feed)
-  - Server events: `crm:message`, `crm:update`
-  - Redis subscriber on `crm:events` channel → fans out to WebSocket rooms
-- `WebhookService` Redis publisher: publishes `message` and `conversation:update` events on inbound
-- Inbox UI: Socket.io client connects to `realtime.saubh.tech/crm`, real-time message delivery, 30s fallback polling when WS disconnected, Live/Polling indicator
+2. **Instance Recreation**
+   - Deleted corrupted `saubh-sim` instance
+   - Created fresh instance with QR code scanning
+   - Re-established WhatsApp Web connection
 
-**Dependencies Added**:
-- `ioredis ^5.9.3` (apps/api — Redis pub/sub for webhook→realtime)
-- `socket.io-client ^4.8.3` (apps/crmwhats — WebSocket client)
+3. **Webhook Configuration**
+   - Set webhook URL: `https://api.saubh.tech/api/crm/webhooks/evolution`
+   - Events: `MESSAGES_UPSERT`, `MESSAGES_UPDATE`, `CONNECTION_UPDATE`, `SEND_MESSAGE`
+   - Both CRM API (port 3001) and WhatsApp service (port 3010) receive webhooks
 
-**Env Vars Added**:
-- `apps/api/.env`: `REDIS_URL=redis://:Red1sSecure2026@127.0.0.1:6379`, `ANTHROPIC_API_KEY`
-- `apps/realtime/.env`: `REDIS_URL=redis://:Red1sSecure2026@127.0.0.1:6379`
-- `apps/crmwhats/.env.local`: `NEXT_PUBLIC_WS_URL=https://realtime.saubh.tech`
+### Key Commands
+```bash
+# Check instance status
+curl -s http://localhost:8081/instance/connectionState/saubh-sim \
+  -H 'apikey: <API_KEY>'
+
+# Recreate instance
+curl -s -X POST http://localhost:8081/instance/create \
+  -H 'apikey: <API_KEY>' -H 'Content-Type: application/json' \
+  -d '{"instanceName":"saubh-sim","qrcode":true,"integration":"WHATSAPP-BAILEYS"}'
+```
 
 ---
 
-### Completed: P11 — Wire crmwhats to Backend API ✅ (Feb 22, 2026)
+## Session 2: WhatsApp Authentication System
 
-**Problem**: crmwhats had UI shell with raw `fetch()` calls — no auth headers, no error handling, no 401 redirect. All API calls would fail on protected endpoints.
+### Features Built
 
-**Solution**: Replaced all raw `fetch()` calls with authenticated `api` client (`lib/api.ts`) across all pages.
+1. **WhatsApp-Based User Registration**
+   - Users send `Register <Name> <UserType>` to 918800607598
+   - System creates user in PostgreSQL
+   - Static passcode = last 4 digits of phone number
+   - Welcome message sent with login credentials
+   - Idempotent: re-registering returns existing user
 
-**Files Modified**:
-| File | Changes |
-|------|---------|
-| `app/[locale]/inbox/page.tsx` | 9 raw fetch → `api.get/post/patch/upload`, WebSocket JWT auth added |
-| `app/[locale]/contacts/page.tsx` | 6 raw fetch → `api.get/post/patch` |
-| `app/[locale]/broadcast/page.tsx` | 3 raw fetch → `api.get` |
-| `app/[locale]/broadcast/create/page.tsx` | 4 raw fetch → `api.get/post` |
-| `context/ChannelContext.tsx` | Enhanced: fetches real channels from API, exposes `channels[]`, `getChannelByType()`, `refreshChannels()` |
-| `.env.example` | Created: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`, `NEXT_PUBLIC_BASE_URL` |
+2. **OTP Authentication Flow**
+   - Users send `Passcode` or `OTP` to get temporary login code
+   - 4-digit OTP stored in Redis with 120s TTL
+   - Rate limited: max 3 OTP requests per 5 minutes
+   - Never written to database (Redis-only)
 
-**API Client** (`lib/api.ts`):
-- Reads `saubh_token` JWT from cookie automatically
-- Sets `Authorization: Bearer` header on every request
-- On 401: redirects to `saubh.tech/[locale]/login`
-- Methods: `get<T>`, `post<T>`, `patch<T>`, `delete<T>`, `upload<T>`
+3. **Login & JWT**
+   - POST `/api/auth/whatsapp/login` with phone + code
+   - Verifies: Redis OTP first → static passcode fallback
+   - Returns JWT token (24h expiry) + user object
+   - Static passcode NEVER cleared (permanent)
 
-**Env Vars Added** (`apps/crmwhats/.env.local`):
-- `NEXT_PUBLIC_API_URL=https://api.saubh.tech`
-- `NEXT_PUBLIC_BASE_URL=https://saubh.tech`
+4. **Auth Command Service**
+   - Intercepts WhatsApp messages before CRM processing
+   - Handles: `Register`, `Passcode`, `OTP` commands
+   - Works on both Evolution and WABA webhooks
 
-**E2E Verified**:
-- ✅ Inbox: conversations load, messages display, send works, Bot/Resolve buttons functional
-- ✅ Contacts: 5 contacts load in grid, search + add + block functional
-- ✅ Broadcast: page loads, "New Broadcast" wizard accessible
-- ✅ Sidebar: user shown (Mani/BO), channel switcher works
-- ✅ Auth: unauthenticated → redirects to login page
-- ⚠️ WebSocket shows "Polling" (fallback works, WS auth needs server-side gateway update — pre-existing)
+5. **Next.js Login Page**
+   - Route: `/[locale]/login`
+   - Phone number input → OTP request → code verify → redirect to dashboard
+   - Responsive, Gen-Z aesthetic (purple/cyan gradients, glass-morphism)
+   - Auto-handles country code normalization
+
+### API Endpoints
+```
+POST /api/auth/whatsapp/register     {whatsapp, fname, usertype}
+POST /api/auth/whatsapp/request-otp  {whatsapp}
+POST /api/auth/whatsapp/login        {whatsapp, code}
+```
+
+### Files
+```
+apps/api/src/auth/whatsapp-auth.service.ts    — Registration, OTP, login logic
+apps/api/src/auth/whatsapp-auth.controller.ts — REST endpoints
+apps/api/src/auth/auth-command.service.ts      — WhatsApp command interceptor
+apps/api/src/auth/otp.service.ts               — Redis OTP store
+apps/api/src/auth/rate-limit.guard.ts          — Redis rate limiter
+apps/api/src/auth/normalize-phone.ts           — Phone number normalization
+apps/api/src/auth/whatsapp-auth.module.ts      — Module with Redis provider
+apps/web/src/app/[locale]/login/page.tsx       — Login UI
+```
 
 ---
 
-## What's Next: P12 — CRM Pipeline (Deals, Tasks, SLA)
+## Session 3: Production Hardening & Security
 
-- Deal stages + pipeline board (Kanban)
-- Lead tracking + contact tagging
-- Task assignment per conversation
-- SLA timers (first response, resolution)
-- Agent performance metrics
+### Fixes & Improvements
 
-**Future phases**:
-- P13 = Analytics Dashboard (message volumes, response times, bot performance, channel comparison)
-- P14 = n8n Automation (workflow triggers, CRM events → actions)
-- P15 = Multi-tenant (business-scoped CRM data)
-- P16 = Marketplace Integration
+1. **Passcode Bug Fix**
+   - Bug: `whatsapp-service/handler.js` was overwriting permanent passcodes with temporary OTP
+   - Fix: Auth service uses Redis-only OTP, never touches Prisma passcode field
+   - Validation: Static passcode persists across OTP requests
+
+2. **Redis Rate Limiting**
+   - Auth endpoints protected by `AuthRateLimitGuard`
+   - Max 5 failed login attempts per 5 minutes per IP+phone combo
+   - Max 3 OTP requests per 5 minutes per phone
+   - Uses Redis `INCR` + `EXPIRE` pattern
+
+3. **Docker Compose Hardening**
+   - `network_mode: host` enforced for Evolution API
+   - `restart: always` policy
+   - Container name: `evolution-api`
+
+4. **Evolution Manager Access Blocked**
+   - `evo-manager.html` was publicly accessible (security risk)
+   - Blocked via Caddy reverse proxy config
+   - Admin-only access pattern
+
+5. **Firewall Rules**
+   - Port 8081 (Evolution API) blocked from public access
+   - Only localhost access allowed
+   - UFW rules configured
+
+6. **Auto-Healing Health Monitor**
+   - Script: monitors Evolution API connection state every 60 seconds
+   - Detects: disconnected, connection closed, duplicate connections
+   - Actions: auto-restart container, clear sessions, reconnect
+   - Runs as PM2 process or cron job
+   - Duplicate detection: if multiple instances detected, cleans up extras
+
+### Files
+```
+/data/docker/evolution-api/docker-compose.yml   — Hardened Docker config
+apps/api/src/auth/rate-limit.guard.ts            — Rate limiting guard
+apps/whatsapp-service/src/handler.js             — Fixed passcode handler
+/data/scripts/evolution-health-monitor.sh         — Auto-healing monitor
+```
 
 ---
 
-## DB Policy (Permanent — apply every session)
+## Session 4: Dashboard UI Development & Deployment
 
-- **Master tables**: schema `master`, no businessId
-- **Tenant tables**: always include businessId
-- **CRM tables**: schema `crm`
-- **Every table must have**: id, createdAt, updatedAt (except legacy tables being modified in-place)
-- **i18n split pattern** for all translatable master data:
-  - Base table: code (UPPERCASE, unique), sortOrder, isActive
-  - i18n table: parentId, locale, name, description, isFallback
-  - `@@unique([parentId, locale])` on i18n tables
-  - `@@index` on all foreign keys
-- **Enums**: UPPERCASE codes only
-- **Never delete columns** in migrations — only add or deprecate
-- **Never force migrations**: always use `prisma migrate dev --name descriptive_name`
-- **Soft delete only**: set `isActive=false`, never hard delete
-- **All migrations must be reversible**
+### Features Built
 
-## Database Schema (Current)
+1. **Dashboard Page** (`/[locale]/dashboard`)
+   - Full marketplace dashboard with Requirements and Offerings tabs
+   - Converted from two HTML designs (requirements.html, offerings.html)
+   - All content preserved verbatim from original designs
 
-### Main Platform DB (`saubhtech`)
-- **public schema**: Business, Client, User (with WhatsApp OTP fields), UserMembership, Conversation, Message, Telephony
-- **master schema**: Geographic hierarchy (Country → State → District → Postal → Place), Organizational hierarchy (Locality → Area → Division → Region → Zone), Industry classification (Sector → Field → Market), Language (basic — langid + language only)
-- **crm schema**: WaChannel, WaContact, WaConversation, WaMessage, WaBroadcast, WaBroadcastRecipient, BotConfig, WaTemplate
+2. **Requirements Tab**
+   - Full-width card layout
+   - Rating display (⭐ 4.8) with client info (CN avatar)
+   - DV/PV badges (Digital Verified / Physical Verified)
+   - Title: "Required Web Developer"
+   - Subtitle: "E-Commerce Website for Fashion Brand"
+   - 5-column grid: Delivery, Location, Eligibility, Budget, Bids
+   - Action buttons: Call, Chat, Video
+   - Live badge with pulse animation
 
-### Evolution DB (`evolution`)
-- Managed by Evolution API internally
+3. **Offerings Tab**
+   - 3-column responsive grid (3→2→1 on mobile)
+   - Provider cards with gradient avatar backgrounds
+   - Ratings, DV/PV badges, status indicators (Live/Off/Away)
+   - Delivery modes (Physical/Digital)
+   - Call/Chat/Video action buttons
 
-## Admin UI Pattern (Permanent)
+4. **Sidebar**
+   - Saubh.Tech brand with logo
+   - User card (RP Singh / Gig Worker / logout button)
+   - Requirements/Offerings tab switcher
+   - Filters: 9 dropdowns (Sector/Field/Product/Service/Country/State/District/Postcode/Place)
+   - 2 checkboxes: Verified, Top Rated
+   - Budget range slider (₹1 – ₹999K)
+   - Quick links: Income, My Bids, Escrow Money
 
-- **Route**: `admin.saubh.tech/[locale]/master/[table]`
-- **CRM Route**: `admin.saubh.tech/[locale]/crm/inbox|contacts|broadcasts`
-- **All routes**: Keycloak protected (ADMIN or SUPER_ADMIN)
-- **All tables**: paginated list + create + edit + soft delete
-- **Existing generic viewer**: `apps/admin/src/app/[locale]/master/[table]/page.tsx`
-- **API base**: `api.saubh.tech/api/`
+5. **Top Bar & Hero**
+   - "🚀 Gig Marketplace" title
+   - Tagline: "|| Real Clients || Verified Providers || Secured Payments ||"
+   - 10-field search panel (Sector/Field/Product/Service/Country/State/District/Postcode/Place/Keyword)
 
-## CRM WhatsApp UI Pattern (Permanent)
+6. **Footer**
+   - Pagination
+   - Legend (Product/Service/Physical/Digital/Phygital/DV/PV/Live/Off/Away)
+   - Messages link
 
-- **Route**: `saubh.tech/crmwhats/[locale]/inbox|contacts|broadcast|templates|settings`
-- **Auth**: WhatsApp JWT (`saubh_token` cookie), BO/GW usertypes only
-- **API client**: `lib/api.ts` — authenticated fetch wrapper (Bearer token from cookie)
-- **Design**: Dark glassmorphism, violet/pink gradient accents
-- **Real-time**: Socket.io client → `realtime.saubh.tech/crm` namespace
-- **API base**: `api.saubh.tech/api/crm/`
+7. **Responsive Design**
+   - Mobile hamburger menu → sidebar overlay
+   - Offerings grid: 3→2→1 columns
+   - Stacked layouts on small screens
 
-## Session Rules
+8. **Styling (Gen-Z/Alpha Aesthetic)**
+   - Dark theme (#05070d background)
+   - Purple (#7c3aed) + Cyan (#06b6d4) gradients
+   - Glass-morphism (backdrop-filter blur)
+   - Radial gradients for depth
+   - Custom scrollbars (4-5px)
+   - Blink animation for Live badges
+   - Hover transforms
+   - Fonts: Outfit + Plus Jakarta Sans
 
-- **WRONG PATH** (never use): `Desktop\15.02.2026\project\saubh-tech`
-- **Correct local path**: `C:\Users\Rishutosh Kumar\Documents\platform`
-- One task at a time. Print ✓ DONE. Wait for NEXT.
-- Files under 20KB → GitHub API
-- Files over 20KB → give PowerShell command
-- SSH commands → give one block, wait for output
-- Never paste prompts into SSH terminal
+### Deployment
+- File: 775 lines TypeScript
+- Transfer: gzip + base64 method (9KB compressed)
+- Build: Compiled in 3.9s, TypeScript check in 4.4s
+- 33/33 static pages generated
+- Live at: https://saubh.tech/en-in/dashboard
+
+### Files
+```
+apps/web/src/app/[locale]/dashboard/page.tsx  — Dashboard page (775 lines)
+apps/web/src/app/[locale]/dashboard/page.tsx.bak — Backup
+```
+
+---
+
+## Session 5: WhatsApp Failover, CRM Realtime Sync
+
+### Feature 1: WhatsApp Provider Failover System
+
+**Problem:** Single point of failure — if WhatsApp bans 918800607598, entire auth system (registration, OTP, bot) fails with no recovery path.
+
+**Solution:** Dual-provider architecture with automatic failover.
+
+#### How It Works
+```
+Message Request (OTP / Welcome / Bot)
+         │
+    WHATSAPP_PRIMARY (env)
+         │
+    ┌────▼────┐
+    │ Primary  │ (Evolution: 918800607598)
+    └────┬────┘
+         │
+    Success? ──YES──→ Done
+         │
+         NO (or circuit open)
+         │
+    ┌────▼─────┐
+    │ Secondary │ (WABA: 918130960040)
+    └────┬─────┘
+         │
+    Success? ──YES──→ Done
+         │
+         NO
+         │
+    Message DROPPED (both down)
+```
+
+#### Circuit Breaker
+- Threshold: **1 failure** → circuit opens (instant failover, user never notices)
+- Reset: **5 minutes** → half-open → retry primary
+- State: In-memory per provider (resets on restart)
+
+#### Components Updated
+| File | Change |
+|------|--------|
+| `whatsapp-sender.service.ts` | Full rewrite: primary/fallback with circuit breaker |
+| `whatsapp-service/sender.js` | Same failover for bot service |
+| `api/.env` | Added `WHATSAPP_PRIMARY=evolution` |
+| `whatsapp-service/.env` | Added `WHATSAPP_PRIMARY`, WABA credentials |
+
+#### Quick Switch Commands
+```bash
+# Instant switch to WABA (if Evolution banned):
+sed -i 's/WHATSAPP_PRIMARY=evolution/WHATSAPP_PRIMARY=waba/' \
+  apps/api/.env apps/whatsapp-service/.env
+pm2 restart api whatsapp-service
+# ~10 seconds, zero code changes
+
+# Switch back:
+sed -i 's/WHATSAPP_PRIMARY=waba/WHATSAPP_PRIMARY=evolution/' \
+  apps/api/.env apps/whatsapp-service/.env
+pm2 restart api whatsapp-service
+```
+
+#### Verified Working
+- ✅ OTP via Evolution: `[EVOLUTION] Sent to 919212401007: 3EB057CB...`
+- ✅ OTP via WABA: `[WABA] Sent to 919212401007: wamid.HBgM...`
+- ✅ Circuit breaker: 1 failure → instant WABA fallback
+- ✅ Env switch: `WHATSAPP_PRIMARY=waba` → immediate routing change
+
+### Feature 2: Number Swap Procedure
+
+**Scenario:** 918800607598 permanently banned, need new number.
+
+**Steps (< 5 minutes):**
+1. Switch primary to WABA (instant, zero downtime)
+2. Create new Evolution instance (`saubh-sim2`)
+3. Scan QR with new phone
+4. Set webhook for new instance
+5. Update `EVOLUTION_INSTANCE` in .env
+6. Update DB channel record
+7. Switch primary back to Evolution
+8. Delete old banned instance
+
+Full runbook: `WHATSAPP-FAILOVER-RUNBOOK.md`
+
+### Feature 3: CRM Inbox Realtime Sync
+
+**Problem:** `admin.saubh.tech/en-in/crm/inbox` was not showing messages in realtime — required manual refresh.
+
+**Root Causes Found & Fixed:**
+
+| # | Problem | Fix |
+|---|---------|-----|
+| 1 | `WebhookService` used `require('ioredis')` — failed silently under pnpm strict hoisting | Replaced with `@Inject('REDIS')` NestJS provider pattern |
+| 2 | `InboxService` had no Redis publish | Added `publishEvent()` after outbound send/media |
+| 3 | `InboxModule` missing Redis provider | Added `RedisProvider` (same proven pattern as auth) |
+| 4 | Evolution webhook skipped all `fromMe: true` messages | Added `handleOutbound()` method to capture outgoing messages |
+| 5 | Outbound handler filtered `status: { not: 'RESOLVED' }` | Removed filter, added auto-reopen for RESOLVED conversations |
+
+#### Realtime Message Flow (Now Working)
+```
+INBOUND:
+WhatsApp → Evolution/WABA webhook → EvolutionWebhookController/WabaWebhookController
+  → WebhookService.processInbound() → Save to DB → Redis PUBLISH crm:events
+  → CrmGateway (realtime) → WebSocket emit crm:message → Admin Inbox UI
+
+OUTBOUND (from CRM):
+Admin Inbox → InboxService.sendMessage() → ChannelService → Evolution/WABA
+  → Save to DB → Redis PUBLISH crm:events → CrmGateway → WebSocket → Admin Inbox UI
+
+OUTBOUND (from phone/bot/auth):
+WhatsApp phone → Evolution SEND_MESSAGE webhook → handleOutbound()
+  → Dedup check (externalId) → Save to DB → Redis PUBLISH → Admin Inbox UI
+```
+
+#### Redis Connections Verified
+```
+✅ [RedisProvider] Redis connected for OTP service
+✅ [RedisProvider:Inbox] Redis connected for Inbox pub/sub
+✅ [WebhookService] WebhookService Redis publisher ready
+```
+
+#### Files Modified
+```
+apps/api/src/crm/webhooks/webhook.service.ts           — @Inject('REDIS'), publishOutbound()
+apps/api/src/crm/webhooks/evolution-webhook.controller.ts — handleOutbound(), reopen RESOLVED
+apps/api/src/crm/inbox/inbox.service.ts                 — @Inject('REDIS'), publishEvent()
+apps/api/src/crm/inbox/inbox.module.ts                  — RedisProvider added
+```
+
+---
+
+## Architecture Diagrams
+
+### WhatsApp Message Flow
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  User Phone   │────▶│ Evolution API │────▶│  API Webhook  │
+│  918800607598 │     │  :8081       │     │  :3001       │
+└──────────────┘     └──────────────┘     └──────┬───────┘
+                                                  │
+┌──────────────┐     ┌──────────────┐            │
+│  User Phone   │────▶│  Meta WABA   │────▶───────┤
+│  918130960040 │     │  Cloud API   │            │
+└──────────────┘     └──────────────┘     ┌──────▼───────┐
+                                          │   Redis       │
+                                          │   pub/sub     │
+                                          └──────┬───────┘
+                                                  │
+                                          ┌──────▼───────┐
+                                          │  Realtime     │
+                                          │  WebSocket    │
+                                          │  :3002       │
+                                          └──────┬───────┘
+                                                  │
+                                          ┌──────▼───────┐
+                                          │  Admin CRM    │
+                                          │  Inbox UI     │
+                                          └──────────────┘
+```
+
+### Auth Flow
+```
+User sends "Register Mani GW" to 918800607598
+  → Evolution webhook → AuthCommandService.handleCommand()
+  → WhatsappAuthService.registerUser()
+  → PostgreSQL: create user (passcode = last 4 digits)
+  → WhatsappSenderService.sendMessage() [with failover]
+  → Welcome message sent via Evolution (or WABA fallback)
+
+User sends "Passcode" to 918800607598
+  → AuthCommandService → OtpService.generateOTP()
+  → Redis: SET otp:wa:919212401007 = 1234 EX 120
+  → WhatsappSenderService.sendOTP() [with failover]
+
+User visits saubh.tech/login → enters phone → enters OTP
+  → POST /api/auth/whatsapp/login {whatsapp, code}
+  → Check Redis OTP → fallback to static passcode
+  → Return JWT token (24h) + user object
+  → Redirect to /dashboard
+```
+
+---
+
+## Environment Variables Reference
+
+### API (.env)
+```env
+# ─── Database ───
+DATABASE_URL=postgresql://...
+
+# ─── Redis ───
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=Red1sSecure2026
+REDIS_URL=redis://:Red1sSecure2026@127.0.0.1:6379
+
+# ─── JWT ───
+JWT_SECRET=<secret>
+JWT_EXPIRY=86400
+
+# ─── Provider Failover ───
+WHATSAPP_PRIMARY=evolution          # or 'waba'
+
+# ─── Evolution API (SIM: +918800607598) ───
+EVOLUTION_API_URL=http://localhost:8081
+EVOLUTION_API_KEY=eec4e150ae057851d1f1d690d371d3844373fa963191e01a09064dc105c35540
+EVOLUTION_INSTANCE=saubh-sim
+
+# ─── WABA (Meta WhatsApp Business: +918130960040) ───
+WABA_PHONE_NUMBER_ID=135600659640001
+WABA_BUSINESS_ACCOUNT_ID=124563407414910
+WABA_ACCESS_TOKEN=<meta-token>
+WABA_VERIFY_TOKEN=a7f3c9e1b2d4068f5a9c7e3b1d204f68
+```
+
+---
+
+## Key Files Reference
+
+### Authentication
+```
+apps/api/src/auth/whatsapp-auth.service.ts      — Core auth logic
+apps/api/src/auth/whatsapp-auth.controller.ts    — REST endpoints
+apps/api/src/auth/auth-command.service.ts        — WhatsApp command handler
+apps/api/src/auth/otp.service.ts                 — Redis OTP management
+apps/api/src/auth/rate-limit.guard.ts            — Rate limiting
+apps/api/src/auth/normalize-phone.ts             — Phone normalization
+apps/api/src/auth/whatsapp-auth.module.ts        — Module + Redis provider
+```
+
+### WhatsApp Sender (Failover)
+```
+apps/api/src/whatsapp/whatsapp-sender.service.ts — Failover sender (Evolution + WABA)
+apps/api/src/whatsapp/whatsapp.module.ts         — WhatsApp module
+apps/whatsapp-service/src/sender.js              — Bot sender with failover
+apps/whatsapp-service/src/handler.js             — Bot message handler
+apps/whatsapp-service/src/index.js               — Express server (webhook listener)
+```
+
+### CRM
+```
+apps/api/src/crm/webhooks/evolution-webhook.controller.ts — Evolution inbound + outbound
+apps/api/src/crm/webhooks/waba-webhook.controller.ts      — WABA inbound
+apps/api/src/crm/webhooks/webhook.service.ts              — Message processing + Redis pub
+apps/api/src/crm/channels/channel.service.ts              — Send via Evolution/WABA
+apps/api/src/crm/inbox/inbox.service.ts                   — Inbox CRUD + Redis pub
+apps/api/src/crm/inbox/inbox.controller.ts                — REST endpoints
+apps/api/src/crm/bot/bot.service.ts                       — AI bot (Claude API)
+```
+
+### Realtime
+```
+apps/realtime/src/crm/crm.gateway.ts  — WebSocket CRM gateway (Redis sub → Socket.IO)
+apps/realtime/src/redis/redis.service.ts — Redis pub/sub service
+```
+
+### Frontend
+```
+apps/web/src/app/[locale]/login/page.tsx      — Login page
+apps/web/src/app/[locale]/dashboard/page.tsx  — Dashboard (775 lines)
+```
+
+### Infrastructure
+```
+/data/docker/evolution-api/docker-compose.yml  — Evolution API container
+/data/scripts/evolution-health-monitor.sh      — Auto-healing monitor
+```
+
+---
+
+## Runbooks & Emergency Procedures
+
+### Evolution Number Banned
+```bash
+# Immediate (10 seconds):
+sed -i 's/WHATSAPP_PRIMARY=evolution/WHATSAPP_PRIMARY=waba/' \
+  /data/projects/platform/apps/api/.env \
+  /data/projects/platform/apps/whatsapp-service/.env
+pm2 restart api whatsapp-service
+```
+
+### New Number Registration (5 minutes)
+```bash
+# 1. Create new instance
+curl -s -X POST http://localhost:8081/instance/create \
+  -H 'apikey: <KEY>' -H 'Content-Type: application/json' \
+  -d '{"instanceName":"saubh-sim2","qrcode":true,"integration":"WHATSAPP-BAILEYS"}'
+
+# 2. Scan QR code
+curl -s http://localhost:8081/instance/connect/saubh-sim2 \
+  -H 'apikey: <KEY>'
+
+# 3. Set webhook
+curl -s -X POST http://localhost:8081/webhook/set/saubh-sim2 \
+  -H 'apikey: <KEY>' -H 'Content-Type: application/json' \
+  -d '{"webhook":{"url":"https://api.saubh.tech/api/crm/webhooks/evolution","enabled":true,"webhookBase64":false,"events":["MESSAGES_UPSERT","MESSAGES_UPDATE","CONNECTION_UPDATE","SEND_MESSAGE"]}}'
+
+# 4. Update .env
+sed -i 's/EVOLUTION_INSTANCE=.*/EVOLUTION_INSTANCE=saubh-sim2/' \
+  apps/api/.env apps/whatsapp-service/.env
+
+# 5. Switch back
+sed -i 's/WHATSAPP_PRIMARY=waba/WHATSAPP_PRIMARY=evolution/' \
+  apps/api/.env apps/whatsapp-service/.env
+pm2 restart api whatsapp-service
+```
+
+### WABA Token Expired
+```bash
+# Get new token from Meta Business Manager
+# Update in .env
+sed -i "s/^WABA_ACCESS_TOKEN=.*/WABA_ACCESS_TOKEN=NEW_TOKEN/" \
+  apps/api/.env apps/whatsapp-service/.env
+pm2 restart api whatsapp-service
+```
+
+### Service Recovery
+```bash
+# Check all services
+pm2 status
+
+# Check Evolution connection
+curl -s http://localhost:8081/instance/connectionState/saubh-sim \
+  -H 'apikey: <KEY>'
+
+# Check Redis
+redis-cli -a Red1sSecure2026 ping
+
+# Restart all
+pm2 restart all
+
+# Check logs
+pm2 logs api --lines 50
+pm2 logs realtime --lines 20
+pm2 logs whatsapp-service --lines 20
+```
+
+---
+
+## Pending / Future Work
+
+| Priority | Item | Description |
+|----------|------|-------------|
+| HIGH | JWT Auth Middleware | Protect API routes with JWT verification |
+| HIGH | Session Management | Logout, token refresh, expired session handling |
+| MEDIUM | WABA Templates | Pre-approve `saubh_otp` and `saubh_welcome` for 24h+ messaging |
+| MEDIUM | Dashboard API Integration | Replace mock data with real API calls |
+| MEDIUM | Multilingual Auth Messages | OTP/welcome messages in user's preferred language |
+| LOW | Provider Health Endpoint | `GET /api/whatsapp/provider-status` for monitoring |
+| LOW | Circuit Breaker Reset Endpoint | `POST /api/whatsapp/reset-circuit/:provider` |
+| LOW | Redis Eviction Policy | Change from `allkeys-lru` to `noeviction` |
+| LOW | Email Verification | Alternate auth method |
+
+---
+
+## Backup Files
+
+All critical files have `.bak.safe` backups:
+```
+apps/api/src/crm/webhooks/webhook.service.ts.bak.safe
+apps/api/src/crm/webhooks/evolution-webhook.controller.ts.bak.safe
+apps/api/src/crm/webhooks/evolution-webhook.controller.ts.bak.safe2
+apps/api/src/crm/webhooks/webhooks.module.ts.bak.safe
+apps/api/src/crm/inbox/inbox.service.ts.bak.safe
+apps/api/src/crm/inbox/inbox.module.ts.bak.safe
+apps/api/src/whatsapp/whatsapp-sender.service.ts.bak.*
+apps/whatsapp-service/src/sender.js.bak.*
+apps/web/src/app/[locale]/dashboard/page.tsx.bak
+```
+
+---
+
+*Last updated: 23 February 2026, 12:00 IST*
+*Sessions covered: 5 (Evolution restore → Auth system → Hardening → Dashboard → Failover + CRM sync)*

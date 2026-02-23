@@ -92,6 +92,9 @@ importers:
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
+      ioredis:
+        specifier: ^5.4.2
+        version: 5.9.3
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3

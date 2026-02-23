@@ -53,7 +53,16 @@ export default function DashboardPage() {
       return;
     }
 
-    setChecking(false);
+    // Profile completion gate: redirect to /profile if incomplete
+    const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.saubh.tech/api';
+    fetch(`${API}/auth/profile`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d && d.isComplete === false) { router.replace(`/${locale}/profile`); return; }
+        setChecking(false);
+      })
+      .catch(() => setChecking(false));
+    return; // setChecking handled in .then above
   }, [locale, router]);
 
   const handleLogout = () => {
