@@ -6,7 +6,7 @@ import * as path from 'path';
 const BACKUP_DIR = '/data/backups';
 const SERVICE_ACCOUNT_PATH = '/data/backups/google-service-account.json';
 
-interface DriveFileInfo {
+export interface DriveFileInfo {
   id: string;
   name: string;
   size: string;
@@ -15,7 +15,7 @@ interface DriveFileInfo {
   webViewLink: string;
 }
 
-interface UploadProgress {
+export interface UploadProgress {
   backupId: string;
   status: 'uploading' | 'complete' | 'failed';
   step: string;
