@@ -146,7 +146,7 @@ export default function BackupPage() {
 
       {activeTab === 'backups' && <BackupsTab password={password} />}
       {activeTab === 'schedule' && <ScheduleTab password={password} />}
-      {activeTab === 'drive' && <DriveTab />}
+      {activeTab === 'drive' && <DriveTab password={password} />}
     </div>
   );
 }
@@ -165,6 +165,7 @@ function BackupsTab({ password }: { password: string }) {
   const [restoreInput, setRestoreInput] = useState('');
   const [restoreJob, setRestoreJob] = useState<RestoreJob | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [driveUploading, setDriveUploading] = useState<string | null>(null);
   const [toast, setToast] = useState('');
 
   const loadBackups = useCallback(async () => {
@@ -413,6 +414,30 @@ function BackupsTab({ password }: { password: string }) {
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const }}>
                   <button onClick={() => triggerDownload(b.id, 'code', password)} style={actionBtnStyle}>⬇ Code</button>
                   <button onClick={() => triggerDownload(b.id, 'db', password)} style={actionBtnStyle}>⬇ DB</button>
+                  <button
+                    onClick={async () => {
+                      setDriveUploading(b.id);
+                      try {
+                        const res = await apiFetch(`/drive/upload/${b.id}`, password, { method: 'POST' });
+                        if (res.ok) {
+                          const data = await res.json();
+                          // Poll progress
+                          const iv = setInterval(async () => {
+                            try {
+                              const pr = await apiFetch(`/drive/progress/${data.jobKey}`, password);
+                              if (pr.ok) {
+                                const p = await pr.json();
+                                if (p.status === 'complete') { clearInterval(iv); setDriveUploading(null); showToast('☁️ Uploaded to Google Drive!'); }
+                                if (p.status === 'failed') { clearInterval(iv); setDriveUploading(null); showToast('❌ Drive upload failed: ' + (p.error || '')); }
+                              }
+                            } catch { /* ignore */ }
+                          }, 3000);
+                        } else { setDriveUploading(null); showToast('Drive upload failed.'); }
+                      } catch { setDriveUploading(null); showToast('Connection error.'); }
+                    }}
+                    disabled={driveUploading === b.id}
+                    style={{ ...actionBtnStyle, color: '#34d399', borderColor: 'rgba(52,211,153,0.3)', opacity: driveUploading === b.id ? 0.5 : 1 }}
+                  >{driveUploading === b.id ? '⟳ Uploading...' : '☁️ Drive'}</button>
                   <button onClick={() => { setRestoreModal(b.id); setRestoreInput(''); }} style={{ ...actionBtnStyle, color: '#fbbf24', borderColor: 'rgba(251,191,36,0.3)' }}>🔄 Restore</button>
                   {deleteConfirm === b.id ? (
                     <div style={{ display: 'flex', gap: '4px' }}>
@@ -692,39 +717,134 @@ function ScheduleTab({ password }: { password: string }) {
    TAB 3 — GOOGLE DRIVE (Placeholder)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function DriveTab() {
+function DriveTab({ password }: { password: string }) {
+  const [status, setStatus] = useState<{ connected: boolean; email: string; folderId: string } | null>(null);
+  const [files, setFiles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [toast, setToast] = useState('');
+
+  const loadData = useCallback(async () => {
+    try {
+      const [sRes, fRes] = await Promise.all([
+        apiFetch('/drive/status', password),
+        apiFetch('/drive/files', password),
+      ]);
+      if (sRes.ok) setStatus(await sRes.json());
+      if (fRes.ok) setFiles(await fRes.json());
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [password]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleDelete = async (fileId: string) => {
+    try {
+      const res = await apiFetch(`/drive/file/${fileId}`, password, { method: 'DELETE' });
+      if (res.ok) { setToast('Deleted from Drive.'); loadData(); }
+    } catch { /* ignore */ }
+    setDeleteConfirm(null);
+  };
+
+  const fmtDate = (iso: string) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
+  if (loading) return <div style={{ color: 'rgba(255,255,255,0.4)', padding: '40px', textAlign: 'center' as const }}>Loading Drive status...</div>;
+
   return (
-    <div style={{ ...cardStyle, maxWidth: '560px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-        <span style={{ fontSize: '32px' }}>☁️</span>
+    <div>
+      {toast && (
+        <div style={{ position: 'fixed', top: '24px', right: '24px', padding: '12px 20px', borderRadius: '10px', background: 'rgba(99,102,241,0.9)', color: '#fff', fontSize: '13px', fontWeight: 600, zIndex: 999 }}>
+          {toast}
+        </div>
+      )}
+
+      {/* Connection status */}
+      <div style={{ ...cardStyle, marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '32px' }}>☁️</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: '#fff' }}>Google Drive</div>
+            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+              Status: {status?.connected
+                ? <span style={{ color: '#34d399' }}>Connected ✓</span>
+                : <span style={{ color: '#f87171' }}>Not configured</span>
+              }
+            </div>
+          </div>
+          {status?.connected && <span style={{ ...badgeStyle, background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>🟢 Active</span>}
+        </div>
+        {status?.connected && (
+          <div style={{ marginTop: '12px', padding: '12px 16px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>
+            <div>Service Account: <strong style={{ color: '#a78bfa' }}>{status.email}</strong></div>
+            <div style={{ marginTop: '4px' }}>Folder ID: <code style={{ color: '#a78bfa' }}>{status.folderId}</code></div>
+          </div>
+        )}
+        {!status?.connected && (
+          <div style={{ marginTop: '16px', padding: '20px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#a78bfa', marginBottom: '12px', marginTop: 0 }}>Setup Instructions</h4>
+            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.8 }}>
+              <div style={{ marginBottom: '4px' }}>1. Create a <strong>Service Account</strong> in Google Cloud Console</div>
+              <div style={{ marginBottom: '4px' }}>2. Enable <strong>Google Drive API</strong></div>
+              <div style={{ marginBottom: '4px' }}>3. Download the JSON key file</div>
+              <div style={{ marginBottom: '4px' }}>4. Place it at:</div>
+              <code style={{ display: 'block', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', fontSize: '12px', color: '#a78bfa', marginBottom: '8px', marginLeft: '16px' }}>
+                /data/backups/google-service-account.json
+              </code>
+              <div style={{ marginBottom: '4px' }}>5. Add to server <strong>.env</strong>:</div>
+              <code style={{ display: 'block', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', fontSize: '12px', color: '#a78bfa', marginLeft: '16px' }}>
+                GDRIVE_FOLDER_ID=your_folder_id
+              </code>
+              <div style={{ marginTop: '8px' }}>6. Share Drive folder with service account email</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Drive files list */}
+      {status?.connected && (
         <div>
-          <div style={{ fontSize: '16px', fontWeight: 600, color: '#fff' }}>Google Drive Integration</div>
-          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Status: <span style={{ color: '#fbbf24' }}>Not configured</span></div>
-        </div>
-      </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: 0 }}>Files in Drive ({files.length})</h3>
+            <button onClick={() => loadData()} style={actionBtnStyle}>↻ Refresh</button>
+          </div>
 
-      <div style={{ padding: '20px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#a78bfa', marginBottom: '12px', marginTop: 0 }}>Setup Instructions</h4>
-        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.8 }}>
-          <div style={{ marginBottom: '4px' }}>1. Go to <strong style={{ color: '#8b5cf6' }}>console.cloud.google.com</strong></div>
-          <div style={{ marginBottom: '4px' }}>2. Create project: <strong>Saubh-Backup</strong></div>
-          <div style={{ marginBottom: '4px' }}>3. Enable <strong>Google Drive API</strong></div>
-          <div style={{ marginBottom: '4px' }}>4. Create <strong>OAuth 2.0</strong> credentials</div>
-          <div style={{ marginBottom: '4px' }}>5. Add redirect URI:</div>
-          <code style={{ display: 'block', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', fontSize: '12px', color: '#a78bfa', marginBottom: '8px', marginLeft: '16px', wordBreak: 'break-all' as const }}>
-            https://admin.saubh.tech/en-in/crm/backup
-          </code>
-          <div style={{ marginBottom: '4px' }}>6. Add to server <strong>.env</strong>:</div>
-          <code style={{ display: 'block', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', fontSize: '12px', color: '#a78bfa', marginLeft: '16px', whiteSpace: 'pre' as const }}>
-{`GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET=your_secret`}
-          </code>
-        </div>
-      </div>
+          {files.length === 0 && (
+            <div style={{ ...cardStyle, textAlign: 'center' as const, padding: '40px 20px' }}>
+              <div style={{ fontSize: '36px', marginBottom: '12px' }}>📂</div>
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>No files uploaded to Drive yet. Use the ☁️ Drive button on a backup to upload.</p>
+            </div>
+          )}
 
-      <button disabled style={{ ...primaryBtnStyle, marginTop: '20px', opacity: 0.4, cursor: 'not-allowed' }}>
-        Connect Google Drive (not configured)
-      </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {files.map((f: any) => (
+              <div key={f.id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' as const, padding: '14px 20px' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0' }}>{f.name}</div>
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' as const }}>
+                    <span style={badgeStyle}>{f.size}</span>
+                    <span style={badgeStyle}>{fmtDate(f.createdTime)}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {f.webViewLink && <a href={f.webViewLink} target="_blank" rel="noopener noreferrer" style={{ ...actionBtnStyle, color: '#60a5fa' }}>🔗 Open</a>}
+                  {deleteConfirm === f.id ? (
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button onClick={() => handleDelete(f.id)} style={{ ...actionBtnStyle, color: '#f87171', borderColor: 'rgba(248,113,113,0.3)' }}>Confirm</button>
+                      <button onClick={() => setDeleteConfirm(null)} style={actionBtnStyle}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setDeleteConfirm(f.id)} style={{ ...actionBtnStyle, color: '#f87171', borderColor: 'rgba(248,113,113,0.2)' }}>🗑</button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

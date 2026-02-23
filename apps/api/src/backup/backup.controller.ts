@@ -16,6 +16,7 @@ import {
 import { Request, Response } from 'express';
 import { BackupService } from './backup.service';
 import { BackupScheduler } from './backup.scheduler';
+import { BackupDriveService } from './backup.drive.service';
 
 /**
  * BackupController — REST endpoints for backup management.
@@ -41,6 +42,7 @@ export class BackupController {
   constructor(
     private readonly backupService: BackupService,
     private readonly backupScheduler: BackupScheduler,
+    private readonly driveService: BackupDriveService,
   ) {}
 
   // ─── Password Check ─────────────────────────────────────────────────────
@@ -160,5 +162,50 @@ export class BackupController {
     await this.backupService.saveSchedule(body);
     await this.backupScheduler.reload();
     return { success: true, message: 'Schedule saved.' };
+  }
+
+  // ─── GET /api/backup/drive/status ──────────────────────────────────────
+
+  @Get('drive/status')
+  getDriveStatus(@Req() req: Request) {
+    this.checkPassword(req);
+    return this.driveService.getConnectionStatus();
+  }
+
+  // ─── POST /api/backup/drive/upload/:id ─────────────────────────────────
+
+  @Post('drive/upload/:id')
+  @HttpCode(HttpStatus.OK)
+  async uploadToDrive(@Req() req: Request, @Param('id') id: string) {
+    this.checkPassword(req);
+    return this.driveService.uploadBackup(id);
+  }
+
+  // ─── GET /api/backup/drive/progress/:jobKey ────────────────────────────
+
+  @Get('drive/progress/:jobKey')
+  getDriveProgress(@Req() req: Request, @Param('jobKey') jobKey: string) {
+    this.checkPassword(req);
+    const progress = this.driveService.getUploadProgress(jobKey);
+    if (!progress) return { status: 'not_found' };
+    return progress;
+  }
+
+  // ─── GET /api/backup/drive/files ───────────────────────────────────────
+
+  @Get('drive/files')
+  async listDriveFiles(@Req() req: Request) {
+    this.checkPassword(req);
+    return this.driveService.listFiles();
+  }
+
+  // ─── DELETE /api/backup/drive/file/:fileId ─────────────────────────────
+
+  @Delete('drive/file/:fileId')
+  @HttpCode(HttpStatus.OK)
+  async deleteDriveFile(@Req() req: Request, @Param('fileId') fileId: string) {
+    this.checkPassword(req);
+    await this.driveService.deleteFile(fileId);
+    return { success: true, deleted: fileId };
   }
 }
