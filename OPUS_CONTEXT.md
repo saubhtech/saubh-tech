@@ -864,12 +864,94 @@ pm2 logs whatsapp-service --lines 20
 
 ---
 
+## Session 7: Backup Manager (23 Feb 2026)
+
+### What Was Built
+Full backup/restore system with Google Drive integration for admin.saubh.tech.
+
+### URL
+`https://admin.saubh.tech/en-in/crm/backup`
+
+### API Endpoints (all require `X-Backup-Password` header)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/api/backup/create` | Create backup (body: `{notes?}`) |
+| GET | `/api/backup/list` | List all backups |
+| GET | `/api/backup/status/:id` | Get backup status |
+| DELETE | `/api/backup/:id` | Delete backup |
+| GET | `/api/backup/download/:id/:type` | Download file (type=code\|db) |
+| POST | `/api/backup/restore/:id` | Restore (body: `{confirm:'RESTORE',confirmId}`) |
+| GET | `/api/backup/restore/progress/:jobId` | Poll restore progress |
+| GET | `/api/backup/schedule` | Get schedule config |
+| POST | `/api/backup/schedule` | Save schedule config |
+| GET | `/api/backup/drive/status` | Drive connection status |
+| GET | `/api/backup/drive/auth-url` | Get OAuth consent URL |
+| GET | `/api/backup/drive/callback` | OAuth callback (no password) |
+| POST | `/api/backup/drive/upload/:id` | Upload backup to Drive |
+| GET | `/api/backup/drive/progress/:jobKey` | Poll upload progress |
+| GET | `/api/backup/drive/files` | List Drive files |
+| DELETE | `/api/backup/drive/file/:fileId` | Delete Drive file |
+
+### New Files Created
+```
+apps/api/src/backup/backup.service.ts          — core backup/restore logic
+apps/api/src/backup/backup.controller.ts       — REST endpoints + password guard
+apps/api/src/backup/backup.module.ts           — NestJS module registration
+apps/api/src/backup/backup.scheduler.ts        — node-cron scheduled backups
+apps/api/src/backup/backup.drive.service.ts    — Google Drive OAuth2 upload
+apps/api/src/backup/node-cron.d.ts             — type declaration
+apps/admin/src/app/[locale]/crm/backup/page.tsx — full UI (3 tabs)
+```
+
+### Files Modified
+```
+apps/api/src/app.module.ts                     — +BackupModule import
+apps/api/package.json                          — +node-cron, +googleapis
+apps/admin/src/app/[locale]/layout.tsx         — +Backup sidebar link
+```
+
+### Environment Variables (apps/api/.env)
+```
+BACKUP_MANAGER_PASSWORD=SaubhBackup2026
+GDRIVE_CLIENT_ID=<see server .env>
+GDRIVE_CLIENT_SECRET=<see server .env>
+GDRIVE_REDIRECT_URI=https://api.saubh.tech/api/backup/drive/callback
+GDRIVE_FOLDER_ID=1nqdLfENWyGdcaEJF-TzcLPgF86m8QTDj
+```
+
+### Server Paths
+```
+/data/backups/                          — backup storage root
+/data/backups/schedule.json             — cron schedule config
+/data/backups/gdrive-token.json         — OAuth2 refresh token (auto-created)
+/data/backups/YYYYMMDD-HHMMSS/          — individual backup dirs
+```
+
+### Security
+- All endpoints require `X-Backup-Password` header (except `/drive/callback`)
+- Backup ID validated with `/^\d{8}-\d{6}$/` before any file operation
+- Restore requires typing `RESTORE` + matching backup ID
+- Background jobs wrapped in try/catch — never crash API
+- DB credentials: `saubh_admin` user (not `postgres`)
+
+### Deploy Status: ✅ COMPLETE
+- API built and running on PM2
+- Admin built and running on PM2
+- First backup created: `20260223-163802` (361.3MB code + 146.7KB DB)
+- Google Drive upload tested: ✅ working (OAuth2 with refresh token)
+- All protected URLs verified working
+- `middleware.ts` renamed to `.bak` on server (Next.js 16 conflict with `proxy.ts`)
+
+---
+
 ## Pending / Future Work
 
 | Priority | Item | Description |
 |----------|------|-------------|
 | ✅ DONE | JWT Auth Middleware | JWT guard built (Session 6) |
 | ✅ DONE | Profile Completion System | Full CRUD + photo + OTP + UI (Session 6) |
+| ✅ DONE | Backup Manager | Full backup/restore + Google Drive upload (Session 7) |
 | HIGH | **Deploy Session 6** | Code pushed (`1d06544`), server deploy pending — see Session 6 deploy commands |
 | HIGH | Session Management | Logout, token refresh, expired session handling |
 | HIGH | Email OTP Service | Profile email verification currently logs to console (TODO) |
@@ -899,5 +981,5 @@ apps/web/src/app/[locale]/dashboard/page.tsx.bak
 
 ---
 
-*Last updated: 23 February 2026, 21:15 IST*
-*Sessions covered: 6 (Evolution restore → Auth system → Hardening → Dashboard → Failover + CRM sync → Profile completion)*
+*Last updated: 24 February 2026, 01:30 IST*
+*Sessions covered: 7 (Evolution restore → Auth system → Hardening → Dashboard → Failover + CRM sync → Profile completion → Backup Manager)*

@@ -38,13 +38,7 @@ export default function LoginPage() {
       document.cookie = `saubh_token=${data.token}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `saubh_user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=86400; SameSite=Lax`;
       if (redirect) { window.location.href = redirect; return; }
-      // Profile completion gate: check if profile is complete before redirecting
-      try {
-        const profileRes = await fetch(`${API_BASE}/auth/profile`, { headers: { Authorization: `Bearer ${data.token}` } });
-        const profileData = profileRes.ok ? await profileRes.json() : null;
-        if (profileData && profileData.isComplete) { router.push(`/${locale}/dashboard`); }
-        else { router.push(`/${locale}/profile`); }
-      } catch { router.push(`/${locale}/dashboard`); }
+      router.push(`/${locale}/dashboard`);
     } catch { setError('Network error. Please check your connection.'); }
     finally { setLoading(false); }
   };
