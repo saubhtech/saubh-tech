@@ -8,7 +8,7 @@ const BACKUP_DIR = '/data/backups';
 const PLATFORM_DIR = '/data/projects/platform';
 const ID_REGEX = /^\d{8}-\d{6}$/;
 
-interface BackupStatus {
+export interface BackupStatus {
   id: string;
   createdAt: string;
   type: 'manual' | 'scheduled';
@@ -22,7 +22,7 @@ interface BackupStatus {
   error?: string;
 }
 
-interface ScheduleConfig {
+export interface ScheduleConfig {
   enabled: boolean;
   frequency: 'daily' | 'weekly' | 'monthly';
   time: string;
@@ -31,7 +31,7 @@ interface ScheduleConfig {
   keepLast: number;
 }
 
-interface RestoreJob {
+export interface RestoreJob {
   jobId: string;
   backupId: string;
   step: string;
