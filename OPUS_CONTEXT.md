@@ -13,11 +13,12 @@
 5. [Session 3: Production Hardening & Security](#session-3-production-hardening--security)
 6. [Session 4: Dashboard UI Development & Deployment](#session-4-dashboard-ui-development--deployment)
 7. [Session 5: WhatsApp Failover, CRM Realtime Sync](#session-5-whatsapp-failover-crm-realtime-sync)
-8. [Architecture Diagrams](#architecture-diagrams)
-9. [Environment Variables Reference](#environment-variables-reference)
-10. [Key Files Reference](#key-files-reference)
-11. [Runbooks & Emergency Procedures](#runbooks--emergency-procedures)
-12. [Pending / Future Work](#pending--future-work)
+8. [Session 6: Profile Completion System](#session-6-profile-completion-system)
+9. [Architecture Diagrams](#architecture-diagrams)
+10. [Environment Variables Reference](#environment-variables-reference)
+11. [Key Files Reference](#key-files-reference)
+12. [Runbooks & Emergency Procedures](#runbooks--emergency-procedures)
+13. [Pending / Future Work](#pending--future-work)
 
 ---
 
@@ -416,6 +417,233 @@ apps/api/src/crm/inbox/inbox.module.ts                  — RedisProvider added
 
 ---
 
+## Session 6: Profile Completion System
+
+### Date: 23 February 2026 (Evening)
+### Git Commit: `1d06544` on main
+
+### Overview
+After WhatsApp-based login, users now must complete their profile before accessing the dashboard. The system gates both the login redirect and the dashboard itself, routing incomplete users to a new `/profile` page.
+
+### ⚠️ DEPLOY STATUS: CODE PUSHED, NOT YET DEPLOYED
+All code is committed and pushed to GitHub (`1d06544`). Server deploy is **pending**.
+
+To deploy, SSH to server and run:
+```bash
+ssh -p 5104 admin1@103.67.236.186
+cd /data/projects/platform
+git pull origin main
+sudo mkdir -p /data/uploads/profiles && sudo chown -R admin1:admin1 /data/uploads
+pnpm install
+pnpm --filter @saubhtech/api build
+pnpm --filter @saubhtech/web build
+pm2 restart api && pm2 restart web
+```
+
+Post-deploy verification:
+```bash
+curl -sf http://localhost:3001/api/healthz && echo "✅ API OK"
+curl -sf http://localhost:3000 > /dev/null && echo "✅ Web OK"
+curl -sf http://localhost:3001/api/master/geo/states > /dev/null && echo "✅ Geo OK"
+curl -sf http://localhost:3001/api/master/geo/languages > /dev/null && echo "✅ Languages OK"
+```
+
+Protected URLs to verify after deploy:
+- `https://saubh.tech` (homepage)
+- `https://saubh.tech/hi-in/login` (login)
+- `https://saubh.tech/hi-in/dashboard` (dashboard)
+- `https://admin.saubh.tech/en-in/crm/inbox` (CRM)
+- `https://api.saubh.tech/api/healthz` (health check)
+- `https://api.saubh.tech/api/auth/whatsapp/verify-otp` (auth POST)
+
+### Safety Rules (Observed This Session)
+Protected files (read-only, no modifications):
+- `apps/api/prisma/schema.prisma` (no migrations)
+- All CRM files (`apps/api/src/crm/*`)
+- All whatsapp-service files
+- `infra/caddy/Caddyfile`
+- Homepage (`apps/web/src/app/[locale]/page.tsx`)
+
+### Features Built
+
+#### 1. JWT Auth Guard
+**File:** `apps/api/src/auth/jwt-auth.guard.ts` (NEW, 48 lines)
+
+- Standalone NestJS guard using raw `jsonwebtoken` library (matches project pattern — no `@nestjs/jwt`)
+- Extracts Bearer token from `Authorization` header
+- Verifies against `JWT_SECRET` env var
+- Sets `req.user = {sub: string, whatsapp, usertype}` with BigInt→string conversion
+- Throws 401 on missing/invalid/expired token
+
+#### 2. Profile Controller (CRUD + Photo + OTP)
+**File:** `apps/api/src/auth/profile.controller.ts` (NEW, ~300 lines)
+
+All endpoints require JWT auth via `JwtAuthGuard`.
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/auth/profile` | Fetch user + `isComplete` boolean |
+| `PATCH` | `/api/auth/profile` | Partial update with validation |
+| `POST` | `/api/auth/profile/photo` | Upload selfie (image-only, max 5MB) |
+| `POST` | `/api/auth/profile/send-otp` | Send 6-digit OTP for mobile/email verification |
+| `POST` | `/api/auth/profile/verify-otp` | Verify OTP + save phone/email to DB |
+
+**isComplete Logic** (all 9 required):
+```
+fname && lname && gender && dob && langid.length > 0 && stateid && districtid && pincode && pic
+```
+
+**Photo Upload:**
+- Multer FileInterceptor, image/* filter, 5MB limit
+- Saves to `/data/uploads/profiles/{userid}.{ext}`
+- Updates `user.pic` in DB with URL path
+- Served at `https://api.saubh.tech/api/uploads/profiles/{userid}.jpg`
+
+**Profile OTP (Redis-only):**
+- Uses `ioredis` directly (new dependency added)
+- Key pattern: `otp:profile:{userid}:{type}` with 120s TTL
+- 6-digit OTP (distinct from 4-digit login passcode)
+- Mobile: sends via `WhatsappSenderService` (fire-and-forget)
+- Email: logs to console (email service TODO)
+- **NEVER** touches `passcode`/`passcodeExpiry` DB columns
+
+#### 3. Profile Module
+**File:** `apps/api/src/auth/profile.module.ts` (NEW, 16 lines)
+
+- Imports: `PrismaModule`, `WhatsappModule` (forwardRef)
+- Controllers: `ProfileController`
+- Registered in `app.module.ts`
+
+#### 4. Public Geo Controller (Cascade Dropdowns)
+**File:** `apps/api/src/master/master-geo.controller.ts` (NEW, 65 lines)
+
+Public endpoints (no auth) for profile form dropdowns. Reuses existing `MasterService` methods.
+
+| Method | Route | Cascade | Returns |
+|--------|-------|---------|--------|
+| `GET` | `/api/master/geo/languages` | — | Active languages |
+| `GET` | `/api/master/geo/states` | Country=IN fixed | Indian states |
+| `GET` | `/api/master/geo/districts?stateId=X` | After state | Districts |
+| `GET` | `/api/master/geo/pincodes?districtId=X` | After district | Postal codes |
+| `GET` | `/api/master/geo/places?pincode=X` | After pincode | Places |
+
+**Note:** Uses `/api/master/geo/` prefix (not `/api/master/`) because the existing `MasterController` at `/api/master/` is admin-only (Keycloak + RolesGuard). Same prefix would cause route conflicts.
+
+#### 5. Profile Page (Frontend)
+**File:** `apps/web/src/app/[locale]/profile/page.tsx` (NEW, ~450 lines, 35KB)
+
+Gen-Z **light** theme (contrasts with dark login page).
+
+**Layout:** Two-panel card — photo upload (left) + form fields (right)
+
+**Features:**
+- Auth guard: reads `saubh_token` cookie → redirects to login if missing → checks `isComplete` → redirects to dashboard if already complete
+- Live progress bar (9 fields tracked, red→amber→green gradient)
+- Photo upload with instant preview, file name/size display
+- 9 form rows: Name, Mobile+OTP, Email+OTP, Gender+DOB, Languages (multi-chip-select), Country+State, District+Pincode, Place, Qualification+Experience
+- Cascade dropdowns: State→District→Pincode→Place (each loads only after parent selected, resets children on change)
+- Language multi-select: searchable dropdown with chips + remove buttons
+- OTP inline verification for mobile (WhatsApp) and email
+- Gender enum mapping: M=Male, F=Female, T=Transgender, O=Other
+- Submit: validates required → uploads photo → PATCH profile → redirects to dashboard
+- Responsive: mobile stacks to single column, compact photo area
+
+**Theme:**
+- Violet (#7c3aed) + Cyan (#06b6d4) + Green (#22c55e) mesh blobs
+- Glassmorphism card with gradient top border
+- Inter font, violet focus glow, gradient submit button
+
+#### 6. Login Page — Profile Gate
+**File:** `apps/web/src/app/[locale]/login/page.tsx` (MODIFIED, +6 lines)
+
+**Before:** Login → always redirects to `/dashboard`
+**After:** Login → fetches `GET /api/auth/profile` → if `isComplete` → `/dashboard`, else → `/profile`
+
+Fallback: if profile API fails, still goes to `/dashboard` (safe default).
+
+All existing login logic, UI, and CSS completely untouched.
+
+#### 7. Dashboard — Profile Guard
+**File:** `apps/web/src/app/[locale]/dashboard/page.tsx` (MODIFIED, +8 lines)
+
+Inside existing `useEffect` (after cookie parse, before `setChecking(false)`):
+- Fetches `GET /api/auth/profile` with JWT
+- If `isComplete === false` → redirects to `/profile`
+- If API fails → shows dashboard normally (safe fallback)
+
+#### 8. Static File Serving
+**File:** `apps/api/src/main.ts` (MODIFIED, +2 lines)
+
+```typescript
+(app as any).useStaticAssets('/data/uploads', { prefix: '/api/uploads' });
+```
+
+Photos accessible at: `https://api.saubh.tech/api/uploads/profiles/{userid}.jpg`
+
+### Files Inventory
+
+#### New Files (5)
+```
+apps/api/src/auth/jwt-auth.guard.ts         — JWT auth guard (48 lines)
+apps/api/src/auth/profile.controller.ts     — Profile CRUD + photo + OTP (~300 lines)
+apps/api/src/auth/profile.module.ts         — Profile NestJS module (16 lines)
+apps/api/src/master/master-geo.controller.ts — Public geo cascade endpoints (65 lines)
+apps/web/src/app/[locale]/profile/page.tsx  — Profile completion page (~450 lines)
+```
+
+#### Modified Files (6)
+```
+apps/api/src/main.ts                        — +2 lines (static file serving)
+apps/api/src/app.module.ts                  — +2 lines (ProfileModule import)
+apps/api/src/master/master.module.ts        — +2 lines (MasterGeoController)
+apps/api/package.json                       — +1 line (ioredis dependency)
+apps/web/src/app/[locale]/login/page.tsx    — +6 lines (profile gate)
+apps/web/src/app/[locale]/dashboard/page.tsx — +8 lines (profile guard)
+```
+
+#### Deploy Scripts (2)
+```
+infra/ops/deploy-profile.sh                 — Automated deploy bash script
+infra/ops/deploy-profile-manual.md          — Step-by-step manual deploy
+```
+
+### Profile Completion Flow
+```
+User sends "Passcode" to WhatsApp → gets 4-digit code
+  → Visits saubh.tech/hi-in/login → enters phone + code
+  → POST /api/auth/whatsapp/verify-otp → JWT token + cookies set
+  → Fetches GET /api/auth/profile → isComplete = false
+  → Redirects to /hi-in/profile
+
+On /profile page:
+  → Loads master data (languages, states)
+  → User fills form (name, gender, dob, languages, location, photo)
+  → Cascade: State → District → Pincode → Place
+  → Optional: verify alt mobile (WhatsApp OTP) + email (email OTP)
+  → Uploads selfie → POST /api/auth/profile/photo
+  → Saves all fields → PATCH /api/auth/profile
+  → isComplete = true → redirects to /hi-in/dashboard
+
+On subsequent logins:
+  → Login → profile check → isComplete = true → straight to dashboard
+```
+
+### Key Technical Decisions
+
+| Decision | Rationale |
+|----------|----------|
+| Raw `jsonwebtoken` for JWT guard | Project already uses it (no @nestjs/jwt installed) |
+| `ioredis` as direct dependency | Needed for profile OTP; BullMQ's ioredis not accessible under pnpm strict hoisting |
+| Redis-only profile OTP | Avoids conflicts with `passcode`/`passcodeExpiry` DB columns used by login |
+| 6-digit profile OTP (vs 4-digit login) | Distinguishes verification contexts |
+| `/api/master/geo/` route prefix | Avoids conflict with existing admin-only `/api/master/` routes |
+| Photo storage at `/data/uploads/profiles/` | Server-local, served via NestJS static assets |
+| `forwardRef(() => WhatsappModule)` | Breaks circular dependency between ProfileModule and WhatsappModule |
+| Profile page light theme | Contrasts with dark login/dashboard for visual differentiation |
+| Safe fallbacks everywhere | If profile API fails: login→dashboard, dashboard→show normally |
+
+---
+
 ## Architecture Diagrams
 
 ### WhatsApp Message Flow
@@ -513,6 +741,17 @@ apps/api/src/auth/otp.service.ts                 — Redis OTP management
 apps/api/src/auth/rate-limit.guard.ts            — Rate limiting
 apps/api/src/auth/normalize-phone.ts             — Phone normalization
 apps/api/src/auth/whatsapp-auth.module.ts        — Module + Redis provider
+apps/api/src/auth/jwt-auth.guard.ts              — JWT auth guard (Session 6)
+apps/api/src/auth/profile.controller.ts          — Profile CRUD + photo + OTP (Session 6)
+apps/api/src/auth/profile.module.ts              — Profile module (Session 6)
+```
+
+### Master Data
+```
+apps/api/src/master/master.controller.ts         — Admin-only CRUD (Keycloak guarded)
+apps/api/src/master/master-geo.controller.ts     — Public geo endpoints for profile (Session 6)
+apps/api/src/master/master.service.ts            — Shared service (countries, states, districts, etc)
+apps/api/src/master/master.module.ts             — Module (both controllers)
 ```
 
 ### WhatsApp Sender (Failover)
@@ -543,8 +782,9 @@ apps/realtime/src/redis/redis.service.ts — Redis pub/sub service
 
 ### Frontend
 ```
-apps/web/src/app/[locale]/login/page.tsx      — Login page
-apps/web/src/app/[locale]/dashboard/page.tsx  — Dashboard (775 lines)
+apps/web/src/app/[locale]/login/page.tsx      — Login page (+ profile gate, Session 6)
+apps/web/src/app/[locale]/dashboard/page.tsx  — Dashboard (+ profile guard, Session 6)
+apps/web/src/app/[locale]/profile/page.tsx    — Profile completion page (Session 6)
 ```
 
 ### Infrastructure
@@ -628,15 +868,17 @@ pm2 logs whatsapp-service --lines 20
 
 | Priority | Item | Description |
 |----------|------|-------------|
-| HIGH | JWT Auth Middleware | Protect API routes with JWT verification |
+| ✅ DONE | JWT Auth Middleware | JWT guard built (Session 6) |
+| ✅ DONE | Profile Completion System | Full CRUD + photo + OTP + UI (Session 6) |
+| HIGH | **Deploy Session 6** | Code pushed (`1d06544`), server deploy pending — see Session 6 deploy commands |
 | HIGH | Session Management | Logout, token refresh, expired session handling |
+| HIGH | Email OTP Service | Profile email verification currently logs to console (TODO) |
 | MEDIUM | WABA Templates | Pre-approve `saubh_otp` and `saubh_welcome` for 24h+ messaging |
 | MEDIUM | Dashboard API Integration | Replace mock data with real API calls |
 | MEDIUM | Multilingual Auth Messages | OTP/welcome messages in user's preferred language |
 | LOW | Provider Health Endpoint | `GET /api/whatsapp/provider-status` for monitoring |
 | LOW | Circuit Breaker Reset Endpoint | `POST /api/whatsapp/reset-circuit/:provider` |
 | LOW | Redis Eviction Policy | Change from `allkeys-lru` to `noeviction` |
-| LOW | Email Verification | Alternate auth method |
 
 ---
 
@@ -657,5 +899,5 @@ apps/web/src/app/[locale]/dashboard/page.tsx.bak
 
 ---
 
-*Last updated: 23 February 2026, 12:00 IST*
-*Sessions covered: 5 (Evolution restore → Auth system → Hardening → Dashboard → Failover + CRM sync)*
+*Last updated: 23 February 2026, 21:15 IST*
+*Sessions covered: 6 (Evolution restore → Auth system → Hardening → Dashboard → Failover + CRM sync → Profile completion)*
