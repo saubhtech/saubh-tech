@@ -5,17 +5,19 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { WhatsappAuthService } from './whatsapp-auth.service';
+import { normalizeWhatsApp } from './normalize-phone';
+import { AuthRateLimitGuard } from './rate-limit.guard';
 
 @Controller('auth/whatsapp')
+@UseGuards(AuthRateLimitGuard)
 export class WhatsappAuthController {
   constructor(private readonly authService: WhatsappAuthService) {}
 
   /**
    * POST /auth/whatsapp/register
-   * Register a new user via WhatsApp number.
-   * Returns 201 on new registration, 200 with existing user if already registered.
    */
   @Post('register')
   async register(
@@ -27,24 +29,35 @@ export class WhatsappAuthController {
       throw new BadRequestException('WhatsApp number is required.');
     }
 
-    if (!fname || !fname.trim()) {
+    // Sanitize & validate phone
+    const normalized = normalizeWhatsApp(whatsapp);
+    if (normalized.length < 10 || normalized.length > 15 || !/^\d+$/.test(normalized)) {
+      throw new BadRequestException('Invalid WhatsApp number.');
+    }
+
+    // Sanitize name — strip HTML/script, limit length
+    const rawName = (fname || '').trim();
+    if (!rawName) {
       throw new BadRequestException('First name is required.');
+    }
+    const safeName = rawName
+      .replace(/<[^>]*>/g, '')   // strip HTML tags
+      .replace(/[^\p{L}\p{N}\s.\-']/gu, '') // allow letters, numbers, spaces, dots, hyphens, apostrophes
+      .slice(0, 50);             // max 50 chars
+
+    if (!safeName) {
+      throw new BadRequestException('Invalid name.');
     }
 
     const validTypes = ['BO', 'CL', 'GW'];
     const ut = usertype?.toUpperCase() || 'GW';
-
     if (!validTypes.includes(ut)) {
       throw new BadRequestException(
         `Invalid usertype "${usertype}". Must be one of: BO, CL, GW.`,
       );
     }
 
-    const user = await this.authService.registerUser(
-      whatsapp.trim(),
-      fname.trim(),
-      ut,
-    );
+    const user = await this.authService.registerUser(normalized, safeName, ut);
 
     return {
       success: true,
@@ -54,8 +67,6 @@ export class WhatsappAuthController {
 
   /**
    * POST /auth/whatsapp/request-otp
-   * Request OTP for an existing user.
-   * 200 on success, 404 if not registered, 429 if rate limited.
    */
   @Post('request-otp')
   @HttpCode(HttpStatus.OK)
@@ -66,7 +77,12 @@ export class WhatsappAuthController {
       throw new BadRequestException('WhatsApp number is required.');
     }
 
-    await this.authService.requestOTP(whatsapp.trim());
+    const normalized = normalizeWhatsApp(whatsapp);
+    if (normalized.length < 10 || normalized.length > 15 || !/^\d+$/.test(normalized)) {
+      throw new BadRequestException('Invalid WhatsApp number.');
+    }
+
+    await this.authService.requestOTP(normalized);
 
     return {
       success: true,
@@ -76,29 +92,38 @@ export class WhatsappAuthController {
 
   /**
    * POST /auth/whatsapp/verify-otp
-   * Verify OTP and return JWT token.
-   * 200 on success, 400 if invalid/expired OTP.
    */
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() body: { whatsapp?: string; passcode?: string }) {
-    const { whatsapp, passcode } = body;
+  async verifyOtp(
+    @Body() body: { whatsapp?: string; otp?: string; passcode?: string },
+  ) {
+    const { whatsapp } = body;
+    const code = body.otp ?? body.passcode;
 
     if (!whatsapp || !whatsapp.trim()) {
       throw new BadRequestException('WhatsApp number is required.');
     }
 
-    if (!passcode || !passcode.trim()) {
-      throw new BadRequestException('Passcode is required.');
+    const normalized = normalizeWhatsApp(whatsapp);
+    if (normalized.length < 10 || normalized.length > 15 || !/^\d+$/.test(normalized)) {
+      throw new BadRequestException('Invalid WhatsApp number.');
     }
 
-    const result = await this.authService.loginWithOTP(
-      whatsapp.trim(),
-      passcode.trim(),
-    );
+    if (!code || !code.trim()) {
+      throw new BadRequestException('OTP or passcode is required.');
+    }
+
+    // Strict: only 4 digits allowed
+    const cleanCode = code.trim();
+    if (!/^\d{4}$/.test(cleanCode)) {
+      throw new BadRequestException('Passcode must be exactly 4 digits.');
+    }
+
+    const result = await this.authService.loginWithOTP(normalized, cleanCode);
 
     if (!result) {
-      throw new BadRequestException('Invalid or expired OTP.');
+      throw new BadRequestException('Invalid or expired OTP/passcode.');
     }
 
     return {
@@ -110,7 +135,6 @@ export class WhatsappAuthController {
 
   /**
    * POST /auth/whatsapp/logout
-   * Client handles cookie deletion. Server just confirms.
    */
   @Post('logout')
   @HttpCode(HttpStatus.OK)
@@ -118,9 +142,6 @@ export class WhatsappAuthController {
     return { success: true };
   }
 
-  /**
-   * Serialize user for JSON response (BigInt → string).
-   */
   private serializeUser(user: any) {
     return {
       userid: user.userid.toString(),
