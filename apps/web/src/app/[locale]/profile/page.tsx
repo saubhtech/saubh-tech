@@ -12,7 +12,6 @@ const GENDER_OPTIONS = Object.entries(GENDER_MAP);
 const USERTYPE_MAP: Record<string, string> = { BO: 'Business Owner', CL: 'Client', GW: 'Gig Worker' };
 const USERTYPE_OPTIONS = Object.entries(USERTYPE_MAP);
 
-/** All 16 fields that must be non-null for profile completeness */
 const TOTAL_REQUIRED = 16;
 
 // ─── Types ────────────────────────────────────────────────────────────────
@@ -54,8 +53,7 @@ function calcProgress(u: {
   if (u.qualification) filled++;
   if (u.experience) filled++;
   if (u.usertype) filled++;
-  // countryCode always 'IN' — auto-set
-  filled++;
+  filled++; // countryCode always 'IN'
   if (u.stateid) filled++;
   if (u.districtid) filled++;
   if (u.pincode) filled++;
@@ -101,9 +99,14 @@ export default function ProfilePage() {
   const [placeid, setPlaceid] = useState<number | null>(null);
   const [pic, setPic] = useState<string | null>(null);
 
-  // Photo upload
+  // Photo: selfie camera + upload fallback
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Master data for dropdowns
@@ -115,17 +118,37 @@ export default function ProfilePage() {
   const [langSearch, setLangSearch] = useState('');
   const [langDropOpen, setLangDropOpen] = useState(false);
 
-  // OTP states
-  const [mobileOtp, setMobileOtp] = useState('');
+  // OTP states — mobile (4-digit)
+  const [mobileOtp, setMobileOtp] = useState(['', '', '', '']);
   const [mobileOtpSent, setMobileOtpSent] = useState(false);
   const [mobileVerified, setMobileVerified] = useState(false);
   const [mobileLoading, setMobileLoading] = useState(false);
-  const [emailOtp, setEmailOtp] = useState('');
+  const [mobileCountdown, setMobileCountdown] = useState(0);
+  const mobileOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // OTP states — email (6-digit)
+  const [emailOtp, setEmailOtp] = useState(['', '', '', '', '', '']);
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
+  const [emailCountdown, setEmailCountdown] = useState(0);
+  const emailOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // ─── Fetch helpers ────────────────────────────────────────────────────
+  // ─── Countdown timers ──────────────────────────────────────────────
+
+  useEffect(() => {
+    if (mobileCountdown <= 0) return;
+    const t = setInterval(() => setMobileCountdown(c => c <= 1 ? 0 : c - 1), 1000);
+    return () => clearInterval(t);
+  }, [mobileCountdown]);
+
+  useEffect(() => {
+    if (emailCountdown <= 0) return;
+    const t = setInterval(() => setEmailCountdown(c => c <= 1 ? 0 : c - 1), 1000);
+    return () => clearInterval(t);
+  }, [emailCountdown]);
+
+  // ─── Fetch helpers ──────────────────────────────────────────────────
 
   const authFetch = useCallback(async (url: string, opts?: RequestInit) => {
     return fetch(url, {
@@ -134,7 +157,7 @@ export default function ProfilePage() {
     });
   }, [token]);
 
-  // ─── Load profile on mount ───────────────────────────────────────────
+  // ─── Load profile on mount ─────────────────────────────────────────
 
   useEffect(() => {
     const t = getCookie('saubh_token');
@@ -167,47 +190,120 @@ export default function ProfilePage() {
         setPincode(u.pincode || '');
         setPlaceid(u.placeid ? Number(u.placeid) : null);
         setPic(u.pic || null);
+
+        // Restore verification status from backend
+        if (data.emailVerified) setEmailVerified(true);
+        if (data.phoneVerified) setMobileVerified(true);
       } catch { router.replace(`/${locale}/login`); return; }
       setLoading(false);
     })();
   }, [locale, router]);
 
-  // ─── Load master data ────────────────────────────────────────────────
+  // ─── Load master data ──────────────────────────────────────────────
 
   useEffect(() => {
     fetch(`${API}/master/geo/languages`).then(r => r.json()).then(d => setLanguages(d.data || [])).catch(() => {});
     fetch(`${API}/master/geo/states`).then(r => r.json()).then(d => setStates(d.data || [])).catch(() => {});
   }, []);
 
-  // Cascade: state → districts
   useEffect(() => {
     setDistricts([]); setPincodes([]); setPlaces([]);
     if (!stateid) return;
     fetch(`${API}/master/geo/districts?stateId=${stateid}`).then(r => r.json()).then(d => setDistricts(d.data || [])).catch(() => {});
   }, [stateid]);
 
-  // Cascade: district → pincodes
   useEffect(() => {
     setPincodes([]); setPlaces([]);
     if (!districtid) return;
     fetch(`${API}/master/geo/pincodes?districtId=${districtid}`).then(r => r.json()).then(d => setPincodes(d.data || [])).catch(() => {});
   }, [districtid]);
 
-  // Cascade: pincode → places
   useEffect(() => {
     setPlaces([]);
     if (!pincode) return;
     fetch(`${API}/master/geo/places?pincode=${pincode}`).then(r => r.json()).then(d => setPlaces(d.data || [])).catch(() => {});
   }, [pincode]);
 
-  // ─── Progress ────────────────────────────────────────────────────────
+  // ─── Progress ──────────────────────────────────────────────────────
 
   const progress = calcProgress({
     fname, lname, email, phone, gender, dob, langid, qualification,
     experience, usertype, stateid, districtid, pincode, placeid, pic,
   }, photoFile);
 
-  // ─── Photo handling ──────────────────────────────────────────────────
+  // ─── Selfie Camera ─────────────────────────────────────────────────
+
+  const startCamera = async () => {
+    setCameraError(false);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setCameraActive(true);
+    } catch (err) {
+      console.error('Camera access denied:', err);
+      setCameraError(true);
+      // Fallback: open file picker
+      fileRef.current?.click();
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const size = Math.min(video.videoWidth, video.videoHeight);
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    // Center-crop to square
+    const sx = (video.videoWidth - size) / 2;
+    const sy = (video.videoHeight - size) / 2;
+    // Mirror for selfie
+    ctx.translate(size, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(blob));
+      stopCamera();
+    }, 'image/jpeg', 0.9);
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  const retakePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    startCamera();
+  };
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
+
+  // ─── File upload fallback ──────────────────────────────────────────
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -219,41 +315,100 @@ export default function ProfilePage() {
     setError('');
   };
 
-  // ─── OTP handlers ───────────────────────────────────────────────────
+  // ─── OTP helpers: generic box input handler ────────────────────────
+
+  const handleOtpBoxChange = (
+    index: number, value: string, digits: number,
+    otpArr: string[], setOtp: (v: string[]) => void,
+    refs: React.MutableRefObject<(HTMLInputElement | null)[]>,
+    autoVerify?: () => void,
+  ) => {
+    if (!/^\d?$/.test(value)) return;
+    const newOtp = [...otpArr];
+    newOtp[index] = value;
+    setOtp(newOtp);
+    if (value && index < digits - 1) refs.current[index + 1]?.focus();
+    if (value && index === digits - 1 && newOtp.every(d => d !== '') && autoVerify) autoVerify();
+  };
+
+  const handleOtpBoxKeyDown = (
+    index: number, e: React.KeyboardEvent,
+    otpArr: string[],
+    refs: React.MutableRefObject<(HTMLInputElement | null)[]>,
+  ) => {
+    if (e.key === 'Backspace' && !otpArr[index] && index > 0) refs.current[index - 1]?.focus();
+  };
+
+  const handleOtpBoxPaste = (
+    e: React.ClipboardEvent, digits: number,
+    setOtp: (v: string[]) => void,
+    refs: React.MutableRefObject<(HTMLInputElement | null)[]>,
+    autoVerify?: () => void,
+  ) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, digits);
+    if (pasted.length === digits) {
+      const arr = pasted.split('');
+      setOtp(arr);
+      refs.current[digits - 1]?.focus();
+      if (autoVerify) autoVerify();
+    }
+  };
+
+  // ─── Send OTP ──────────────────────────────────────────────────────
 
   const sendOtp = async (type: 'mobile' | 'email', value: string) => {
     if (!token || !value.trim()) return;
     const setL = type === 'mobile' ? setMobileLoading : setEmailLoading;
     const setSent = type === 'mobile' ? setMobileOtpSent : setEmailOtpSent;
+    const setCD = type === 'mobile' ? setMobileCountdown : setEmailCountdown;
     setL(true);
+    setError('');
     try {
       const res = await authFetch(`${API}/auth/profile/send-otp`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, value: value.trim() }),
       });
-      if (res.ok) setSent(true);
-      else setError(`Failed to send ${type} OTP.`);
+      const data = await res.json();
+      if (res.ok) {
+        setSent(true);
+        setCD(data.expiresIn || 120);
+        if (type === 'mobile') {
+          setMobileOtp(['', '', '', '']);
+          setTimeout(() => mobileOtpRefs.current[0]?.focus(), 100);
+        } else {
+          setEmailOtp(['', '', '', '', '', '']);
+          setTimeout(() => emailOtpRefs.current[0]?.focus(), 100);
+        }
+      } else {
+        setError(data.message || `Failed to send ${type} OTP.`);
+      }
     } catch { setError('Network error.'); }
     setL(false);
   };
 
-  const verifyOtp = async (type: 'mobile' | 'email', value: string, otp: string) => {
-    if (!token || !otp.trim()) return;
+  // ─── Verify OTP ────────────────────────────────────────────────────
+
+  const verifyOtp = async (type: 'mobile' | 'email', value: string, otpCode: string) => {
+    if (!token || !otpCode.trim()) return;
     const setL = type === 'mobile' ? setMobileLoading : setEmailLoading;
     const setV = type === 'mobile' ? setMobileVerified : setEmailVerified;
     setL(true);
     try {
       const res = await authFetch(`${API}/auth/profile/verify-otp`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, value: value.trim(), otp: otp.trim() }),
+        body: JSON.stringify({ type, value: value.trim(), otp: otpCode.trim() }),
       });
       if (res.ok) { setV(true); setError(''); }
-      else setError(`Invalid or expired ${type} OTP.`);
+      else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.message || `Invalid or expired ${type} OTP.`);
+      }
     } catch { setError('Network error.'); }
     setL(false);
   };
 
-  // ─── Submit ──────────────────────────────────────────────────────────
+  // ─── Submit ────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -263,7 +418,9 @@ export default function ProfilePage() {
     if (!fname.trim()) { setError('First name is required.'); return; }
     if (!lname.trim()) { setError('Last name is required.'); return; }
     if (!email.trim()) { setError('Email is required.'); return; }
+    if (!emailVerified) { setError('Please verify your email before continuing.'); return; }
     if (!phone.trim()) { setError('Phone number is required.'); return; }
+    if (!mobileVerified) { setError('Please verify your mobile number before continuing.'); return; }
     if (!gender) { setError('Gender is required.'); return; }
     if (!dob) { setError('Date of birth is required.'); return; }
     if (langid.length === 0) { setError('Select at least one language.'); return; }
@@ -274,7 +431,7 @@ export default function ProfilePage() {
     if (!districtid) { setError('District is required.'); return; }
     if (!pincode) { setError('Pin code is required.'); return; }
     if (!placeid) { setError('Place is required.'); return; }
-    if (!pic && !photoFile) { setError('Please upload a profile photo.'); return; }
+    if (!pic && !photoFile) { setError('Please take a selfie or upload a photo.'); return; }
 
     setSubmitting(true);
 
@@ -308,17 +465,16 @@ export default function ProfilePage() {
 
       const data = await res.json();
       if (data.isComplete) {
-        // Update cookie with fresh user data
         document.cookie = `saubh_user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=86400; SameSite=Lax`;
         router.push(`/${locale}/dashboard`);
       } else {
-        setError('Some required fields are still missing.');
+        setError('Some required fields are still missing or unverified.');
         setSubmitting(false);
       }
     } catch { setError('Network error. Please try again.'); setSubmitting(false); }
   };
 
-  // ─── Language chip helpers ───────────────────────────────────────────
+  // ─── Language chip helpers ─────────────────────────────────────────
 
   const addLang = (id: number) => { if (!langid.includes(id)) setLangid([...langid, id]); setLangSearch(''); setLangDropOpen(false); };
   const removeLang = (id: number) => setLangid(langid.filter(l => l !== id));
@@ -327,7 +483,7 @@ export default function ProfilePage() {
     !langid.includes(l.langid) && l.language?.toLowerCase().includes(langSearch.toLowerCase())
   );
 
-  // ─── Loading state ──────────────────────────────────────────────────
+  // ─── Loading state ─────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -346,6 +502,7 @@ export default function ProfilePage() {
   return (
     <>
       <style>{baseStyles}</style>
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
       <div className="pp">
         <div className="pp-mesh"><div className="pp-m1" /><div className="pp-m2" /><div className="pp-m3" /></div>
 
@@ -369,23 +526,57 @@ export default function ProfilePage() {
             <div className="pp-card-top" />
             <div className="pp-grid">
 
-              {/* ── LEFT: Photo upload ────────────────────────────── */}
+              {/* ── LEFT: Photo (selfie) + User Type ───────────────── */}
               <div className="pp-left">
-                <div className="pp-photo-area" onClick={() => fileRef.current?.click()}>
-                  {(photoPreview || pic) ? (
-                    <img src={photoPreview || (pic?.startsWith('http') ? pic : `${API.replace('/api', '')}${pic?.startsWith('/api') ? pic : `/api${pic}`}`)} alt="Profile" className="pp-photo-img" />
-                  ) : (
-                    <div className="pp-photo-placeholder">
-                      <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="#7c3aed" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
-                      <div className="pp-photo-text">Click to upload selfie *</div>
-                      <div className="pp-photo-hint">JPG, PNG — max 5 MB</div>
+
+                {/* Selfie camera area */}
+                {cameraActive ? (
+                  <div className="pp-camera-wrap">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="pp-camera-video"
+                      style={{ transform: 'scaleX(-1)' }}
+                    />
+                    <div className="pp-camera-actions">
+                      <button type="button" className="pp-cam-btn pp-cam-capture" onClick={capturePhoto}>
+                        📸 Capture
+                      </button>
+                      <button type="button" className="pp-cam-btn pp-cam-cancel" onClick={stopCamera}>
+                        ✕ Cancel
+                      </button>
                     </div>
-                  )}
-                  <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
-                </div>
+                  </div>
+                ) : (photoPreview || pic) ? (
+                  <div className="pp-photo-area">
+                    <img src={photoPreview || (pic?.startsWith('http') ? pic : `${API.replace('/api', '')}${pic?.startsWith('/api') ? pic : `/api${pic}`}`)} alt="Profile" className="pp-photo-img" />
+                    <div className="pp-photo-overlay" onClick={retakePhoto}>
+                      <span>📸 Retake Selfie</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pp-photo-area pp-photo-empty" onClick={startCamera}>
+                    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="#7c3aed" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
+                    <div className="pp-photo-text">📸 Take a Selfie *</div>
+                    <div className="pp-photo-hint">Camera will open for selfie</div>
+                    {cameraError && (
+                      <div className="pp-photo-fallback" onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}>
+                        Or upload a photo instead
+                      </div>
+                    )}
+                  </div>
+                )}
+                <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
+                {!cameraActive && !photoPreview && !pic && (
+                  <div className="pp-upload-fallback" onClick={() => fileRef.current?.click()}>
+                    📁 Upload instead
+                  </div>
+                )}
                 {photoFile && <div className="pp-photo-name">{photoFile.name} ({(photoFile.size / 1024).toFixed(0)} KB)</div>}
 
-                {/* User Type selector below photo */}
+                {/* User Type selector */}
                 <div className="pp-field" style={{ width: '100%', marginTop: '8px' }}>
                   <label className="pp-label">I am a *</label>
                   <div className="pp-usertype-group">
@@ -403,7 +594,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* ── RIGHT: Form fields ────────────────────────────── */}
+              {/* ── RIGHT: Form fields ─────────────────────────────── */}
               <div className="pp-right">
 
                 {/* Row 1: Name */}
@@ -418,59 +609,115 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Row 2: Email + OTP */}
+                {/* Row 2: Email + OTP (6-digit) */}
                 <div className="pp-row">
                   <div className="pp-field" style={{ gridColumn: 'span 2' }}>
-                    <label className="pp-label">Email *</label>
-                    <div className="pp-otp-row">
-                      <input className="pp-input pp-otp-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" />
-                      {!emailVerified ? (
-                        !emailOtpSent ? (
-                          <button type="button" className="pp-otp-btn" disabled={!email.trim() || emailLoading} onClick={() => sendOtp('email', email)}>
-                            {emailLoading ? '...' : 'Verify'}
-                          </button>
-                        ) : (
-                          <>
-                            <input className="pp-input pp-otp-code" value={emailOtp} onChange={e => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Code" maxLength={6} />
-                            <button type="button" className="pp-otp-btn" disabled={emailLoading} onClick={() => verifyOtp('email', email, emailOtp)}>
-                              {emailLoading ? '...' : '✓'}
+                    <label className="pp-label">
+                      Email * {emailVerified && <span className="pp-verified-badge">✓ Verified</span>}
+                    </label>
+                    {!emailVerified ? (
+                      <div className="pp-verify-block">
+                        <div className="pp-otp-row">
+                          <input className="pp-input pp-otp-input" type="email" value={email}
+                            onChange={e => { setEmail(e.target.value); setEmailOtpSent(false); setEmailVerified(false); }}
+                            placeholder="your@email.com" disabled={emailOtpSent && !emailVerified} />
+                          {!emailOtpSent && (
+                            <button type="button" className="pp-otp-btn" disabled={!email.trim() || emailLoading} onClick={() => sendOtp('email', email)}>
+                              {emailLoading ? '...' : 'Send Code'}
                             </button>
-                          </>
-                        )
-                      ) : (
-                        <span className="pp-verified">✓</span>
-                      )}
-                    </div>
+                          )}
+                        </div>
+                        {emailOtpSent && !emailVerified && (
+                          <div className="pp-otp-verify-section">
+                            <div className="pp-otp-hint">Enter 6-digit code sent to {email}</div>
+                            <div className="pp-otp-boxes" onPaste={(e) => handleOtpBoxPaste(e, 6, setEmailOtp, emailOtpRefs, () => verifyOtp('email', email, emailOtp.join('')))}>
+                              {emailOtp.map((d, i) => (
+                                <input
+                                  key={i}
+                                  ref={el => { emailOtpRefs.current[i] = el; }}
+                                  className={`pp-otp-box${d ? ' pp-otp-filled' : ''}`}
+                                  type="text" inputMode="numeric" maxLength={1} value={d}
+                                  onChange={e => handleOtpBoxChange(i, e.target.value, 6, emailOtp, setEmailOtp, emailOtpRefs,
+                                    () => { const code = [...emailOtp]; code[i] = e.target.value; verifyOtp('email', email, code.join('')); }
+                                  )}
+                                  onKeyDown={e => handleOtpBoxKeyDown(i, e, emailOtp, emailOtpRefs)}
+                                  disabled={emailLoading}
+                                />
+                              ))}
+                            </div>
+                            <div className="pp-otp-meta">
+                              {emailCountdown > 0 ? (
+                                <span className="pp-otp-timer">Expires in {Math.floor(emailCountdown / 60)}:{(emailCountdown % 60).toString().padStart(2, '0')}</span>
+                              ) : (
+                                <span className="pp-otp-expired">Code expired</span>
+                              )}
+                              <span className="pp-otp-resend" style={{ opacity: emailCountdown > 250 ? 0.3 : 1, pointerEvents: emailCountdown > 250 ? 'none' : 'auto' }}
+                                onClick={() => sendOtp('email', email)}>Resend</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <input className="pp-input" value={email} readOnly style={{ opacity: 0.7 }} />
+                    )}
                   </div>
                 </div>
 
-                {/* Row 3: Mobile + OTP */}
+                {/* Row 3: Mobile + OTP (4-digit) */}
                 <div className="pp-row">
                   <div className="pp-field">
                     <label className="pp-label">WhatsApp (registered)</label>
                     <input className="pp-input" value={whatsapp} readOnly style={{ opacity: 0.6 }} />
                   </div>
                   <div className="pp-field">
-                    <label className="pp-label">Alternate Mobile *</label>
-                    <div className="pp-otp-row">
-                      <input className="pp-input pp-otp-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Alt. mobile" />
-                      {!mobileVerified ? (
-                        !mobileOtpSent ? (
-                          <button type="button" className="pp-otp-btn" disabled={!phone.trim() || mobileLoading} onClick={() => sendOtp('mobile', phone)}>
-                            {mobileLoading ? '...' : 'OTP'}
-                          </button>
-                        ) : (
-                          <>
-                            <input className="pp-input pp-otp-code" value={mobileOtp} onChange={e => setMobileOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Code" maxLength={6} />
-                            <button type="button" className="pp-otp-btn" disabled={mobileLoading} onClick={() => verifyOtp('mobile', phone, mobileOtp)}>
-                              {mobileLoading ? '...' : '✓'}
+                    <label className="pp-label">
+                      Alternate Mobile * {mobileVerified && <span className="pp-verified-badge">✓ Verified</span>}
+                    </label>
+                    {!mobileVerified ? (
+                      <div className="pp-verify-block">
+                        <div className="pp-otp-row">
+                          <input className="pp-input pp-otp-input" value={phone}
+                            onChange={e => { setPhone(e.target.value); setMobileOtpSent(false); setMobileVerified(false); }}
+                            placeholder="Alt. mobile" disabled={mobileOtpSent && !mobileVerified} />
+                          {!mobileOtpSent && (
+                            <button type="button" className="pp-otp-btn" disabled={!phone.trim() || mobileLoading} onClick={() => sendOtp('mobile', phone)}>
+                              {mobileLoading ? '...' : 'OTP'}
                             </button>
-                          </>
-                        )
-                      ) : (
-                        <span className="pp-verified">✓</span>
-                      )}
-                    </div>
+                          )}
+                        </div>
+                        {mobileOtpSent && !mobileVerified && (
+                          <div className="pp-otp-verify-section">
+                            <div className="pp-otp-hint">Enter 4-digit code sent via WhatsApp</div>
+                            <div className="pp-otp-boxes" onPaste={(e) => handleOtpBoxPaste(e, 4, setMobileOtp, mobileOtpRefs, () => verifyOtp('mobile', phone, mobileOtp.join('')))}>
+                              {mobileOtp.map((d, i) => (
+                                <input
+                                  key={i}
+                                  ref={el => { mobileOtpRefs.current[i] = el; }}
+                                  className={`pp-otp-box${d ? ' pp-otp-filled' : ''}`}
+                                  type="text" inputMode="numeric" maxLength={1} value={d}
+                                  onChange={e => handleOtpBoxChange(i, e.target.value, 4, mobileOtp, setMobileOtp, mobileOtpRefs,
+                                    () => { const code = [...mobileOtp]; code[i] = e.target.value; verifyOtp('mobile', phone, code.join('')); }
+                                  )}
+                                  onKeyDown={e => handleOtpBoxKeyDown(i, e, mobileOtp, mobileOtpRefs)}
+                                  disabled={mobileLoading}
+                                />
+                              ))}
+                            </div>
+                            <div className="pp-otp-meta">
+                              {mobileCountdown > 0 ? (
+                                <span className="pp-otp-timer">Expires in {Math.floor(mobileCountdown / 60)}:{(mobileCountdown % 60).toString().padStart(2, '0')}</span>
+                              ) : (
+                                <span className="pp-otp-expired">Code expired</span>
+                              )}
+                              <span className="pp-otp-resend" style={{ opacity: mobileCountdown > 90 ? 0.3 : 1, pointerEvents: mobileCountdown > 90 ? 'none' : 'auto' }}
+                                onClick={() => sendOtp('mobile', phone)}>Resend</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <input className="pp-input" value={phone} readOnly style={{ opacity: 0.7 }} />
+                    )}
                   </div>
                 </div>
 
@@ -489,7 +736,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Row 5: Languages (multi-select chips) */}
+                {/* Row 5: Languages */}
                 <div className="pp-row">
                   <div className="pp-field" style={{ gridColumn: 'span 2', position: 'relative' }}>
                     <label className="pp-label">Languages * (select at least one)</label>
@@ -580,8 +827,8 @@ export default function ProfilePage() {
 
                 {/* Submit */}
                 <div className="pp-submit-row">
-                  <button type="submit" className="pp-submit-btn" disabled={submitting}>
-                    {submitting ? 'Saving...' : 'Save & Continue →'}
+                  <button type="submit" className="pp-submit-btn" disabled={submitting || !emailVerified || !mobileVerified}>
+                    {submitting ? 'Saving...' : !emailVerified || !mobileVerified ? '🔒 Verify Email & Mobile First' : 'Save & Continue →'}
                   </button>
                 </div>
 
@@ -642,18 +889,38 @@ const baseStyles = `
 
 /* Left panel */
 .pp-left{padding:28px 24px;border-right:1px solid rgba(124,58,237,0.08);display:flex;flex-direction:column;align-items:center;gap:12px;}
+
+/* Photo area */
 .pp-photo-area{
-  width:210px;height:210px;border-radius:18px;cursor:pointer;overflow:hidden;
+  width:210px;height:210px;border-radius:18px;overflow:hidden;position:relative;
   border:2px dashed rgba(124,58,237,0.25);
   display:flex;align-items:center;justify-content:center;
   transition:.25s;background:rgba(124,58,237,0.03);
 }
-.pp-photo-area:hover{border-color:#7c3aed;background:rgba(124,58,237,0.06);}
+.pp-photo-empty{cursor:pointer;}
+.pp-photo-empty:hover{border-color:#7c3aed;background:rgba(124,58,237,0.06);}
 .pp-photo-img{width:100%;height:100%;object-fit:cover;}
-.pp-photo-placeholder{text-align:center;padding:20px;}
-.pp-photo-text{font-size:.85rem;font-weight:600;color:#7c3aed;margin-top:10px;}
-.pp-photo-hint{font-size:.72rem;color:#66708a;margin-top:4px;}
+.pp-photo-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:.25s;cursor:pointer;color:#fff;font-weight:600;font-size:.85rem;
+}
+.pp-photo-area:hover .pp-photo-overlay{opacity:1;}
+.pp-photo-text{font-size:.85rem;font-weight:600;color:#7c3aed;margin-top:10px;text-align:center;}
+.pp-photo-hint{font-size:.72rem;color:#66708a;margin-top:4px;text-align:center;}
+.pp-photo-fallback{font-size:.72rem;color:#7c3aed;margin-top:8px;cursor:pointer;text-decoration:underline;text-align:center;}
+.pp-upload-fallback{font-size:.78rem;color:#66708a;cursor:pointer;text-align:center;transition:.2s;}
+.pp-upload-fallback:hover{color:#7c3aed;}
 .pp-photo-name{font-size:.75rem;color:#66708a;text-align:center;word-break:break-all;}
+
+/* Camera */
+.pp-camera-wrap{width:210px;height:260px;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;background:#000;border:2px solid #7c3aed;}
+.pp-camera-video{width:100%;flex:1;object-fit:cover;border-radius:16px 16px 0 0;}
+.pp-camera-actions{display:flex;gap:4px;padding:6px;}
+.pp-cam-btn{flex:1;padding:8px 0;border:none;border-radius:10px;font-weight:700;font-size:.8rem;cursor:pointer;font-family:'Inter',sans-serif;}
+.pp-cam-capture{background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;}
+.pp-cam-cancel{background:rgba(255,255,255,0.1);color:#fff;}
+.pp-cam-capture:hover{opacity:.9;}
+.pp-cam-cancel:hover{background:rgba(255,255,255,0.2);}
 
 /* User type buttons */
 .pp-usertype-group{display:flex;flex-direction:column;gap:6px;width:100%;}
@@ -673,7 +940,7 @@ const baseStyles = `
 .pp-right{padding:24px 28px;display:flex;flex-direction:column;gap:14px;}
 .pp-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .pp-field{display:flex;flex-direction:column;gap:4px;}
-.pp-label{font-size:.78rem;font-weight:600;color:#66708a;}
+.pp-label{font-size:.78rem;font-weight:600;color:#66708a;display:flex;align-items:center;gap:6px;}
 
 .pp-input{
   height:40px;border-radius:10px;padding:0 12px;font-size:.88rem;
@@ -685,10 +952,16 @@ const baseStyles = `
 .pp-input:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,0.1);}
 .pp-select{cursor:pointer;appearance:auto;}
 
-/* OTP row */
+/* Verified badge */
+.pp-verified-badge{
+  display:inline-flex;align-items:center;gap:2px;padding:1px 8px;border-radius:10px;
+  font-size:.7rem;font-weight:700;background:rgba(34,197,94,0.12);color:#16a34a;
+}
+
+/* OTP verification */
+.pp-verify-block{display:flex;flex-direction:column;gap:8px;}
 .pp-otp-row{display:flex;gap:6px;align-items:center;}
 .pp-otp-input{flex:1;}
-.pp-otp-code{width:72px;flex:none;text-align:center;letter-spacing:2px;}
 .pp-otp-btn{
   height:40px;padding:0 14px;border-radius:10px;border:none;
   background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;
@@ -697,7 +970,22 @@ const baseStyles = `
 }
 .pp-otp-btn:hover{opacity:.9;transform:translateY(-1px);}
 .pp-otp-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
-.pp-verified{color:#22c55e;font-weight:800;font-size:1.1rem;padding:0 8px;}
+
+.pp-otp-verify-section{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:10px;background:rgba(124,58,237,0.03);border:1px solid rgba(124,58,237,0.08);}
+.pp-otp-hint{font-size:.76rem;color:#66708a;font-weight:500;}
+.pp-otp-boxes{display:flex;gap:6px;justify-content:center;}
+.pp-otp-box{
+  width:42px;height:48px;border-radius:10px;text-align:center;font-size:1.3rem;font-weight:800;
+  font-family:'Inter',sans-serif;color:#15192d;outline:none;
+  background:rgba(255,255,255,0.9);border:2px solid rgba(124,58,237,0.15);transition:.2s;
+}
+.pp-otp-box:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,0.1);}
+.pp-otp-filled{border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.04);}
+.pp-otp-meta{display:flex;justify-content:space-between;align-items:center;font-size:.74rem;}
+.pp-otp-timer{color:#66708a;font-weight:600;}
+.pp-otp-expired{color:#ef4444;font-weight:600;}
+.pp-otp-resend{color:#7c3aed;font-weight:700;cursor:pointer;}
+.pp-otp-resend:hover{text-decoration:underline;}
 
 /* Language chips */
 .pp-chips-wrap{
@@ -745,12 +1033,14 @@ const baseStyles = `
   .pp{padding:12px;}
   .pp-grid{grid-template-columns:1fr;}
   .pp-left{border-right:none;border-bottom:1px solid rgba(124,58,237,0.08);padding:20px;flex-direction:column;gap:12px;align-items:center;}
-  .pp-photo-area{width:120px;height:120px;flex:none;}
+  .pp-photo-area{width:140px;height:140px;flex:none;}
+  .pp-camera-wrap{width:140px;height:200px;}
   .pp-usertype-group{flex-direction:row;flex-wrap:wrap;}
   .pp-usertype-btn{flex:1;min-width:0;text-align:center;padding:8px 6px;font-size:.75rem;}
   .pp-right{padding:18px 16px;}
   .pp-row{grid-template-columns:1fr;}
   .pp-row > .pp-field[style*="grid-column"]{grid-column:span 1!important;}
   .pp-submit-btn{width:100%;}
+  .pp-otp-box{width:36px;height:42px;font-size:1.1rem;}
 }
 `;
