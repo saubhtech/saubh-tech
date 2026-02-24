@@ -15,11 +15,14 @@ import {
   Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { WhatsappSenderService } from '../whatsapp/whatsapp-sender.service';
+import { firstValueFrom } from 'rxjs';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as nodemailer from 'nodemailer';
 import Redis from 'ioredis';
 
 const UPLOAD_DIR = '/data/uploads/profiles';
@@ -27,23 +30,27 @@ const UPLOAD_DIR = '/data/uploads/profiles';
 /**
  * Profile Controller — GET and PATCH for user profile completion.
  *
- * GET  /api/auth/profile       → fetch user + isComplete
- * PATCH /api/auth/profile      → partial update + recalculate isComplete
+ * GET  /api/auth/profile       → fetch user + isComplete + verification status
+ * PATCH /api/auth/profile      → partial update (enforces email/phone verified via OTP)
+ * POST /api/auth/profile/photo → upload profile photo
+ * POST /api/auth/profile/send-otp   → send OTP (email via SMTP, mobile via Evolution API)
+ * POST /api/auth/profile/verify-otp → verify OTP and mark as verified
  *
  * All endpoints require JWT (JwtAuthGuard).
- * Does NOT modify any existing auth endpoints.
  */
 @Controller('auth/profile')
 @UseGuards(JwtAuthGuard)
 export class ProfileController {
   private readonly logger = new Logger(ProfileController.name);
-
   private redis: Redis;
+  private mailer: nodemailer.Transporter | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly whatsappSender: WhatsappSenderService,
+    private readonly config: ConfigService,
+    private readonly http: HttpService,
   ) {
+    // Redis
     this.redis = new Redis({
       host: process.env.REDIS_HOST || '127.0.0.1',
       port: parseInt(process.env.REDIS_PORT || '6379', 10),
@@ -53,6 +60,27 @@ export class ProfileController {
     this.redis.connect().catch((err) =>
       this.logger.error('Redis connection failed for ProfileController', err),
     );
+
+    // Nodemailer SMTP transport
+    const smtpHost = this.config.get<string>('SMTP_HOST', '');
+    if (smtpHost) {
+      this.mailer = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(this.config.get<string>('SMTP_PORT', '587'), 10),
+        secure: this.config.get<string>('SMTP_PORT', '587') === '465',
+        auth: {
+          user: this.config.get<string>('SMTP_USER', ''),
+          pass: this.config.get<string>('SMTP_PASS', ''),
+        },
+      });
+      this.mailer.verify().then(() => {
+        this.logger.log('SMTP transport ready for email OTP');
+      }).catch((err) => {
+        this.logger.error('SMTP transport verification failed', err);
+      });
+    } else {
+      this.logger.warn('SMTP_HOST not configured — email OTP will not work');
+    }
   }
 
   // ─── GET /api/auth/profile ──────────────────────────────────────────────
@@ -69,10 +97,16 @@ export class ProfileController {
       throw new NotFoundException('User not found');
     }
 
+    // Check Redis for verification status
+    const emailVerified = await this.isFieldVerified(req.user.sub, 'email', user.email);
+    const phoneVerified = await this.isFieldVerified(req.user.sub, 'mobile', user.phone);
+
     return {
       success: true,
       user: this.serializeUser(user),
-      isComplete: this.checkComplete(user),
+      isComplete: this.checkComplete(user) && emailVerified && phoneVerified,
+      emailVerified,
+      phoneVerified,
     };
   }
 
@@ -83,10 +117,8 @@ export class ProfileController {
   async updateProfile(@Req() req: any, @Body() body: any) {
     const userid = BigInt(req.user.sub);
 
-    // Verify user exists
     const existing = await this.prisma.user.findUnique({
       where: { userid },
-      select: { userid: true },
     });
 
     if (!existing) {
@@ -130,7 +162,7 @@ export class ProfileController {
       data.gender = body.gender || null;
     }
 
-    // Date of birth — expects ISO date string or YYYY-MM-DD
+    // Date of birth
     if (body.dob !== undefined) {
       if (body.dob) {
         const parsed = new Date(body.dob);
@@ -143,7 +175,7 @@ export class ProfileController {
       }
     }
 
-    // Language IDs — array of integers
+    // Language IDs
     if (body.langid !== undefined) {
       if (!Array.isArray(body.langid)) {
         throw new BadRequestException('langid must be an array of integers.');
@@ -159,13 +191,29 @@ export class ProfileController {
     if (body.placeid !== undefined)
       data.placeid = body.placeid ? parseInt(body.placeid, 10) : null;
 
-    // Email (direct update without OTP — OTP verified separately)
-    if (body.email !== undefined)
-      data.email = body.email ? String(body.email).trim().toLowerCase() : null;
+    // ─── Email: only accept if verified via OTP ───────────────────────
+    if (body.email !== undefined) {
+      const emailVal = body.email ? String(body.email).trim().toLowerCase() : null;
+      if (emailVal) {
+        const verified = await this.isFieldVerified(req.user.sub, 'email', emailVal);
+        if (!verified) {
+          throw new BadRequestException('Email must be verified via OTP before saving.');
+        }
+      }
+      data.email = emailVal;
+    }
 
-    // Phone (direct update without OTP — OTP verified separately)
-    if (body.phone !== undefined)
-      data.phone = body.phone ? String(body.phone).trim() : null;
+    // ─── Phone: only accept if verified via OTP ───────────────────────
+    if (body.phone !== undefined) {
+      const phoneVal = body.phone ? String(body.phone).trim() : null;
+      if (phoneVal) {
+        const verified = await this.isFieldVerified(req.user.sub, 'mobile', phoneVal);
+        if (!verified) {
+          throw new BadRequestException('Phone must be verified via OTP before saving.');
+        }
+      }
+      data.phone = phoneVal;
+    }
 
     // Prevent empty update
     if (Object.keys(data).length === 0) {
@@ -179,10 +227,16 @@ export class ProfileController {
       data,
     });
 
+    // Re-check verification for completeness
+    const emailVerified = await this.isFieldVerified(req.user.sub, 'email', updated.email);
+    const phoneVerified = await this.isFieldVerified(req.user.sub, 'mobile', updated.phone);
+
     return {
       success: true,
       user: this.serializeUser(updated),
-      isComplete: this.checkComplete(updated),
+      isComplete: this.checkComplete(updated) && emailVerified && phoneVerified,
+      emailVerified,
+      phoneVerified,
     };
   }
 
@@ -191,7 +245,7 @@ export class ProfileController {
   @Post('photo')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('photo', {
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (_req: any, file: any, cb: any) => {
       if (!file.mimetype.startsWith('image/')) {
         return cb(new BadRequestException('Only image files are allowed.'), false);
@@ -209,13 +263,9 @@ export class ProfileController {
     const filename = `${userid}${ext}`;
     const filepath = path.join(UPLOAD_DIR, filename);
 
-    // Ensure upload directory exists
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-    // Write file to disk
     fs.writeFileSync(filepath, file.buffer);
 
-    // Update user pic field in DB
     const picUrl = `/uploads/profiles/${filename}`;
     await this.prisma.user.update({
       where: { userid: BigInt(userid) },
@@ -224,10 +274,7 @@ export class ProfileController {
 
     this.logger.log(`Photo uploaded for user ${userid}: ${picUrl}`);
 
-    return {
-      success: true,
-      pic: picUrl,
-    };
+    return { success: true, pic: picUrl };
   }
 
   // ─── POST /api/auth/profile/send-otp ─────────────────────────────────────
@@ -245,26 +292,69 @@ export class ProfileController {
       throw new BadRequestException('value is required.');
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const redisKey = `otp:profile:${userid}:${type}`;
 
-    // Store in Redis with 120s TTL
-    await this.redis.set(redisKey, otp, 'EX', 120);
-
     if (type === 'mobile') {
-      // Send OTP via WhatsApp
+      // ─── 4-digit OTP via Evolution API ──────────────────────────────
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      await this.redis.set(redisKey, otp, 'EX', 120);
+
       const phone = String(value).trim().replace(/\D/g, '');
       const message = `Your Saubh verification code is: ${otp}\nValid for 2 minutes. Do not share.`;
-      this.whatsappSender.sendMessage(phone, message).catch((err) =>
-        this.logger.error(`Failed to send profile OTP to ${phone}`, err),
-      );
-    } else {
-      // Email OTP — TODO: integrate email service
-      this.logger.log(`[EMAIL OTP] ${type} OTP for user ${userid}: ${otp}`);
-    }
 
-    return { success: true, sent: true, expiresIn: 120 };
+      // Send directly via Evolution API
+      await this.sendViaEvolution(phone, message);
+
+      this.logger.log(`Mobile OTP sent via Evolution to ${phone}`);
+      return { success: true, sent: true, expiresIn: 120, digits: 4 };
+
+    } else {
+      // ─── 6-digit OTP via Email (SMTP) ───────────────────────────────
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      await this.redis.set(redisKey, otp, 'EX', 300); // 5 min for email
+
+      const emailTo = String(value).trim().toLowerCase();
+
+      if (!this.mailer) {
+        this.logger.error('SMTP not configured — cannot send email OTP');
+        throw new BadRequestException('Email service not configured. Contact support.');
+      }
+
+      const fromAddr = this.config.get<string>('SMTP_FROM', 'noreply@saubh.tech');
+
+      try {
+        await this.mailer.sendMail({
+          from: `"Saubh.Tech" <${fromAddr}>`,
+          to: emailTo,
+          subject: 'Your Saubh.Tech Verification Code',
+          html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8f9fa;border-radius:12px;">
+              <div style="text-align:center;margin-bottom:24px;">
+                <h2 style="color:#15192d;margin:0;">Saubh<span style="color:#7c3aed;">.</span>Tech</h2>
+              </div>
+              <div style="background:#fff;padding:28px;border-radius:10px;border:1px solid #e5e7eb;">
+                <p style="color:#374151;font-size:15px;margin:0 0 16px;">Your verification code is:</p>
+                <div style="text-align:center;padding:16px;background:linear-gradient(135deg,#f3f0ff,#ecfdf5);border-radius:10px;margin:0 0 16px;">
+                  <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#7c3aed;">${otp}</span>
+                </div>
+                <p style="color:#6b7280;font-size:13px;margin:0;">Valid for 5 minutes. Do not share this code.</p>
+              </div>
+              <p style="color:#9ca3af;font-size:11px;text-align:center;margin:16px 0 0;">
+                If you didn't request this, please ignore this email.
+              </p>
+            </div>
+          `,
+          text: `Your Saubh.Tech verification code is: ${otp}\nValid for 5 minutes. Do not share.`,
+        });
+
+        this.logger.log(`Email OTP sent to ${emailTo}`);
+        return { success: true, sent: true, expiresIn: 300, digits: 6 };
+
+      } catch (err: any) {
+        this.logger.error(`Failed to send email OTP to ${emailTo}: ${err.message}`);
+        throw new BadRequestException('Failed to send verification email. Please try again.');
+      }
+    }
   }
 
   // ─── POST /api/auth/profile/verify-otp ───────────────────────────────────
@@ -292,14 +382,22 @@ export class ProfileController {
       throw new BadRequestException('Invalid or expired OTP.');
     }
 
-    // OTP valid — delete key and update user field
+    // OTP valid — delete OTP key
     await this.redis.del(redisKey);
 
+    // Mark this value as verified (TTL 24h — lasts for session)
+    const cleanValue = type === 'email'
+      ? String(value).trim().toLowerCase()
+      : String(value).trim().replace(/\D/g, '');
+    const verifiedKey = `verified:profile:${userid}:${type}:${cleanValue}`;
+    await this.redis.set(verifiedKey, '1', 'EX', 86400);
+
+    // Also update the DB field
     const updateData: Record<string, any> = {};
     if (type === 'mobile') {
-      updateData.phone = String(value).trim();
+      updateData.phone = cleanValue;
     } else {
-      updateData.email = String(value).trim().toLowerCase();
+      updateData.email = cleanValue;
     }
 
     await this.prisma.user.update({
@@ -307,18 +405,71 @@ export class ProfileController {
       data: updateData,
     });
 
-    this.logger.log(`Profile ${type} verified for user ${userid}: ${value}`);
+    this.logger.log(`Profile ${type} verified for user ${userid}: ${cleanValue}`);
 
     return { success: true, verified: true };
+  }
+
+  // ─── Evolution API direct sender ────────────────────────────────────────
+
+  private async sendViaEvolution(to: string, body: string): Promise<void> {
+    const baseUrl = this.config.get<string>('EVOLUTION_API_URL', 'http://localhost:8081');
+    const apiKey = this.config.get<string>('EVOLUTION_API_KEY', '');
+
+    // Get instance name from DB or env
+    let instance = this.config.get<string>('EVOLUTION_INSTANCE', '');
+    try {
+      const channel = await this.prisma.waChannel.findFirst({
+        where: { type: 'EVOLUTION', isActive: true },
+        select: { instanceName: true },
+      });
+      if (channel?.instanceName) instance = channel.instanceName;
+    } catch (err: any) {
+      this.logger.warn(`Failed to get Evolution instance from DB: ${err.message}`);
+    }
+
+    if (!instance) {
+      this.logger.error('No Evolution instance configured for mobile OTP');
+      throw new BadRequestException('WhatsApp service not configured. Contact support.');
+    }
+
+    try {
+      const url = `${baseUrl}/message/sendText/${instance}`;
+      await firstValueFrom(
+        this.http.post(
+          url,
+          { number: to, text: body },
+          {
+            headers: { apikey: apiKey, 'Content-Type': 'application/json' },
+            timeout: 10000,
+          },
+        ),
+      );
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.response?.data?.error || err.message;
+      this.logger.error(`Evolution API send failed to ${to}: ${errMsg}`);
+      throw new BadRequestException('Failed to send WhatsApp OTP. Please try again.');
+    }
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────
 
   /**
+   * Check if a field value has been verified via OTP.
+   */
+  private async isFieldVerified(userid: string, type: string, value: string | null): Promise<boolean> {
+    if (!value) return false;
+    const cleanValue = type === 'email'
+      ? value.trim().toLowerCase()
+      : value.trim().replace(/\D/g, '');
+    const key = `verified:profile:${userid}:${type}:${cleanValue}`;
+    const result = await this.redis.get(key);
+    return result === '1';
+  }
+
+  /**
    * Check if all required profile fields are filled.
-   * Required (16 fields): fname, lname, email, phone, pic, gender, dob,
-   *   langid(>0), qualification, experience, usertype,
-   *   countryCode, stateid, districtid, pincode, placeid
+   * Note: email/phone verification is checked separately.
    */
   private checkComplete(user: any): boolean {
     return !!(
@@ -342,10 +493,6 @@ export class ProfileController {
     );
   }
 
-  /**
-   * Serialize user for JSON response.
-   * BigInt fields → string. Excludes sensitive fields.
-   */
   private serializeUser(user: any) {
     return {
       userid: user.userid.toString(),
