@@ -108,6 +108,17 @@ export class ProfileController {
     if (body.countryCode !== undefined)
       data.countryCode = body.countryCode ? String(body.countryCode).trim().toUpperCase() : null;
 
+    // UserType: BO, CL, GW, SA, AD
+    if (body.usertype !== undefined) {
+      const validTypes = ['BO', 'CL', 'GW', 'SA', 'AD'];
+      if (body.usertype && !validTypes.includes(body.usertype)) {
+        throw new BadRequestException(
+          `Invalid usertype "${body.usertype}". Must be one of: BO, CL, GW.`,
+        );
+      }
+      data.usertype = body.usertype || 'GW';
+    }
+
     // Gender enum: M, F, T, O
     if (body.gender !== undefined) {
       const validGenders = ['M', 'F', 'T', 'O'];
@@ -147,6 +158,14 @@ export class ProfileController {
       data.districtid = body.districtid ? parseInt(body.districtid, 10) : null;
     if (body.placeid !== undefined)
       data.placeid = body.placeid ? parseInt(body.placeid, 10) : null;
+
+    // Email (direct update without OTP — OTP verified separately)
+    if (body.email !== undefined)
+      data.email = body.email ? String(body.email).trim().toLowerCase() : null;
+
+    // Phone (direct update without OTP — OTP verified separately)
+    if (body.phone !== undefined)
+      data.phone = body.phone ? String(body.phone).trim() : null;
 
     // Prevent empty update
     if (Object.keys(data).length === 0) {
@@ -297,21 +316,29 @@ export class ProfileController {
 
   /**
    * Check if all required profile fields are filled.
-   * Required: fname, lname, gender, dob, langid(>0),
-   *           stateid, districtid, pincode, pic
+   * Required (16 fields): fname, lname, email, phone, pic, gender, dob,
+   *   langid(>0), qualification, experience, usertype,
+   *   countryCode, stateid, districtid, pincode, placeid
    */
   private checkComplete(user: any): boolean {
     return !!(
       user.fname &&
       user.lname &&
+      user.email &&
+      user.phone &&
+      user.pic &&
       user.gender &&
       user.dob &&
       user.langid &&
       user.langid.length > 0 &&
+      user.qualification &&
+      user.experience &&
+      user.usertype &&
+      user.countryCode &&
       user.stateid &&
       user.districtid &&
       user.pincode &&
-      user.pic
+      user.placeid
     );
   }
 
