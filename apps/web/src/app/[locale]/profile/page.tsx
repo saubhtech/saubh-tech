@@ -9,7 +9,15 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.saubh.tech/api';
 const GENDER_MAP: Record<string, string> = { M: 'Male', F: 'Female', T: 'Transgender', O: 'Other' };
 const GENDER_OPTIONS = Object.entries(GENDER_MAP);
 
-const REQUIRED_FIELDS = ['fname', 'lname', 'gender', 'dob', 'langid', 'stateid', 'districtid', 'pincode', 'pic'] as const;
+const USERTYPE_MAP: Record<string, string> = { GW: 'Gig Worker', BO: 'Business Owner', CL: 'Client' };
+const USERTYPE_OPTIONS = Object.entries(USERTYPE_MAP);
+
+// All 16 required fields from the user table
+const REQUIRED_FIELDS = [
+  'fname', 'lname', 'email', 'phone', 'pic', 'gender', 'dob',
+  'langid', 'qualification', 'experience', 'countryCode',
+  'stateid', 'districtid', 'pincode', 'placeid', 'usertype',
+] as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -32,18 +40,36 @@ function getCookie(name: string): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-function calcProgress(u: Partial<UserProfile>, photoFile: File | null): number {
+function calcProgress(
+  u: {
+    fname?: string; lname?: string; email?: string; phone?: string;
+    gender?: string; dob?: string; langid?: number[];
+    qualification?: string; experience?: string; countryCode?: string;
+    stateid?: number | null; districtid?: number | null;
+    pincode?: string; placeid?: number | null; usertype?: string;
+    pic?: string | null;
+  },
+  photoFile: File | null,
+): number {
+  const total = REQUIRED_FIELDS.length; // 16
   let filled = 0;
   if (u.fname) filled++;
   if (u.lname) filled++;
+  if (u.email) filled++;
+  if (u.phone) filled++;
   if (u.gender) filled++;
   if (u.dob) filled++;
   if (u.langid && u.langid.length > 0) filled++;
+  if (u.qualification) filled++;
+  if (u.experience) filled++;
+  if (u.countryCode) filled++;
   if (u.stateid) filled++;
   if (u.districtid) filled++;
   if (u.pincode) filled++;
+  if (u.placeid) filled++;
+  if (u.usertype) filled++;
   if (u.pic || photoFile) filled++;
-  return Math.round((filled / 9) * 100);
+  return Math.round((filled / total) * 100);
 }
 
 function progressColor(p: number): string {
@@ -76,6 +102,7 @@ export default function ProfilePage() {
   const [langid, setLangid] = useState<number[]>([]);
   const [qualification, setQualification] = useState('');
   const [experience, setExperience] = useState('');
+  const [usertype, setUsertype] = useState('GW');
   const [stateid, setStateid] = useState<number | null>(null);
   const [districtid, setDistrictid] = useState<number | null>(null);
   const [pincode, setPincode] = useState('');
@@ -142,6 +169,7 @@ export default function ProfilePage() {
         setLangid(u.langid || []);
         setQualification(u.qualification || '');
         setExperience(u.experience || '');
+        setUsertype(u.usertype || 'GW');
         setStateid(u.stateid || null);
         setDistrictid(u.districtid || null);
         setPincode(u.pincode || '');
@@ -182,7 +210,10 @@ export default function ProfilePage() {
 
   // ─── Progress ────────────────────────────────────────────────────────
 
-  const progress = calcProgress({ fname, lname, gender, dob, langid, stateid, districtid, pincode, pic }, photoFile);
+  const progress = calcProgress(
+    { fname, lname, email, phone, gender, dob, langid, qualification, experience, countryCode: 'IN', stateid, districtid, pincode, placeid, usertype, pic },
+    photoFile,
+  );
 
   // ─── Photo handling ──────────────────────────────────────────────────
 
@@ -236,15 +267,23 @@ export default function ProfilePage() {
     e.preventDefault();
     setError(''); setSuccess('');
 
-    // Validate required fields
+    // Validate ALL 16 required fields
     if (!fname.trim()) { setError('First name is required.'); return; }
     if (!lname.trim()) { setError('Last name is required.'); return; }
+    if (!email.trim()) { setError('Email is required.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Enter a valid email address.'); return; }
+    if (!phone.trim()) { setError('Alternate mobile number is required.'); return; }
+    if (phone.trim().replace(/\D/g, '').length < 10) { setError('Enter a valid mobile number.'); return; }
     if (!gender) { setError('Gender is required.'); return; }
     if (!dob) { setError('Date of birth is required.'); return; }
     if (langid.length === 0) { setError('Select at least one language.'); return; }
+    if (!qualification.trim()) { setError('Qualification is required.'); return; }
+    if (!experience.trim()) { setError('Experience is required.'); return; }
+    if (!usertype) { setError('User type is required.'); return; }
     if (!stateid) { setError('State is required.'); return; }
     if (!districtid) { setError('District is required.'); return; }
     if (!pincode) { setError('Pin code is required.'); return; }
+    if (!placeid) { setError('Place is required.'); return; }
     if (!pic && !photoFile) { setError('Please upload a profile photo.'); return; }
 
     setSubmitting(true);
@@ -258,14 +297,24 @@ export default function ProfilePage() {
         if (!photoRes.ok) { setError('Photo upload failed.'); setSubmitting(false); return; }
       }
 
-      // 2. Patch profile
+      // 2. Patch profile — send ALL fields
       const body: Record<string, any> = {
-        fname: fname.trim(), lname: lname.trim(), gender, dob,
-        langid, stateid, districtid, pincode, countryCode: 'IN',
+        fname: fname.trim(),
+        lname: lname.trim(),
+        email: email.trim(),
+        phone: phone.trim().replace(/\D/g, ''),
+        gender,
+        dob,
+        langid,
+        qualification: qualification.trim(),
+        experience: experience.trim(),
+        usertype,
+        countryCode: 'IN',
+        stateid,
+        districtid,
+        pincode,
+        placeid,
       };
-      if (qualification.trim()) body.qualification = qualification.trim();
-      if (experience.trim()) body.experience = experience.trim();
-      if (placeid) body.placeid = placeid;
 
       const res = await authFetch(`${API}/auth/profile`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -348,7 +397,7 @@ export default function ProfilePage() {
                   ) : (
                     <div className="pp-photo-placeholder">
                       <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="#7c3aed" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
-                      <div className="pp-photo-text">Click to upload selfie</div>
+                      <div className="pp-photo-text">Click to upload selfie *</div>
                       <div className="pp-photo-hint">JPG, PNG — max 5 MB</div>
                     </div>
                   )}
@@ -379,7 +428,7 @@ export default function ProfilePage() {
                     <input className="pp-input" value={whatsapp} readOnly style={{ opacity: 0.6 }} />
                   </div>
                   <div className="pp-field">
-                    <label className="pp-label">Alternate Mobile</label>
+                    <label className="pp-label">Alternate Mobile *</label>
                     <div className="pp-otp-row">
                       <input className="pp-input pp-otp-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Alt. mobile" />
                       {!mobileVerified ? (
@@ -391,12 +440,12 @@ export default function ProfilePage() {
                           <>
                             <input className="pp-input pp-otp-code" value={mobileOtp} onChange={e => setMobileOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Code" maxLength={6} />
                             <button type="button" className="pp-otp-btn" disabled={mobileLoading} onClick={() => verifyOtp('mobile', phone, mobileOtp)}>
-                              {mobileLoading ? '...' : '✓'}
+                              {mobileLoading ? '...' : '\u2713'}
                             </button>
                           </>
                         )
                       ) : (
-                        <span className="pp-verified">✓</span>
+                        <span className="pp-verified">{'\u2713'}</span>
                       )}
                     </div>
                   </div>
@@ -405,7 +454,7 @@ export default function ProfilePage() {
                 {/* Row 3: Email + OTP */}
                 <div className="pp-row">
                   <div className="pp-field" style={{ gridColumn: 'span 2' }}>
-                    <label className="pp-label">Email</label>
+                    <label className="pp-label">Email *</label>
                     <div className="pp-otp-row">
                       <input className="pp-input pp-otp-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" />
                       {!emailVerified ? (
@@ -417,12 +466,12 @@ export default function ProfilePage() {
                           <>
                             <input className="pp-input pp-otp-code" value={emailOtp} onChange={e => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Code" maxLength={6} />
                             <button type="button" className="pp-otp-btn" disabled={emailLoading} onClick={() => verifyOtp('email', email, emailOtp)}>
-                              {emailLoading ? '...' : '✓'}
+                              {emailLoading ? '...' : '\u2713'}
                             </button>
                           </>
                         )
                       ) : (
-                        <span className="pp-verified">✓</span>
+                        <span className="pp-verified">{'\u2713'}</span>
                       )}
                     </div>
                   </div>
@@ -451,7 +500,7 @@ export default function ProfilePage() {
                       {langid.map(id => (
                         <span key={id} className="pp-chip">
                           {langName(id)}
-                          <button type="button" className="pp-chip-x" onClick={() => removeLang(id)}>×</button>
+                          <button type="button" className="pp-chip-x" onClick={() => removeLang(id)}>{'\u00d7'}</button>
                         </span>
                       ))}
                       <input
@@ -472,7 +521,30 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Row 6: Country + State */}
+                {/* Row 6: User Type + Qualification */}
+                <div className="pp-row">
+                  <div className="pp-field">
+                    <label className="pp-label">I am a... *</label>
+                    <select className="pp-input pp-select" value={usertype} onChange={e => setUsertype(e.target.value)}>
+                      <option value="">Select type</option>
+                      {USERTYPE_OPTIONS.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div className="pp-field">
+                    <label className="pp-label">Qualification *</label>
+                    <input className="pp-input" value={qualification} onChange={e => setQualification(e.target.value)} placeholder="e.g. B.Tech, MBA" />
+                  </div>
+                </div>
+
+                {/* Row 7: Experience */}
+                <div className="pp-row">
+                  <div className="pp-field" style={{ gridColumn: 'span 2' }}>
+                    <label className="pp-label">Experience *</label>
+                    <input className="pp-input" value={experience} onChange={e => setExperience(e.target.value)} placeholder="e.g. 3 years in web development" />
+                  </div>
+                </div>
+
+                {/* Row 8: Country + State */}
                 <div className="pp-row">
                   <div className="pp-field">
                     <label className="pp-label">Country</label>
@@ -487,7 +559,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Row 7: District + Pincode */}
+                {/* Row 9: District + Pincode */}
                 <div className="pp-row">
                   <div className="pp-field">
                     <label className="pp-label">District *</label>
@@ -505,26 +577,14 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Row 8: Place */}
+                {/* Row 10: Place */}
                 <div className="pp-row">
                   <div className="pp-field" style={{ gridColumn: 'span 2' }}>
-                    <label className="pp-label">Place</label>
+                    <label className="pp-label">Place *</label>
                     <select className="pp-input pp-select" value={placeid || ''} onChange={e => setPlaceid(e.target.value ? +e.target.value : null)} disabled={!pincode}>
-                      <option value="">{pincode ? 'Select place (optional)' : 'Select pincode first'}</option>
+                      <option value="">{pincode ? 'Select place' : 'Select pincode first'}</option>
                       {places.map((p: any) => <option key={p.placeid} value={Number(p.placeid)}>{p.place}</option>)}
                     </select>
-                  </div>
-                </div>
-
-                {/* Row 9: Qualification + Experience */}
-                <div className="pp-row">
-                  <div className="pp-field">
-                    <label className="pp-label">Qualification</label>
-                    <input className="pp-input" value={qualification} onChange={e => setQualification(e.target.value)} placeholder="e.g. B.Tech, MBA" />
-                  </div>
-                  <div className="pp-field">
-                    <label className="pp-label">Experience</label>
-                    <input className="pp-input" value={experience} onChange={e => setExperience(e.target.value)} placeholder="e.g. 3 years" />
                   </div>
                 </div>
 
@@ -535,7 +595,7 @@ export default function ProfilePage() {
                 {/* Submit */}
                 <div className="pp-submit-row">
                   <button type="submit" className="pp-submit-btn" disabled={submitting}>
-                    {submitting ? 'Saving...' : 'Save & Continue →'}
+                    {submitting ? 'Saving...' : 'Save & Continue \u2192'}
                   </button>
                 </div>
 
