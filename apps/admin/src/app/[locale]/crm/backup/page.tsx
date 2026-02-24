@@ -723,6 +723,8 @@ function DriveTab({ password }: { password: string }) {
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [toast, setToast] = useState('');
+  const [backupStep, setBackupStep] = useState<'idle' | 'creating' | 'uploading' | 'done' | 'failed'>('idle');
+  const [backupMsg, setBackupMsg] = useState('');
 
   const loadData = useCallback(async () => {
     try {
@@ -737,6 +739,52 @@ function DriveTab({ password }: { password: string }) {
   }, [password]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const handleBackupToDrive = async () => {
+    setBackupStep('creating');
+    setBackupMsg('Creating backup...');
+    try {
+      const res = await apiFetch('/create', password, { method: 'POST', body: JSON.stringify({ notes: 'Drive backup' }) });
+      if (!res.ok) { setBackupStep('failed'); setBackupMsg('Failed to create backup.'); return; }
+      const { id } = await res.json();
+      await new Promise<void>((resolve, reject) => {
+        const iv = setInterval(async () => {
+          try {
+            const sr = await apiFetch(`/status/${id}`, password);
+            if (sr.ok) {
+              const s = await sr.json();
+              if (s.status === 'complete') { clearInterval(iv); resolve(); }
+              if (s.status === 'failed') { clearInterval(iv); reject(new Error(s.error || 'Backup failed')); }
+            }
+          } catch { /* keep polling */ }
+        }, 2000);
+      });
+      setBackupStep('uploading');
+      setBackupMsg('Uploading to Google Drive...');
+      const ur = await apiFetch(`/drive/upload/${id}`, password, { method: 'POST' });
+      if (!ur.ok) { setBackupStep('failed'); setBackupMsg('Failed to start Drive upload.'); return; }
+      const { jobKey } = await ur.json();
+      await new Promise<void>((resolve, reject) => {
+        const iv = setInterval(async () => {
+          try {
+            const pr = await apiFetch(`/drive/progress/${jobKey}`, password);
+            if (pr.ok) {
+              const p = await pr.json();
+              if (p.status === 'complete') { clearInterval(iv); resolve(); }
+              if (p.status === 'failed') { clearInterval(iv); reject(new Error(p.error || 'Upload failed')); }
+            }
+          } catch { /* keep polling */ }
+        }, 3000);
+      });
+      setBackupStep('done');
+      setBackupMsg('Backup uploaded to Google Drive!');
+      loadData();
+      setTimeout(() => { setBackupStep('idle'); setBackupMsg(''); }, 5000);
+    } catch (e: any) {
+      setBackupStep('failed');
+      setBackupMsg(e?.message || 'Something went wrong.');
+    }
+  };
 
   const handleDelete = async (fileId: string) => {
     try {
@@ -813,6 +861,42 @@ GDRIVE_FOLDER_ID=your_folder_id`}</code>
           </div>
         )}
       </div>
+
+      {/* Backup to Drive button */}
+      {status?.connected && (
+        <div style={{ ...cardStyle, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' as const }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>🚀 Backup to Drive</div>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>Creates a fresh backup and uploads it directly to Google Drive.</div>
+          </div>
+          <button
+            onClick={handleBackupToDrive}
+            disabled={backupStep !== 'idle' && backupStep !== 'done' && backupStep !== 'failed'}
+            style={{
+              ...primaryBtnStyle,
+              background: backupStep === 'done' ? 'linear-gradient(135deg, #22c55e, #059669)' : backupStep === 'failed' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #34d399, #059669)',
+              opacity: (backupStep !== 'idle' && backupStep !== 'done' && backupStep !== 'failed') ? 0.6 : 1,
+              minWidth: '200px', textAlign: 'center' as const,
+            }}
+          >
+            {backupStep === 'idle' && '☁️ Backup to Drive Now'}
+            {backupStep === 'creating' && '⟳ Creating backup...'}
+            {backupStep === 'uploading' && '⟳ Uploading to Drive...'}
+            {backupStep === 'done' && '✅ Done!'}
+            {backupStep === 'failed' && '❌ Failed — Retry'}
+          </button>
+        </div>
+      )}
+      {backupMsg && (backupStep === 'creating' || backupStep === 'uploading') && (
+        <div style={{ ...cardStyle, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '20px', display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#34d399' }}>{backupMsg}</div>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>{backupStep === 'creating' ? 'Archiving code and database...' : 'This may take 2–3 minutes for large backups.'}</div>
+          </div>
+          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
 
       {/* Drive files list */}
       {status?.connected && (
