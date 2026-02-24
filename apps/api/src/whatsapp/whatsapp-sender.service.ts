@@ -57,6 +57,7 @@ export class WhatsappSenderService {
   /**
    * Send a plain text message with automatic failover.
    * Tries primary provider first, falls back to secondary on failure.
+   * THROWS if both providers fail — callers must handle the error.
    */
   async sendMessage(to: string, body: string): Promise<void> {
     const primary = this.getPrimary();
@@ -85,9 +86,13 @@ export class WhatsappSenderService {
         return;
       }
       this.recordFailure(secondary);
-      this.logger.error(`[${secondary.toUpperCase()}] Fallback ALSO failed for ${to}: ${result.error}`);
+      const errMsg = `Both WhatsApp providers failed for ${to}. Primary: ${primary}, Secondary: ${secondary} — ${result.error}`;
+      this.logger.error(errMsg);
+      throw new Error(errMsg);
     } else {
-      this.logger.error(`BOTH providers have circuit OPEN — message to ${to} DROPPED`);
+      const errMsg = `BOTH providers have circuit OPEN — message to ${to} DROPPED`;
+      this.logger.error(errMsg);
+      throw new Error(errMsg);
     }
   }
 
@@ -108,6 +113,7 @@ export class WhatsappSenderService {
   async sendWelcome(to: string, name: string, passcode: string): Promise<void> {
     const message = [
       `Welcome to Saubh.Tech, ${name}!\u{1F44B}`,
+      `Your sign-in credentials are:`,
       `\u{1F517} URL: https://saubh.tech`,
       `\u{1F464} Login: ${to}`,
       `\u{1F510} Passcode: ${passcode}`,
