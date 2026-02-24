@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  evolution:
+    image: evoapicloud/evolution-api:latest
+    container_name: saubh-evolution
+    network_mode: host  # CRITICAL: Never use bridge network - breaks Baileys crypto handshake
+    restart: unless-stopped
+    environment:
+      - SERVER_URL=http://localhost:8081
+      - SERVER_PORT=8081
+      - AUTHENTICATION_API_KEY=eec4e150ae057851d1f1d690d371d3844373fa963191e01a09064dc105c35540
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://saubh_admin:PgSecure2026Saubh@127.0.0.1:5432/evolution
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://:Red1sSecure2026@127.0.0.1:6379/1
+      - CACHE_REDIS_PREFIX_KEY=evo
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=false
+      - DATABASE_SAVE_DATA_CHATS=false
+      - DATABASE_SAVE_DATA_CONTACTS=false
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8081/instance/connectionState/saubh-sim", "-H", "apikey:eec4e150ae057851d1f1d690d371d3844373fa963191e01a09064dc105c35540"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: saubh-redis
+    restart: unless-stopped
+    command: redis-server --requirepass Red1sSecure2026 --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "Red1sSecure2026", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+volumes:
+  redis-data:
+    driver: local
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║ PRODUCTION NOTES                                                ║
+# ║                                                                 ║
+# ║ 1. Evolution MUST use network_mode: host                        ║
+# ║    Docker bridge breaks Baileys Signal Protocol handshake       ║
+# ║    (pre-key upload timeout / messages hang forever)             ║
+# ║                                                                 ║
+# ║ 2. NEVER expose evo-manager.html publicly                      ║
+# ║    It creates duplicate WebSocket connections that cause        ║
+# ║    infinite session conflicts (type: "replaced" loop)           ║
+# ║                                                                 ║
+# ║ 3. To update: docker compose pull && docker compose up -d      ║
+# ║ 4. Logs: docker compose logs -f evolution                      ║
+# ║ 5. Health: /var/log/evo-health.log                             ║
+# ╚══════════════════════════════════════════════════════════════════╝

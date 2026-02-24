@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Saubh.Tech — WhatsApp Connect</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',system-ui,sans-serif;background:#080b12;color:#f1f5f9;min-height:100vh;padding:20px;}
+    .wrap{max-width:520px;margin:0 auto;}
+    h1{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.6rem;text-align:center;margin-bottom:6px;}
+    h1 span{background:linear-gradient(135deg,#22c55e,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .sub{text-align:center;color:rgba(255,255,255,.4);font-size:.85rem;margin-bottom:24px;}
+    .btn{height:44px;border:none;border-radius:12px;font-weight:700;font-size:.9rem;cursor:pointer;font-family:'Outfit',sans-serif;transition:.2s;letter-spacing:.2px;padding:0 20px;width:100%;}
+    .btn:active{transform:scale(.97);}
+    .btn-green{color:#fff;background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 16px rgba(34,197,94,.25);}
+    .btn-blue{color:#fff;background:linear-gradient(135deg,#3b82f6,#6366f1);box-shadow:0 4px 16px rgba(99,102,241,.25);}
+    .btn-orange{color:#fff;background:linear-gradient(135deg,#f97316,#ef4444);box-shadow:0 4px 16px rgba(249,115,22,.25);}
+    .btn:hover{transform:translateY(-1px);}
+    .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px;margin-bottom:16px;position:relative;overflow:hidden;}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#22c55e,#06b6d4,#8b5cf6);}
+    .card h2{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.05rem;margin-bottom:14px;}
+    .status-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.9rem;justify-content:center;}
+    .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block;}
+    .dot-green{background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.5);}
+    .dot-red{background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,.5);}
+    .dot-yellow{background:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,.5);}
+    .detail{color:rgba(255,255,255,.45);font-size:.82rem;text-align:center;margin-bottom:2px;}
+    .qr-area{text-align:center;padding:16px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:200px;}
+    .qr-area img{max-width:280px;border-radius:12px;background:#fff;padding:10px;}
+    .pairing-box{background:rgba(34,197,94,.08);border:3px solid rgba(34,197,94,.4);border-radius:18px;padding:28px 20px;text-align:center;width:100%;}
+    .pairing-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:1rem;color:#86efac;margin-bottom:14px;text-transform:uppercase;letter-spacing:2px;}
+    .pairing-code{font-family:'Outfit',monospace;font-size:3.5rem;font-weight:900;letter-spacing:16px;color:#ffffff;text-shadow:0 0 24px rgba(34,197,94,.7),0 0 48px rgba(34,197,94,.3);display:block;padding:10px 0;}
+    .pairing-label{font-size:.88rem;color:rgba(255,255,255,.65);margin-top:10px;line-height:1.6;}
+    .qr-msg{color:rgba(255,255,255,.35);font-size:.8rem;}
+    .loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#22c55e;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle;}
+    .big-loader{width:48px;height:48px;border-width:3px;margin:0 auto 12px auto;display:block;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:.75rem;font-weight:700;text-transform:uppercase;}
+    .tag-open{background:rgba(34,197,94,.15);color:#86efac;}
+    .tag-close{background:rgba(239,68,68,.15);color:#fca5a5;}
+    .tag-connecting{background:rgba(245,158,11,.15);color:#fde68a;}
+    input.field{height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);padding:0 14px;color:#f1f5f9;font-size:.92rem;font-family:inherit;width:100%;}
+    input.field:focus{outline:none;border-color:rgba(34,197,94,.4);box-shadow:0 0 0 3px rgba(34,197,94,.1);}
+    label{font-size:.8rem;color:rgba(255,255,255,.5);font-weight:600;display:block;margin-bottom:5px;}
+    .hint{font-size:.72rem;color:rgba(255,255,255,.3);margin-top:3px;}
+    .field-group{margin-bottom:12px;}
+    .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+    .log{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px;font-family:monospace;font-size:.75rem;color:rgba(255,255,255,.4);max-height:150px;overflow-y:auto;white-space:pre-wrap;margin-top:12px;}
+
+    /* Top-level tabs */
+    .tabs{display:flex;gap:4px;margin-bottom:16px;background:rgba(255,255,255,.03);border-radius:12px;padding:4px;}
+    .tab{flex:1;padding:10px;text-align:center;border-radius:10px;cursor:pointer;font-weight:700;font-size:.85rem;font-family:'Outfit',sans-serif;color:rgba(255,255,255,.4);transition:.2s;}
+    .tab.active{background:rgba(34,197,94,.15);color:#86efac;}
+    .tab:hover{color:rgba(255,255,255,.7);}
+    .tab-content{display:none;}
+    .tab-content.active{display:block;}
+
+    /* Connect method nav */
+    .method-nav{display:flex;gap:0;margin:16px 0 0 0;border-radius:14px;overflow:hidden;border:2px solid rgba(255,255,255,.08);}
+    .method-btn{flex:1;padding:14px 10px;text-align:center;cursor:pointer;font-weight:800;font-size:.9rem;font-family:'Outfit',sans-serif;transition:.2s;border:none;background:rgba(255,255,255,.03);color:rgba(255,255,255,.35);}
+    .method-btn:first-child{border-right:1px solid rgba(255,255,255,.06);}
+    .method-btn.active{color:#fff;}
+    .method-btn.qr-active{background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(99,102,241,.2));color:#93c5fd;}
+    .method-btn.pair-active{background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(6,182,212,.2));color:#86efac;}
+    .method-btn:hover{color:rgba(255,255,255,.7);}
+    .method-panel{display:none;}
+    .method-panel.active{display:block;}
+
+    .countdown{font-family:'Outfit',sans-serif;font-size:.82rem;color:rgba(245,158,11,.7);margin-top:6px;}
+    .steps{text-align:left;background:rgba(255,255,255,.03);border-radius:12px;padding:14px 18px;margin-top:12px;font-size:.84rem;line-height:1.8;color:rgba(255,255,255,.55);}
+    .steps b{color:rgba(255,255,255,.85);}
+    .steps .num{display:inline-block;width:22px;height:22px;border-radius:50%;background:rgba(34,197,94,.15);color:#86efac;text-align:center;font-weight:800;font-size:.75rem;line-height:22px;margin-right:6px;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Saubh<span>.</span>Tech — WhatsApp</h1>
+  <p class="sub">Connect your WhatsApp number</p>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('connect')">📱 Connect</div>
+    <div class="tab" onclick="switchTab('create')">➕ New</div>
+    <div class="tab" onclick="switchTab('status')">📊 Status</div>
+  </div>
+
+  <!-- Tab: Connect -->
+  <div class="tab-content active" id="tab-connect">
+    <div class="card">
+      <h2>📱 Connect WhatsApp</h2>
+      <div class="field-group">
+        <label>Instance Name</label>
+        <input class="field" id="connectInstName" placeholder="e.g. saubh-sim" value="saubh-sim"/>
+      </div>
+      <div class="field-group">
+        <label>Phone Number</label>
+        <input class="field" id="connectPhone" placeholder="e.g. 918800607598"/>
+        <div class="hint">Required for pairing code. Country code + number, no + or spaces.</div>
+      </div>
+      <button class="btn btn-blue" onclick="startConnect()">Connect</button>
+
+      <!-- Method Nav: QR | Pairing Code -->
+      <div class="method-nav" id="methodNav" style="display:none;">
+        <div class="method-btn qr-active" id="btnQR" onclick="switchMethod('qr')">📷 QR Code</div>
+        <div class="method-btn" id="btnPair" onclick="switchMethod('pair')">🔢 Pairing Code</div>
+      </div>
+
+      <!-- QR Panel -->
+      <div class="method-panel" id="panel-qr">
+        <div class="qr-area" id="qrArea"></div>
+        <div class="steps">
+          <span class="num">1</span> Open <b>WhatsApp</b> on your phone<br/>
+          <span class="num">2</span> Tap <b>Settings → Linked Devices</b><br/>
+          <span class="num">3</span> Tap <b>Link a Device</b><br/>
+          <span class="num">4</span> <b>Scan</b> the QR code above
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-blue" onclick="fetchQR()">🔄 Refresh QR</button>
+          <button class="btn btn-green" onclick="checkStatusConnect()">✅ Verify</button>
+        </div>
+      </div>
+
+      <!-- Pairing Code Panel -->
+      <div class="method-panel" id="panel-pair">
+        <div class="qr-area" id="pairArea"></div>
+        <div class="steps">
+          <span class="num">1</span> Open <b>WhatsApp</b> on your phone<br/>
+          <span class="num">2</span> Tap <b>Settings → Linked Devices</b><br/>
+          <span class="num">3</span> Tap <b>Link with phone number</b><br/>
+          <span class="num">4</span> <b>Enter the code</b> shown above
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-green" onclick="fetchPairCode()">🔄 New Code</button>
+          <button class="btn btn-green" onclick="checkStatusConnect()">✅ Verify</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Create -->
+  <div class="tab-content" id="tab-create">
+    <div class="card">
+      <h2>➕ Create New Instance</h2>
+      <div class="field-group">
+        <label>Instance Name</label>
+        <input class="field" id="newInstName" placeholder="e.g. my-business"/>
+        <div class="hint">A unique short name for this WhatsApp connection</div>
+      </div>
+      <div class="field-group">
+        <label>Phone Number (optional)</label>
+        <input class="field" id="newInstPhone" placeholder="e.g. 918130960040"/>
+      </div>
+      <button class="btn btn-green" onclick="createInstance()">Create Instance</button>
+      <div id="createResult" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Tab: Status -->
+  <div class="tab-content" id="tab-status">
+    <div class="card">
+      <h2>📊 Check Status</h2>
+      <div class="field-group">
+        <label>Instance Name</label>
+        <input class="field" id="statusInstName" placeholder="e.g. saubh-sim" value="saubh-sim"/>
+      </div>
+      <button class="btn btn-green" onclick="checkStatus()">Check Status</button>
+      <div id="statusResult" style="margin-top:16px;"></div>
+    </div>
+    <div class="card">
+      <h2>🔗 Webhook</h2>
+      <div class="field-group">
+        <label>Instance Name</label>
+        <input class="field" id="whInstName" placeholder="saubh-sim" value="saubh-sim"/>
+      </div>
+      <div class="field-group">
+        <label>Webhook URL</label>
+        <input class="field" id="whUrl" value="http://172.16.2.1:3001/api/crm/webhooks/evolution"/>
+      </div>
+      <button class="btn btn-orange" onclick="setWebhook()">Set Webhook</button>
+      <div id="webhookResult" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div class="log" id="log">Ready.
+</div>
+</div>
+
+<script>
+var EVO_BASE = '/whats';
+var EVO_KEY = 'eec4e150ae057851d1f1d690d371d3844373fa963191e01a09064dc105c35540';
+var MAX_RETRIES = 5;
+var RETRY_DELAY = 2500;
+var countdownTimer = null;
+
+function log(msg) {
+  var el = document.getElementById('log');
+  var ts = new Date().toLocaleTimeString();
+  el.textContent += '[' + ts + '] ' + msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+async function api(path, method, body) {
+  method = method || 'GET';
+  var opts = { method: method, headers: { 'apikey': EVO_KEY, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  var res = await fetch(EVO_BASE + path, opts);
+  return await res.json();
+}
+
+function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+// ─── Top-level tabs ────────────────────────────────────────────────
+function switchTab(name) {
+  var tabs = document.querySelectorAll('.tabs .tab');
+  var contents = document.querySelectorAll('.tab-content');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+  for (var i = 0; i < contents.length; i++) contents[i].classList.remove('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  var idx = { connect: 0, create: 1, status: 2 };
+  tabs[idx[name]].classList.add('active');
+}
+
+// ─── Method nav: QR vs Pairing Code ───────────────────────────────
+function switchMethod(m) {
+  document.getElementById('btnQR').className = 'method-btn' + (m === 'qr' ? ' qr-active' : '');
+  document.getElementById('btnPair').className = 'method-btn' + (m === 'pair' ? ' pair-active' : '');
+  document.getElementById('panel-qr').className = 'method-panel' + (m === 'qr' ? ' active' : '');
+  document.getElementById('panel-pair').className = 'method-panel' + (m === 'pair' ? ' active' : '');
+}
+
+function dotHtml(s) {
+  var c = s === 'open' ? 'dot-green' : s === 'connecting' ? 'dot-yellow' : 'dot-red';
+  return '<div class="dot ' + c + '"></div>';
+}
+function stateTag(s) {
+  var c = s === 'open' ? 'tag-open' : s === 'connecting' ? 'tag-connecting' : 'tag-close';
+  return '<span class="tag ' + c + '">' + s + '</span>';
+}
+
+function startCountdown(el, seconds) {
+  if (countdownTimer) clearInterval(countdownTimer);
+  var left = seconds;
+  el.textContent = '⏱ Expires in ' + left + 's';
+  countdownTimer = setInterval(function() {
+    left--;
+    if (left <= 0) { clearInterval(countdownTimer); el.textContent = '⏱ Expired — click Refresh'; return; }
+    el.textContent = '⏱ Expires in ' + left + 's';
+  }, 1000);
+}
+
+// ─── Start Connect — fetch both QR and pair code ──────────────────
+async function startConnect() {
+  var name = document.getElementById('connectInstName').value.trim();
+  var phone = document.getElementById('connectPhone').value.trim().replace(/[\s+\-]/g, '');
+  if (!name) { alert('Enter instance name'); return; }
+
+  document.getElementById('methodNav').style.display = 'flex';
+  switchMethod('qr');
+
+  // Fetch QR (no phone needed)
+  fetchQR();
+  // Fetch Pair Code (needs phone)
+  if (phone) {
+    fetchPairCode();
+  } else {
+    document.getElementById('pairArea').innerHTML = '<p style="color:rgba(245,158,11,.7);font-size:.88rem;">⚠️ Enter phone number above, then click <b>New Code</b></p>';
+  }
+}
+
+// ─── Fetch QR Code ────────────────────────────────────────────────
+async function fetchQR(retryCount) {
+  retryCount = retryCount || 0;
+  var name = document.getElementById('connectInstName').value.trim();
+  if (!name) return;
+  var el = document.getElementById('qrArea');
+
+  el.innerHTML = '<div class="loader big-loader"></div><p style="color:rgba(255,255,255,.45);">' +
+    (retryCount > 0 ? 'Retry ' + retryCount + '/' + MAX_RETRIES + '...' : 'Loading QR code...') + '</p>';
+  log('QR request: ' + name + (retryCount > 0 ? ' (retry ' + retryCount + ')' : ''));
+
+  try {
+    var data = await api('/instance/connect/' + name);
+
+    // Already connected
+    if (data && data.instance && data.instance.state === 'open') {
+      el.innerHTML = '<div class="status-row">' + dotHtml('open') + ' <b>' + name + '</b> already connected!</div>';
+      document.getElementById('pairArea').innerHTML = '<div class="status-row">' + dotHtml('open') + ' <b>' + name + '</b> already connected!</div>';
+      return;
+    }
+
+    if (data && data.base64) {
+      var cdId = 'qr-cd-' + Date.now();
+      el.innerHTML = '<img src="' + data.base64 + '" alt="QR Code"/><div class="countdown" id="' + cdId + '"></div>';
+      startCountdown(document.getElementById(cdId), 45);
+      log('QR loaded OK');
+      return;
+    }
+
+    // No QR yet — retry
+    if (retryCount < MAX_RETRIES) {
+      await sleep(RETRY_DELAY);
+      return fetchQR(retryCount + 1);
+    }
+    el.innerHTML = '<p style="color:#fca5a5;">Could not load QR. Click Refresh.</p>';
+  } catch(e) {
+    if (retryCount < MAX_RETRIES) { await sleep(RETRY_DELAY); return fetchQR(retryCount + 1); }
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+  }
+}
+
+// ─── Fetch Pairing Code ───────────────────────────────────────────
+async function fetchPairCode(retryCount) {
+  retryCount = retryCount || 0;
+  var name = document.getElementById('connectInstName').value.trim();
+  var phone = document.getElementById('connectPhone').value.trim().replace(/[\s+\-]/g, '');
+  if (!name) return;
+  if (!phone) {
+    document.getElementById('pairArea').innerHTML = '<p style="color:rgba(245,158,11,.7);font-size:.88rem;">⚠️ Enter phone number above and click <b>New Code</b></p>';
+    return;
+  }
+  var el = document.getElementById('pairArea');
+  el.innerHTML = '<div class="loader big-loader"></div><p style="color:rgba(255,255,255,.45);">' +
+    (retryCount > 0 ? 'Retry ' + retryCount + '/' + MAX_RETRIES + '...' : 'Generating pairing code...') + '</p>';
+  log('Pair code request: ' + name + ' phone=' + phone + (retryCount > 0 ? ' (retry ' + retryCount + ')' : ''));
+
+  try {
+    var data = await api('/instance/connect/' + name + '?number=' + phone);
+
+    // Already connected
+    if (data && data.instance && data.instance.state === 'open') {
+      el.innerHTML = '<div class="status-row">' + dotHtml('open') + ' <b>' + name + '</b> already connected!</div>';
+      return;
+    }
+
+    if (data && data.pairingCode) {
+      var cdId = 'pair-cd-' + Date.now();
+      el.innerHTML = '<div class="pairing-box">' +
+        '<div class="pairing-title">📲 Your Pairing Code</div>' +
+        '<div class="pairing-code">' + data.pairingCode + '</div>' +
+        '<div class="countdown" id="' + cdId + '"></div>' +
+        '</div>';
+      startCountdown(document.getElementById(cdId), 45);
+      log('Pair code: ' + data.pairingCode);
+      return;
+    }
+
+    // No code yet — retry
+    if (retryCount < MAX_RETRIES) {
+      await sleep(RETRY_DELAY);
+      return fetchPairCode(retryCount + 1);
+    }
+    el.innerHTML = '<p style="color:#fca5a5;">Pairing code unavailable. Ensure phone number is correct and click New Code.</p>';
+  } catch(e) {
+    if (retryCount < MAX_RETRIES) { await sleep(RETRY_DELAY); return fetchPairCode(retryCount + 1); }
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+  }
+}
+
+// ─── Create Instance ──────────────────────────────────────────────
+async function createInstance() {
+  var name = document.getElementById('newInstName').value.trim();
+  var phone = document.getElementById('newInstPhone').value.trim().replace(/[\s+\-]/g, '');
+  var el = document.getElementById('createResult');
+  if (!name) { alert('Enter an instance name'); return; }
+  el.innerHTML = '<span class="loader"></span> Creating...';
+  log('Create: ' + name);
+  try {
+    var body = {
+      instanceName: name,
+      integration: 'WHATSAPP-BAILEYS',
+      qrcode: true,
+      webhook: {
+        url: 'http://172.16.2.1:3001/api/crm/webhooks/evolution',
+        enabled: true,
+        webhookByEvents: false,
+        events: ['MESSAGES_UPSERT']
+      }
+    };
+    if (phone) body.number = phone;
+    var data = await api('/instance/create', 'POST', body);
+    log('Created: ' + JSON.stringify(data).slice(0, 200));
+    el.innerHTML = '<p style="color:#86efac;">✅ <b>' + name + '</b> created! Connecting...</p>';
+    document.getElementById('connectInstName').value = name;
+    document.getElementById('connectPhone').value = phone;
+    switchTab('connect');
+    setTimeout(function() { startConnect(); }, 2000);
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+  }
+}
+
+// ─── Status ───────────────────────────────────────────────────────
+function checkStatusConnect() {
+  var name = document.getElementById('connectInstName').value.trim();
+  if (name) {
+    document.getElementById('statusInstName').value = name;
+    switchTab('status');
+    checkStatus();
+  }
+}
+
+async function checkStatus() {
+  var name = document.getElementById('statusInstName').value.trim();
+  if (!name) { alert('Enter instance name'); return; }
+  var el = document.getElementById('statusResult');
+  el.innerHTML = '<span class="loader"></span> Checking...';
+  log('Status: ' + name);
+  try {
+    var state = await api('/instance/connectionState/' + name);
+    var s = (state && state.instance && state.instance.state) || 'unknown';
+    var html = '<div class="status-row">' + dotHtml(s) + ' <b>' + name + '</b> ' + stateTag(s) + '</div>';
+    try {
+      var wh = await api('/webhook/find/' + name);
+      html += '<div class="detail">Webhook: ' + (wh.enabled ? '✅ Active' : '❌ Disabled') + '</div>';
+      if (wh.url) html += '<div class="detail" style="font-size:.75rem;word-break:break-all;">' + wh.url + '</div>';
+    } catch(e2) {}
+    el.innerHTML = html;
+    log(name + ': ' + s);
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+  }
+}
+
+async function setWebhook() {
+  var name = document.getElementById('whInstName').value.trim();
+  var url = document.getElementById('whUrl').value.trim();
+  var el = document.getElementById('webhookResult');
+  if (!name || !url) { alert('Enter instance name and URL'); return; }
+  el.innerHTML = '<span class="loader"></span> Setting...';
+  try {
+    await api('/webhook/set/' + name, 'POST', {
+      webhook: { url: url, enabled: true, webhookByEvents: false, events: ['MESSAGES_UPSERT'] }
+    });
+    el.innerHTML = '<p style="color:#86efac;">✅ Webhook set for <b>' + name + '</b></p>';
+    log('Webhook OK');
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5;">Error: ' + e.message + '</p>';
+  }
+}
+</script>
+</body>
+</html>
