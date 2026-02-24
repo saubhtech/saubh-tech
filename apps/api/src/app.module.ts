@@ -11,7 +11,8 @@ import { MasterModule } from './master/master.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { WhatsappAuthModule } from './auth/whatsapp-auth.module';
 import { CrmModule } from './crm/crm.module';
-
+import { ProfileModule } from './auth/profile.module';
+import { BackupModule } from './backup/backup.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -32,6 +33,8 @@ import { CrmModule } from './crm/crm.module';
     WhatsappModule,
     WhatsappAuthModule,
     CrmModule,
+    ProfileModule,
+    BackupModule,
   ],
 })
 export class AppModule {}
