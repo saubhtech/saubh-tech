@@ -6,6 +6,8 @@ import {
   HttpStatus,
   BadRequestException,
   UseGuards,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { WhatsappAuthService } from './whatsapp-auth.service';
 import { normalizeWhatsApp } from './normalize-phone';
@@ -14,10 +16,16 @@ import { AuthRateLimitGuard } from './rate-limit.guard';
 @Controller('auth/whatsapp')
 @UseGuards(AuthRateLimitGuard)
 export class WhatsappAuthController {
+  private readonly logger = new Logger(WhatsappAuthController.name);
+
   constructor(private readonly authService: WhatsappAuthService) {}
 
   /**
    * POST /auth/whatsapp/register
+   *
+   * New user: creates account, sends welcome with static passcode.
+   * Existing user: generates OTP, sends welcome-back message.
+   * Both sends are awaited — returns error if WhatsApp delivery fails.
    */
   @Post('register')
   async register(
@@ -57,16 +65,34 @@ export class WhatsappAuthController {
       );
     }
 
-    const user = await this.authService.registerUser(normalized, safeName, ut);
+    try {
+      const { user, isNew } = await this.authService.registerUser(normalized, safeName, ut);
 
-    return {
-      success: true,
-      user: this.serializeUser(user),
-    };
+      return {
+        success: true,
+        isNew,
+        user: this.serializeUser(user),
+        message: isNew
+          ? `Welcome ${safeName}! Check WhatsApp for your passcode.`
+          : `Welcome back! Check WhatsApp for your one-time login code.`,
+      };
+    } catch (err: any) {
+      // Re-throw NestJS HttpExceptions (rate limit, etc.)
+      if (err?.status) throw err;
+
+      // WhatsApp send failure
+      this.logger.error(`Register: WhatsApp send failed for ${normalized}: ${err.message}`);
+      throw new InternalServerErrorException(
+        'Could not send message via WhatsApp. Please try again in a moment.',
+      );
+    }
   }
 
   /**
    * POST /auth/whatsapp/request-otp
+   *
+   * Generates OTP, sends via WhatsApp (awaited).
+   * Returns error if user not found or WhatsApp delivery fails.
    */
   @Post('request-otp')
   @HttpCode(HttpStatus.OK)
@@ -82,12 +108,23 @@ export class WhatsappAuthController {
       throw new BadRequestException('Invalid WhatsApp number.');
     }
 
-    await this.authService.requestOTP(normalized);
+    try {
+      await this.authService.requestOTP(normalized);
 
-    return {
-      success: true,
-      expiresIn: 120,
-    };
+      return {
+        success: true,
+        expiresIn: 120,
+      };
+    } catch (err: any) {
+      // Re-throw NestJS HttpExceptions (not found, rate limit, etc.)
+      if (err?.status) throw err;
+
+      // WhatsApp send failure
+      this.logger.error(`Request OTP: WhatsApp send failed for ${normalized}: ${err.message}`);
+      throw new InternalServerErrorException(
+        'Could not send OTP via WhatsApp. Please try again in a moment.',
+      );
+    }
   }
 
   /**
