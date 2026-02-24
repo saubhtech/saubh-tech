@@ -72,6 +72,7 @@ export class WhatsappAuthController {
         success: true,
         isNew,
         user: this.serializeUser(user),
+        isComplete: this.checkComplete(user),
         message: isNew
           ? `Welcome ${safeName}! Check WhatsApp for your passcode.`
           : `Welcome back! Check WhatsApp for your one-time login code.`,
@@ -129,6 +130,9 @@ export class WhatsappAuthController {
 
   /**
    * POST /auth/whatsapp/verify-otp
+   *
+   * Returns { token, user, isComplete } so the frontend can redirect
+   * to /profile (incomplete) or /dashboard (complete).
    */
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
@@ -167,6 +171,7 @@ export class WhatsappAuthController {
       success: true,
       token: result.token,
       user: this.serializeUser(result.user),
+      isComplete: this.checkComplete(result.user),
     };
   }
 
@@ -179,6 +184,34 @@ export class WhatsappAuthController {
     return { success: true };
   }
 
+  /**
+   * Check if ALL required profile fields are filled.
+   * Required (16): fname, lname, email, phone, pic, gender, dob,
+   *   langid(>0), qualification, experience, country_code, stateid,
+   *   districtid, pincode, placeid, usertype
+   */
+  private checkComplete(user: any): boolean {
+    return !!(
+      user.fname &&
+      user.lname &&
+      user.email &&
+      user.phone &&
+      user.pic &&
+      user.gender &&
+      user.dob &&
+      user.langid &&
+      user.langid.length > 0 &&
+      user.qualification &&
+      user.experience &&
+      user.countryCode &&
+      user.stateid &&
+      user.districtid &&
+      user.pincode &&
+      user.placeid &&
+      user.usertype
+    );
+  }
+
   private serializeUser(user: any) {
     return {
       userid: user.userid.toString(),
@@ -186,7 +219,19 @@ export class WhatsappAuthController {
       fname: user.fname,
       lname: user.lname,
       email: user.email,
+      phone: user.phone,
+      pic: user.pic,
+      gender: user.gender,
+      dob: user.dob,
+      langid: user.langid,
+      qualification: user.qualification,
+      experience: user.experience,
       usertype: user.usertype,
+      countryCode: user.countryCode,
+      stateid: user.stateid,
+      districtid: user.districtid,
+      pincode: user.pincode,
+      placeid: user.placeid ? user.placeid.toString() : null,
       status: user.status,
     };
   }

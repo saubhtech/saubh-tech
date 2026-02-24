@@ -108,6 +108,44 @@ export class ProfileController {
     if (body.countryCode !== undefined)
       data.countryCode = body.countryCode ? String(body.countryCode).trim().toUpperCase() : null;
 
+    // Email — direct save (OTP verification is optional)
+    if (body.email !== undefined) {
+      if (body.email) {
+        const emailStr = String(body.email).trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr)) {
+          throw new BadRequestException('Invalid email address.');
+        }
+        data.email = emailStr;
+      } else {
+        data.email = null;
+      }
+    }
+
+    // Phone — direct save (OTP verification is optional)
+    if (body.phone !== undefined) {
+      if (body.phone) {
+        const phoneStr = String(body.phone).trim().replace(/\D/g, '');
+        if (phoneStr.length < 10 || phoneStr.length > 15) {
+          throw new BadRequestException('Invalid phone number.');
+        }
+        data.phone = phoneStr;
+      } else {
+        data.phone = null;
+      }
+    }
+
+    // User type — BO, CL, GW, SA, AD
+    if (body.usertype !== undefined) {
+      const validTypes = ['BO', 'CL', 'GW', 'SA', 'AD'];
+      const ut = String(body.usertype).trim().toUpperCase();
+      if (!validTypes.includes(ut)) {
+        throw new BadRequestException(
+          `Invalid usertype "${body.usertype}". Must be one of: ${validTypes.join(', ')}.`,
+        );
+      }
+      data.usertype = ut;
+    }
+
     // Gender enum: M, F, T, O
     if (body.gender !== undefined) {
       const validGenders = ['M', 'F', 'T', 'O'];
@@ -296,22 +334,30 @@ export class ProfileController {
   // ─── Helpers ────────────────────────────────────────────────────────────
 
   /**
-   * Check if all required profile fields are filled.
-   * Required: fname, lname, gender, dob, langid(>0),
-   *           stateid, districtid, pincode, pic
+   * Check if ALL required profile fields are filled.
+   * Required (16): fname, lname, email, phone, pic, gender, dob,
+   *   langid(>0), qualification, experience, countryCode, stateid,
+   *   districtid, pincode, placeid, usertype
    */
   private checkComplete(user: any): boolean {
     return !!(
       user.fname &&
       user.lname &&
+      user.email &&
+      user.phone &&
+      user.pic &&
       user.gender &&
       user.dob &&
       user.langid &&
       user.langid.length > 0 &&
+      user.qualification &&
+      user.experience &&
+      user.countryCode &&
       user.stateid &&
       user.districtid &&
       user.pincode &&
-      user.pic
+      user.placeid &&
+      user.usertype
     );
   }
 
