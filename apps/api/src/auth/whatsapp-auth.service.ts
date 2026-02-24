@@ -29,14 +29,19 @@ export class WhatsappAuthService {
   }
 
   /**
-   * Register a new user via WhatsApp. Idempotent.
-   * Sets static passcode = last 4 digits of normalized whatsapp number.
+   * Register or welcome-back a user via WhatsApp.
+   *
+   * NEW user: create in DB → await send welcome (with static passcode) via Evolution→WABA.
+   * EXISTING user: generate Redis OTP → await send welcome-back (with OTP) via Evolution→WABA.
+   *
+   * Returns { user, isNew } so the controller can differentiate.
+   * THROWS if WhatsApp send fails (both providers down).
    */
   async registerUser(
     whatsapp: string,
     fname: string,
     usertype: string,
-  ): Promise<User> {
+  ): Promise<{ user: User; isNew: boolean }> {
     const normalized = normalizeWhatsApp(whatsapp);
 
     const existing = await this.prisma.user.findUnique({
@@ -44,9 +49,34 @@ export class WhatsappAuthService {
     });
 
     if (existing) {
-      return existing;
+      // Existing user → generate OTP and send welcome-back message
+      const allowed = await this.otpService.checkRateLimit(normalized);
+      if (!allowed) {
+        throw new HttpException(
+          'Too many requests. Please try again later.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      const otp = await this.otpService.generateOTP(normalized);
+      const displayName = existing.fname || fname;
+
+      // Await send — throws if both providers fail
+      await this.whatsappSender.sendMessage(
+        normalized,
+        [
+          `\u{1F44B} Welcome back, ${displayName}!`,
+          `\u{1F510} Your one-time passcode is:`,
+          `\u{1F522} ${otp}`,
+          `\u{23F0} Valid for this login and 2 minutes only.`,
+        ].join('\n'),
+      );
+
+      this.logger.log(`Register endpoint: existing user ${normalized} — OTP sent`);
+      return { user: existing, isNew: false };
     }
 
+    // New user — static passcode = last 4 digits of normalized whatsapp
     const staticPasscode = normalized.slice(-4);
 
     const user = await this.prisma.user.create({
@@ -60,26 +90,16 @@ export class WhatsappAuthService {
       },
     });
 
-    // Send welcome message (fire-and-forget)
-    this.whatsappSender
-      .sendMessage(
-        normalized,
-        [
-          `Welcome to Saubh.Tech, ${fname}!\u{1F44B}`,
-          `\u{1F517} URL: https://saubh.tech`,
-          `\u{1F464} Login: ${normalized}`,
-          `\u{1F510} Passcode: ${staticPasscode}`,
-        ].join('\n'),
-      )
-      .catch((err) => {
-        this.logger.error('Failed to send welcome message', err);
-      });
+    // Await send welcome — throws if both providers fail
+    await this.whatsappSender.sendWelcome(normalized, fname, staticPasscode);
 
-    return user;
+    this.logger.log(`Registered new user: ${normalized} (${fname})`);
+    return { user, isNew: true };
   }
 
   /**
    * Request OTP for an existing user. Stores in Redis (120s TTL).
+   * Awaits WhatsApp send — THROWS if send fails.
    * Never writes OTP to Prisma.
    */
   async requestOTP(whatsapp: string): Promise<void> {
@@ -107,15 +127,10 @@ export class WhatsappAuthService {
 
     const otp = await this.otpService.generateOTP(normalized);
 
-    // Send via WhatsApp (fire-and-forget)
-    this.whatsappSender
-      .sendMessage(
-        normalized,
-        `\u{1F522} Your Saubh login code is: ${otp}\n\u{23F0} Valid for 2 minutes. Do not share.`,
-      )
-      .catch((err) => {
-        this.logger.error('Failed to send OTP via WhatsApp', err);
-      });
+    // Await send — throws if both providers fail
+    await this.whatsappSender.sendOTP(normalized, otp);
+
+    this.logger.log(`OTP sent to ${normalized} for user ${user.userid}`);
   }
 
   /**
