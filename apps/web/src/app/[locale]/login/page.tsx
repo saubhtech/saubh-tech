@@ -151,7 +151,8 @@ export default function LoginPage() {
       document.cookie = `saubh_user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=86400; SameSite=Lax`;
       setTimeout(() => {
         if (redirect) { window.location.href = redirect; }
-        else { router.push(`/${locale}/dashboard`); }
+        else if (data.isComplete) { router.push(`/${locale}/dashboard`); }
+        else { router.push(`/${locale}/profile`); }
       }, 800);
     } catch {
       setError('Network error. Please try again.');
@@ -308,22 +309,22 @@ export default function LoginPage() {
             <section className="lp-card lp-card-left">
               <div className="lp-card-inner">
                 <div>
-                  <h2 className="lp-title">👤 New here? Register</h2>
+                  <h2 className="lp-title">{'\u{1F464}'} New here? Register</h2>
                   <p className="lp-subtitle">Create your account instantly. We&apos;ll send your login credentials via WhatsApp.</p>
                 </div>
 
                 {regStep === 'done' ? (
                   <div className="lp-block">
                     <div className="lp-check">
-                      <div className="lp-check-icon">✓</div>
+                      <div className="lp-check-icon">{'\u2713'}</div>
                     </div>
                     <div className="lp-success" style={{textAlign:'center'}}>{regMsg}</div>
                     <div style={{textAlign:'center',marginTop:'12px'}}>
-                      <span className="lp-wa-badge">📱 Check your WhatsApp</span>
+                      <span className="lp-wa-badge">{'\u{1F4F1}'} Check your WhatsApp</span>
                     </div>
                     <div style={{textAlign:'center',marginTop:'12px'}}>
                       <span className="lp-link" onClick={() => { setRegStep('idle'); setRegMsg(''); }}>
-                        Register another →
+                        Register another {'\u2192'}
                       </span>
                     </div>
                   </div>
@@ -355,7 +356,7 @@ export default function LoginPage() {
                       >
                         {regStep === 'registering'
                           ? <><span className="lp-spinner" />Creating account...</>
-                          : '📱 Register via WhatsApp'}
+                          : '\u{1F4F1} Register via WhatsApp'}
                       </button>
                     </form>
                   </div>
@@ -363,7 +364,7 @@ export default function LoginPage() {
 
                 <div className="lp-divider">already registered?</div>
                 <p className="lp-subtitle" style={{textAlign:'center'}}>
-                  Use the <b>Sign In</b> panel to login →
+                  Use the <b>Sign In</b> panel to login {'\u2192'}
                 </p>
               </div>
             </section>
@@ -371,23 +372,23 @@ export default function LoginPage() {
             <section className="lp-card lp-card-right">
               <div className="lp-card-inner">
                 <div>
-                  <h2 className="lp-title">🔐 Sign In</h2>
+                  <h2 className="lp-title">{'\u{1F510}'} Sign In</h2>
                   <p className="lp-subtitle">Enter your WhatsApp number and we&apos;ll send a one-time passcode.</p>
                 </div>
 
                 {step === 'success' ? (
                   <div className="lp-block">
                     <div className="lp-check">
-                      <div className="lp-check-icon">✓</div>
+                      <div className="lp-check-icon">{'\u2713'}</div>
                     </div>
                     <div className="lp-success" style={{textAlign:'center'}}>
-                      Verified! Redirecting to dashboard...
+                      Verified! Redirecting...
                     </div>
                   </div>
                 ) : step === 'otp' || step === 'verifying' ? (
                   <div className="lp-block">
                     <div style={{textAlign:'center',marginBottom:'8px'}}>
-                      <span className="lp-wa-badge">📱 Code sent to {phone}</span>
+                      <span className="lp-wa-badge">{'\u{1F4F1}'} Code sent to {phone}</span>
                     </div>
                     {error && <div className="lp-err">{error}</div>}
                     <form className="lp-form" onSubmit={handleVerifySubmit}>
@@ -426,7 +427,7 @@ export default function LoginPage() {
                     </div>
                     <div style={{display:'flex',justifyContent:'space-between',marginTop:'8px'}}>
                       <span className="lp-link" onClick={() => { setStep('idle'); setError(''); setOtp(['','','','']); }}>
-                        ← Change number
+                        {'\u2190'} Change number
                       </span>
                       <span
                         className="lp-link"
@@ -457,7 +458,7 @@ export default function LoginPage() {
                       >
                         {step === 'sending'
                           ? <><span className="lp-spinner" />Sending OTP...</>
-                          : '📲 Send OTP via WhatsApp'}
+                          : '\u{1F4F2} Send OTP via WhatsApp'}
                       </button>
                     </form>
                     <div className="lp-divider">or use permanent passcode</div>
@@ -487,7 +488,7 @@ export default function LoginPage() {
 
                 <div className="lp-divider">new user?</div>
                 <p className="lp-subtitle" style={{textAlign:'center'}}>
-                  Use the <b>Register</b> panel to create your account ←
+                  Use the <b>Register</b> panel to create your account {'\u2190'}
                 </p>
               </div>
             </section>
