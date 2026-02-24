@@ -151,7 +151,7 @@ export default function LoginPage() {
       document.cookie = `saubh_user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=86400; SameSite=Lax`;
       setTimeout(() => {
         if (redirect) { window.location.href = redirect; }
-        else { router.push(`/${locale}/dashboard`); }
+        else { router.push(`/${locale}/profile`); }
       }, 800);
     } catch {
       setError('Network error. Please try again.');
@@ -381,7 +381,7 @@ export default function LoginPage() {
                       <div className="lp-check-icon">✓</div>
                     </div>
                     <div className="lp-success" style={{textAlign:'center'}}>
-                      Verified! Redirecting to dashboard...
+                      Verified! Redirecting...
                     </div>
                   </div>
                 ) : step === 'otp' || step === 'verifying' ? (
