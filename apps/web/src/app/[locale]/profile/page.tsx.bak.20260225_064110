@@ -410,32 +410,28 @@ export default function ProfilePage() {
 
   // ─── Submit ────────────────────────────────────────────────────────
 
-  const handleSubmit = async (e: FormEvent, mode: 'draft' | 'complete' = 'complete') => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(''); setSuccess('');
 
-    // Basic validation — always required even for draft
+    // Validate all 16 required fields
     if (!fname.trim()) { setError('First name is required.'); return; }
-
-    // Full validation only for "complete" mode
-    if (mode === 'complete') {
-      if (!lname.trim()) { setError('Last name is required.'); return; }
-      if (!email.trim()) { setError('Email is required.'); return; }
-      if (!emailVerified) { setError('Please verify your email to complete your profile.'); return; }
-      if (!phone.trim()) { setError('Alternate mobile is required.'); return; }
-      if (!mobileVerified) { setError('Please verify your mobile to complete your profile.'); return; }
-      if (!gender) { setError('Gender is required.'); return; }
-      if (!dob) { setError('Date of birth is required.'); return; }
-      if (langid.length === 0) { setError('Select at least one language.'); return; }
-      if (!qualification.trim()) { setError('Qualification is required.'); return; }
-      if (!experience.trim()) { setError('Experience is required.'); return; }
-      if (!usertype) { setError('Please select your role.'); return; }
-      if (!stateid) { setError('State is required.'); return; }
-      if (!districtid) { setError('District is required.'); return; }
-      if (!pincode) { setError('Pin code is required.'); return; }
-      if (!placeid) { setError('Place is required.'); return; }
-      if (!pic && !photoFile) { setError('Please take a selfie or upload a photo.'); return; }
-    }
+    if (!lname.trim()) { setError('Last name is required.'); return; }
+    if (!email.trim()) { setError('Email is required.'); return; }
+    if (!emailVerified) { setError('Please verify your email before continuing.'); return; }
+    if (!phone.trim()) { setError('Phone number is required.'); return; }
+    if (!mobileVerified) { setError('Please verify your mobile number before continuing.'); return; }
+    if (!gender) { setError('Gender is required.'); return; }
+    if (!dob) { setError('Date of birth is required.'); return; }
+    if (langid.length === 0) { setError('Select at least one language.'); return; }
+    if (!qualification.trim()) { setError('Qualification is required.'); return; }
+    if (!experience.trim()) { setError('Experience is required.'); return; }
+    if (!usertype) { setError('Please select your role.'); return; }
+    if (!stateid) { setError('State is required.'); return; }
+    if (!districtid) { setError('District is required.'); return; }
+    if (!pincode) { setError('Pin code is required.'); return; }
+    if (!placeid) { setError('Place is required.'); return; }
+    if (!pic && !photoFile) { setError('Please take a selfie or upload a photo.'); return; }
 
     setSubmitting(true);
 
@@ -446,28 +442,15 @@ export default function ProfilePage() {
         fd.append('photo', photoFile);
         const photoRes = await authFetch(`${API}/auth/profile/photo`, { method: 'POST', body: fd });
         if (!photoRes.ok) { setError('Photo upload failed.'); setSubmitting(false); return; }
-        // Update pic state after successful upload
-        const photoData = await photoRes.json().catch(() => ({}));
-        if (photoData.pic) setPic(photoData.pic);
       }
 
-      // 2. Patch profile — include all filled fields
+      // 2. Patch profile — all fields
       const body: Record<string, any> = {
-        fname: fname.trim(),
-        usertype,
-        countryCode: 'IN',
+        fname: fname.trim(), lname: lname.trim(), gender, dob,
+        langid, stateid, districtid, pincode, countryCode: 'IN',
+        qualification: qualification.trim(), experience: experience.trim(),
+        usertype, email: email.trim(), phone: phone.trim(),
       };
-      if (lname.trim()) body.lname = lname.trim();
-      if (email.trim()) body.email = email.trim();
-      if (phone.trim()) body.phone = phone.trim();
-      if (gender) body.gender = gender;
-      if (dob) body.dob = dob;
-      if (langid.length > 0) body.langid = langid;
-      if (qualification.trim()) body.qualification = qualification.trim();
-      if (experience.trim()) body.experience = experience.trim();
-      if (stateid) body.stateid = stateid;
-      if (districtid) body.districtid = districtid;
-      if (pincode) body.pincode = pincode;
       if (placeid) body.placeid = placeid;
 
       const res = await authFetch(`${API}/auth/profile`, {
@@ -484,15 +467,8 @@ export default function ProfilePage() {
       if (data.isComplete) {
         document.cookie = `saubh_user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=86400; SameSite=Lax`;
         router.push(`/${locale}/dashboard`);
-      } else if (mode === 'draft') {
-        setSuccess('Profile saved! Complete verification to finish setup.');
-        setSubmitting(false);
       } else {
-        // mode === 'complete' but isComplete is false
-        const missing = [];
-        if (!data.emailVerified) missing.push('email verification');
-        if (!data.phoneVerified) missing.push('mobile verification');
-        setError('Almost there! Still need: ' + (missing.length > 0 ? missing.join(' and ') : 'some required fields') + '.');
+        setError('Some required fields are still missing or unverified.');
         setSubmitting(false);
       }
     } catch { setError('Network error. Please try again.'); setSubmitting(false); }
@@ -675,7 +651,7 @@ export default function ProfilePage() {
                               ) : (
                                 <span className="pp-otp-expired">Code expired</span>
                               )}
-                              <span className="pp-otp-resend" style={{ opacity: emailCountdown > 550 ? 0.3 : 1, pointerEvents: emailCountdown > 550 ? 'none' : 'auto' }}
+                              <span className="pp-otp-resend" style={{ opacity: emailCountdown > 250 ? 0.3 : 1, pointerEvents: emailCountdown > 250 ? 'none' : 'auto' }}
                                 onClick={() => sendOtp('email', email)}>Resend</span>
                             </div>
                           </div>
@@ -851,23 +827,8 @@ export default function ProfilePage() {
 
                 {/* Submit */}
                 <div className="pp-submit-row">
-                  <button
-                    type="button"
-                    className="pp-draft-btn"
-                    disabled={submitting}
-                    onClick={(e) => handleSubmit(e as any, 'draft')}
-                  >
-                    {submitting ? 'Saving...' : '💾 Save Draft'}
-                  </button>
-                  <button
-                    type="submit"
-                    className="pp-submit-btn"
-                    disabled={submitting || !emailVerified || !mobileVerified}
-                    onClick={(e) => { e.preventDefault(); handleSubmit(e as any, 'complete'); }}
-                  >
-                    {submitting ? 'Saving...' : !emailVerified || !mobileVerified
-                      ? '🔒 Verify to Complete'
-                      : 'Save & Continue →'}
+                  <button type="submit" className="pp-submit-btn" disabled={submitting || !emailVerified || !mobileVerified}>
+                    {submitting ? 'Saving...' : !emailVerified || !mobileVerified ? '🔒 Verify Email & Mobile First' : 'Save & Continue →'}
                   </button>
                 </div>
 
@@ -1056,17 +1017,7 @@ const baseStyles = `
 .pp-success{padding:10px 14px;border-radius:10px;font-size:.84rem;font-weight:500;background:rgba(34,197,94,0.08);color:#16a34a;border:1px solid rgba(34,197,94,0.15);}
 
 /* Submit */
-.pp-submit-row{display:flex;justify-content:flex-end;padding-top:4px;gap:12px;}
-/* Save Draft button */
-.pp-draft-btn{
-  height:46px;padding:0 24px;border:2px solid rgba(124,58,237,0.3);border-radius:12px;
-  background:transparent;color:#7c3aed;
-  font-weight:700;font-size:.88rem;cursor:pointer;
-  font-family:'Inter',system-ui,sans-serif;transition:.2s;
-}
-.pp-draft-btn:hover{background:rgba(124,58,237,0.06);border-color:#7c3aed;}
-.pp-draft-btn:disabled{opacity:.4;cursor:not-allowed;}
-
+.pp-submit-row{display:flex;justify-content:flex-end;padding-top:4px;}
 .pp-submit-btn{
   height:46px;padding:0 36px;border:none;border-radius:12px;
   background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;

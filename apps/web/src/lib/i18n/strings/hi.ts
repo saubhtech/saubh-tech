@@ -11,7 +11,7 @@ const hi: TranslationStrings = {
   // ─── Navbar ───
   'nav.gigWork': 'गिग-वर्क',
   'nav.branding': 'ब्रांडिंग',
-  'nav.saubhos': 'SaubhOS',
+  'nav.saubhos': 'सौबोस',
   'nav.academy': 'अकादमी',
   'nav.support': 'सहायता',
   'nav.login': 'लॉगिन',
@@ -151,7 +151,7 @@ const hi: TranslationStrings = {
   'blog.viewAll': 'सभी लेख देखें',
 
   // ─── FAQ ───
-  'faq.tag': 'FAQ',
+  'faq.tag': 'एफ. ए. क्यू.',
   'faq.title': 'अक्सर पूछे जाने वाले प्रश्न (FAQ)',
   'faq.subtitle': 'Saubh.Tech के बारे में सामान्य प्रश्नों के उत्तर पाएँ',
   'faq.q1': 'क्या Saubh.Tech सुरक्षित है?',
@@ -224,8 +224,8 @@ const hi: TranslationStrings = {
   'newsletter.subscribe': 'सब्सक्राइब करें',
 
   // ─── Footer ───
-  'footer.gstn': 'GSTN: 10AAUPS8603H1ZH',
-  'footer.udyam': 'UDYAM-BR-31-0056281',
+  'footer.gstn': 'जी. एस. टी. एन.: 10 ए. ए. ए. यू. पी. एस. 8603 एच1जेडएच',
+  'footer.udyam': 'उदयम-बी. आर.-31-0056281',
   'footer.community': 'समुदाय',
   'footer.community.about': 'Saubh Global के बारे में',
   'footer.community.founders': 'संस्थापक सह-मालिक',
@@ -247,7 +247,7 @@ const hi: TranslationStrings = {
   'footer.addr2': '5वीं मंज़िल, S.B. प्लाज़ा, असम सचिवालय के सामने, दिसपुर - 781006',
   'footer.tagline': 'गिग वर्क। सत्यापित लोग। सुरक्षित आय',
   'footer.credit': 'मणि द्वारा परिकल्पित, धरती का एक रत्न।',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'सर्वाधिकार सुरक्षित।',
 
   // ─── SEO / Meta ───

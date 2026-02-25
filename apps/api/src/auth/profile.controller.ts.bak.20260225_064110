@@ -195,8 +195,10 @@ export class ProfileController {
     if (body.email !== undefined) {
       const emailVal = body.email ? String(body.email).trim().toLowerCase() : null;
       if (emailVal) {
-        // Email verification is checked for isComplete, but saving is allowed without it
-        // This lets users save progress even if email verification is delayed
+        const verified = await this.isFieldVerified(req.user.sub, 'email', emailVal);
+        if (!verified) {
+          throw new BadRequestException('Email must be verified via OTP before saving.');
+        }
       }
       data.email = emailVal;
     }
@@ -205,8 +207,10 @@ export class ProfileController {
     if (body.phone !== undefined) {
       const phoneVal = body.phone ? String(body.phone).trim() : null;
       if (phoneVal) {
-        // Phone verification is checked for isComplete, but saving is allowed without it
-        // This lets users save progress even if mobile verification is delayed
+        const verified = await this.isFieldVerified(req.user.sub, 'mobile', phoneVal);
+        if (!verified) {
+          throw new BadRequestException('Phone must be verified via OTP before saving.');
+        }
       }
       data.phone = phoneVal;
     }
@@ -293,7 +297,7 @@ export class ProfileController {
     if (type === 'mobile') {
       // ─── 4-digit OTP via Evolution API ──────────────────────────────
       const otp = Math.floor(1000 + Math.random() * 9000).toString();
-      await this.redis.set(redisKey, otp, 'EX', 300); // 5 min for mobile
+      await this.redis.set(redisKey, otp, 'EX', 120);
 
       const phone = String(value).trim().replace(/\D/g, '');
       const message = `Your Saubh verification code is: ${otp}\nValid for 2 minutes. Do not share.`;
@@ -302,12 +306,12 @@ export class ProfileController {
       await this.sendViaEvolution(phone, message);
 
       this.logger.log(`Mobile OTP sent via Evolution to ${phone}`);
-      return { success: true, sent: true, expiresIn: 300, digits: 4 };
+      return { success: true, sent: true, expiresIn: 120, digits: 4 };
 
     } else {
       // ─── 6-digit OTP via Email (SMTP) ───────────────────────────────
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      await this.redis.set(redisKey, otp, 'EX', 600); // 10 min for email
+      await this.redis.set(redisKey, otp, 'EX', 300); // 5 min for email
 
       const emailTo = String(value).trim().toLowerCase();
 
@@ -344,7 +348,7 @@ export class ProfileController {
         });
 
         this.logger.log(`Email OTP sent to ${emailTo}`);
-        return { success: true, sent: true, expiresIn: 600, digits: 6 };
+        return { success: true, sent: true, expiresIn: 300, digits: 6 };
 
       } catch (err: any) {
         this.logger.error(`Failed to send email OTP to ${emailTo}: ${err.message}`);
@@ -386,7 +390,7 @@ export class ProfileController {
       ? String(value).trim().toLowerCase()
       : String(value).trim().replace(/\D/g, '');
     const verifiedKey = `verified:profile:${userid}:${type}:${cleanValue}`;
-    await this.redis.set(verifiedKey, '1', 'EX', 2592000); // 30 days
+    await this.redis.set(verifiedKey, '1', 'EX', 86400);
 
     // Also update the DB field
     const updateData: Record<string, any> = {};
