@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { I18nModule } from './i18n/i18n.module';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from './prisma/prisma.module';
@@ -14,7 +15,6 @@ import { CrmModule } from './crm/crm.module';
 import { ProfileModule } from './auth/profile.module';
 import { BackupModule } from './backup/backup.module';
 @Module({
-  imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     BullModule.forRoot({
       connection: {
