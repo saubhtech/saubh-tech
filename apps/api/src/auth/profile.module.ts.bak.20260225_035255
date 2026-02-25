@@ -1,5 +1,4 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
 import { PrismaModule } from '../prisma/prisma.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { ProfileController } from './profile.controller';
@@ -10,7 +9,7 @@ import { ProfileController } from './profile.controller';
  * Does NOT modify WhatsappAuthModule or any existing module.
  */
 @Module({
-  imports: [PrismaModule, forwardRef(() => WhatsappModule), HttpModule],
+  imports: [PrismaModule, forwardRef(() => WhatsappModule)],
   controllers: [ProfileController],
 })
 export class ProfileModule {}
