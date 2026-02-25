@@ -410,22 +410,6 @@ export default function ProfilePage() {
     setL(false);
   };
 
-
-  // ─── Auto-verify when all OTP digits are entered ───────────────────
-  useEffect(() => {
-    const code = emailOtp.join('');
-    if (code.length === 6 && /^\d{6}$/.test(code) && !emailVerified && !emailLoading && emailOtpSent) {
-      verifyOtp('email', email, code);
-    }
-  }, [emailOtp]);
-
-  useEffect(() => {
-    const code = mobileOtp.join('');
-    if (code.length === 4 && /^\d{4}$/.test(code) && !mobileVerified && !mobileLoading && mobileOtpSent) {
-      verifyOtp('mobile', phone, code);
-    }
-  }, [mobileOtp]);
-
   // ─── Submit ────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: FormEvent, mode: 'draft' | 'complete' = 'complete') => {
@@ -673,7 +657,7 @@ export default function ProfilePage() {
                         {emailOtpSent && !emailVerified && (
                           <div className="pp-otp-verify-section">
                             <div className="pp-otp-hint">Enter 6-digit code sent to {email}</div>
-                            <div className="pp-otp-boxes" onPaste={(e) => handleOtpBoxPaste(e, 6, setEmailOtp, emailOtpRefs, undefined)}>
+                            <div className="pp-otp-boxes" onPaste={(e) => handleOtpBoxPaste(e, 6, setEmailOtp, emailOtpRefs, () => verifyOtp('email', email, emailOtp.join('')))}>
                               {emailOtp.map((d, i) => (
                                 <input
                                   key={i}
@@ -681,7 +665,7 @@ export default function ProfilePage() {
                                   className={`pp-otp-box${d ? ' pp-otp-filled' : ''}`}
                                   type="text" inputMode="numeric" maxLength={1} value={d}
                                   onChange={e => handleOtpBoxChange(i, e.target.value, 6, emailOtp, setEmailOtp, emailOtpRefs,
-                                    undefined
+                                    () => { const code = [...emailOtp]; code[i] = e.target.value; verifyOtp('email', email, code.join('')); }
                                   )}
                                   onKeyDown={e => handleOtpBoxKeyDown(i, e, emailOtp, emailOtpRefs)}
                                   disabled={emailLoading}
@@ -745,7 +729,7 @@ export default function ProfilePage() {
                                   className={`pp-otp-box${d ? ' pp-otp-filled' : ''}`}
                                   type="text" inputMode="numeric" maxLength={1} value={d}
                                   onChange={e => handleOtpBoxChange(i, e.target.value, 4, mobileOtp, setMobileOtp, mobileOtpRefs,
-                                    undefined
+                                    () => { const code = [...mobileOtp]; code[i] = e.target.value; verifyOtp('mobile', phone, code.join('')); }
                                   )}
                                   onKeyDown={e => handleOtpBoxKeyDown(i, e, mobileOtp, mobileOtpRefs)}
                                   disabled={mobileLoading}
