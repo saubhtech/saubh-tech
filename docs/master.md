@@ -198,6 +198,97 @@ Dark Gen-Z: two-column glass cards, API-driven register, OTP boxes, passcode fal
 
 ---
 
+
+
+---
+
+## 🌍 I18N AUTOMATION — NON-NEGOTIABLE
+
+**Policy:** Every page must use `t('key')` for all strings. No hardcoded English. Ever.
+
+See `/data/projects/platform/docs/I18N-POLICY.md` for full policy.
+
+### Architecture
+```
+en.ts (source of truth, 248+ keys)
+  → i18n-page-watcher (systemd daemon, polls every 30s)
+  → auto-translate.mjs (API: POST :5050/translate {texts[], targetLang})
+  → Updates all 36 language files
+  → translation-status.json tracks every key×lang
+  → Git pre-commit hook blocks incomplete translations
+  → Nightly audit cron at 3:30 AM auto-fixes gaps
+```
+
+### Components
+| Component | Location |
+|-----------|----------|
+| Auto-translate engine | `/data/scripts/i18n/auto-translate.mjs` |
+| Page watcher daemon | `/data/scripts/i18n/i18n-page-watcher.mjs` (systemd: i18n-auto-translate) |
+| Audit script | `/data/scripts/i18n/audit-translations.mjs` |
+| Status tracker | `/data/scripts/i18n/translation-status.json` |
+| One-shot runner | `/data/scripts/i18n/run-translation.sh` |
+| Git pre-commit hook | `.git/hooks/pre-commit` |
+| Policy document | `docs/I18N-POLICY.md` |
+
+### Translation API
+```bash
+POST http://localhost:5050/translate
+Body: { "texts": ["Hello", "Welcome"], "targetLang": "hi" }
+Response: { "translations": ["नमस्ते", "स्वागत"], "engines": [...], "elapsed": 17.3 }
+```
+
+### Key Commands
+```bash
+/data/scripts/i18n/run-translation.sh          # Translate all missing keys
+node /data/scripts/i18n/audit-translations.mjs  # Full audit
+node /data/scripts/i18n/auto-translate.mjs --lang hi --force  # Re-translate Hindi
+sudo systemctl status i18n-auto-translate       # Watcher status
+```
+
+---
+
+## 🧭 PROXY — LOCALE AUTO-DETECT
+
+File: `apps/web/src/proxy.ts` (Next.js 16 convention)
+
+Detection priority:
+1. URL already has valid locale → pass through
+2. Cookie `saubh-lang` → user's explicit choice (from banner)
+3. `Accept-Language` header → browser preference
+4. `cf-ipcountry` header → Cloudflare geo-detection
+5. Fallback → `en-in`
+
+Once detected, locale persists via `saubh_locale` cookie across ALL pages.
+Matcher skips: `_next`, `/api/`, static files.
+
+---
+
+## ↔️ RTL SUPPORT
+
+CSS: `apps/web/src/app/rtl.css` (imported in root layout)
+Languages: Arabic (ar), Urdu (ur), Sindhi (sd), Kashmiri (ks)
+Mechanism: `LocaleHydrator` sets `<html dir="rtl">`, CSS [dir="rtl"] selectors handle layout.
+Phone/OTP inputs stay LTR. Directional icons auto-flip.
+
+---
+
+## 🔤 MULTI-SCRIPT FONTS
+
+Component: `apps/web/src/components/FontLoader.tsx` (in locale layout)
+Loads Google Noto Sans fonts on demand per script:
+Devanagari, Bengali, Tamil, Telugu, Gujarati, Kannada, Malayalam,
+Odia, Gurmukhi, Arabic, Ol Chiki, CJK (SC/JP/KR), Thai.
+English uses existing Sora + DM Sans.
+
+---
+
+## 🏷️ SEO i18n
+
+Helper: `apps/web/src/lib/seo/locale-metadata.ts`
+Provides `getLocaleMetadata(locale, path)` for per-page metadata.
+Hardcoded SEO for top 7 languages (auto-translate produces poor SEO text).
+Includes hreflang, canonical, OpenGraph locale, content-language.
+
 ## 🔧 COMMANDS
 ```bash
 pnpm --filter @saubhtech/<app> build && pm2 restart <app>

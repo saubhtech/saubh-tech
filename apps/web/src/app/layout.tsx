@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import './globals.css';
 import './mobile-lang.css';
 import './hero-video.css';
+import './rtl.css';
 
 export const metadata: Metadata = {
   title: 'Saubh.Tech — Phygital Gig Marketplace | UGC & Branding Platform',

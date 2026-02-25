@@ -3,6 +3,7 @@ import { isValidLocale, localeToLang } from '@/lib/i18n/locale-map';
 import { getHreflangLinks, getCanonicalUrl } from '@/lib/seo/hreflang';
 import { LocaleHydrator } from './locale-hydrator';
 import LocaleBanner from '@/components/LocaleBanner';
+import FontLoader from '@/components/FontLoader';
 
 const RTL_LANGS = new Set(['ur', 'ar', 'sd', 'ks']);
 
@@ -46,6 +47,7 @@ export default async function LocaleLayout({
       </head>
 
       <LocaleHydrator lang={lang} dir={dir as 'ltr' | 'rtl'} />
+      <FontLoader />
       {children}
       <LocaleBanner />
     </>

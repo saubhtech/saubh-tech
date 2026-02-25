@@ -1,0 +1,125 @@
+/* ═══ RTL LAYOUT SUPPORT ═══
+ * Languages: Arabic (ar), Urdu (ur), Sindhi (sd), Kashmiri (ks)
+ * Applied when <html dir="rtl"> is set by LocaleHydrator
+ * 
+ * Strategy: Use logical CSS properties (margin-inline-start, etc.)
+ * for new code. This file handles legacy overrides.
+ */
+
+/* ─── Base RTL ─── */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] body {
+  direction: rtl;
+}
+
+/* ─── Flexbox auto-flip ─── */
+[dir="rtl"] .flex-row,
+[dir="rtl"] .lp-row {
+  flex-direction: row-reverse;
+}
+
+/* ─── Navigation ─── */
+[dir="rtl"] .nav-links {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .nav-logo {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* ─── Cards / Glass panels ─── */
+[dir="rtl"] .lp-card {
+  text-align: right;
+}
+
+[dir="rtl"] .lp-card input,
+[dir="rtl"] .lp-card textarea {
+  text-align: right;
+  direction: rtl;
+}
+
+/* Phone inputs stay LTR (numbers are always LTR) */
+[dir="rtl"] input[type="tel"],
+[dir="rtl"] input[type="number"],
+[dir="rtl"] .lp-phone-input {
+  direction: ltr;
+  text-align: left;
+}
+
+/* OTP boxes stay LTR */
+[dir="rtl"] .lp-otp-row {
+  flex-direction: row;
+  direction: ltr;
+}
+
+/* ─── Margins/Paddings flip ─── */
+[dir="rtl"] .ml-auto { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .mr-auto { margin-right: 0; margin-left: auto; }
+[dir="rtl"] .pl-4 { padding-left: 0; padding-right: 1rem; }
+[dir="rtl"] .pr-4 { padding-right: 0; padding-left: 1rem; }
+
+/* ─── Icons that need flipping ─── */
+[dir="rtl"] .fa-arrow-right { transform: scaleX(-1); }
+[dir="rtl"] .fa-arrow-left { transform: scaleX(-1); }
+[dir="rtl"] .fa-chevron-right { transform: scaleX(-1); }
+[dir="rtl"] .fa-chevron-left { transform: scaleX(-1); }
+
+/* ─── Arrows in text ─── */
+[dir="rtl"] .lp-divider::before {
+  content: '\2190'; /* ← */
+}
+[dir="rtl"] .lp-divider::after {
+  content: '\2192'; /* → */
+}
+
+/* ─── Lists ─── */
+[dir="rtl"] ul, [dir="rtl"] ol {
+  padding-right: 1.5em;
+  padding-left: 0;
+}
+
+/* ─── Hero section ─── */
+[dir="rtl"] .hero-content {
+  text-align: right;
+}
+
+[dir="rtl"] .hero-badges {
+  justify-content: flex-end;
+}
+
+/* ─── Grid layouts ─── */
+[dir="rtl"] .features-grid,
+[dir="rtl"] .stats-grid {
+  direction: rtl;
+}
+
+/* ─── Section tags ─── */
+[dir="rtl"] .section-tag {
+  text-align: right;
+}
+
+/* ─── Footer ─── */
+[dir="rtl"] .footer-grid {
+  direction: rtl;
+}
+
+/* ─── Scrollbar ─── */
+[dir="rtl"] ::-webkit-scrollbar {
+  direction: ltr;
+}
+
+/* ─── Transitions should not flip ─── */
+[dir="rtl"] .transition-transform {
+  /* Keep transform animations consistent */
+}
+
+/* ─── Mobile: banner at bottom ─── */
+@media (max-width: 768px) {
+  [dir="rtl"] .lp-row {
+    flex-direction: column;
+  }
+}
