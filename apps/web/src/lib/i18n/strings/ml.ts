@@ -11,7 +11,7 @@ const ml: TranslationStrings = {
   // ─── Navbar ───
   'nav.gigWork': 'ഗിഗ്-വര്‍ക്ക്',
   'nav.branding': 'ബ്രാന്‍ഡിംഗ്',
-  'nav.saubhos': 'SaubhOS',
+  'nav.saubhos': 'സൌബോസ്',
   'nav.academy': 'അക്കാദമി',
   'nav.support': 'സഹായം',
   'nav.login': 'ലോഗിന്‍',
@@ -151,7 +151,7 @@ const ml: TranslationStrings = {
   'blog.viewAll': 'എല്ലാ ലേഖനങ്ങളും കാണുക',
 
   // ─── FAQ ───
-  'faq.tag': 'FAQ',
+  'faq.tag': 'പതിവുചോദ്യങ്ങൾ',
   'faq.title': 'പതിവായി ചോദിക്കുന്ന ചോദ്യങ്ങള്‍ (FAQ)',
   'faq.subtitle': 'Saubh.Tech-നെ കുറിച്ചുള്ള സാധാരണ ചോദ്യങ്ങള്‍ക്ക് ഉത്തരങ്ങള്‍ കണ്ടെത്തുക',
   'faq.q1': 'Saubh.Tech സുരക്ഷിതമാണോ?',
@@ -224,8 +224,8 @@ const ml: TranslationStrings = {
   'newsletter.subscribe': 'സബ്സ്ക്രൈബ് ചെയ്യുക',
 
   // ─── Footer ───
-  'footer.gstn': 'GSTN: 10AAUPS8603H1ZH',
-  'footer.udyam': 'UDYAM-BR-31-0056281',
+  'footer.gstn': 'ജി. എസ്. ടി. എൻഃ 10 എഎ. എ. യു. പി. എസ്. 8603എച്ച്1സെഡ്.',
+  'footer.udyam': 'ഉദയം-ബിആർ-31-0056281',
   'footer.community': 'കമ്മ്യൂണിറ്റി',
   'footer.community.about': 'Saubh Global-നെ കുറിച്ച്',
   'footer.community.founders': 'സ്ഥാപക സഹ-ഉടമകള്‍',
@@ -255,42 +255,42 @@ const ml: TranslationStrings = {
   'meta.description': 'സുരക്ഷിത ഗിഗ് വര്‍ക്ക്, UGC കണ്ടന്റ് ക്രിയേഷന്‍, ഡിജിറ്റല്‍ ബ്രാന്‍ഡിംഗ് എന്നിവയ്ക്കായി ലോകമെമ്പാടുമുള്ള വെരിഫൈഡ് വ്യക്തികളുമായും ബിസിനസുകളുമായും ബന്ധപ്പെടുക. എസ്ക്രോ-സംരക്ഷിത പേയ്മെന്റുകള്‍.',
 
   // ─── Login Page ───
-  'login.register.title': '👤 New here? Register',
-  'login.register.subtitle': 'Create your account instantly. We\'ll send your login credentials via WhatsApp.',
-  'login.register.namePlaceholder': 'Your name',
-  'login.register.phonePlaceholder': 'WhatsApp number (e.g. 9876543210)',
-  'login.register.btn': '📱 Register via WhatsApp',
-  'login.register.creating': 'Creating account...',
-  'login.register.checkWhatsapp': '📱 Check your WhatsApp',
-  'login.register.another': 'Register another →',
-  'login.register.already': 'already registered?',
-  'login.register.useSignIn': 'Use the Sign In panel to login →',
-  'login.signin.title': '🔐 Sign In',
-  'login.signin.subtitle': 'Enter your WhatsApp number and we\'ll send a one-time passcode.',
-  'login.signin.sendOtp': '📲 Send OTP via WhatsApp',
-  'login.signin.sendingOtp': 'Sending OTP...',
-  'login.signin.codeSentTo': '📱 Code sent to',
-  'login.signin.verifyBtn': 'Verify & Sign In',
-  'login.signin.verifying': 'Verifying...',
-  'login.signin.verified': 'Verified! Redirecting...',
-  'login.signin.changeNumber': '← Change number',
-  'login.signin.resendCode': 'Resend code',
-  'login.signin.codeExpiresIn': 'Code expires in',
-  'login.signin.codeExpired': 'Code expired',
-  'login.signin.orPasscode': 'or use permanent passcode',
-  'login.signin.passcodeHint': 'Enter your WhatsApp number and the 4-digit passcode you received during registration.',
-  'login.signin.passcodePlaceholder': '4-digit passcode',
-  'login.signin.passcodeBtn': 'Continue with Passcode',
-  'login.signin.newUser': 'new user?',
-  'login.signin.useRegister': 'Use the Register panel to create your account ←',
-  'login.error.enterName': 'Please enter your name.',
-  'login.error.validPhone': 'Please enter a valid WhatsApp number.',
-  'login.error.validPhoneShort': 'Enter a valid WhatsApp number.',
-  'login.error.regFailed': 'Registration failed.',
-  'login.error.otpFailed': 'Failed to send OTP.',
-  'login.error.invalidOtp': 'Invalid or expired passcode.',
-  'login.error.enter4digit': 'Enter the 4-digit code.',
-  'login.error.enter4passcode': 'Enter a 4-digit passcode.',
+  'login.register.title': 'ഇവിടെ പുതിയതാണോ? രജിസ്റ്റർ ചെയ്യുക',
+  'login.register.subtitle': 'ഉടൻ തന്നെ നിങ്ങളുടെ അക്കൌണ്ട് സൃഷ്ടിക്കുക. ഞങ്ങൾ നിങ്ങളുടെ ലോഗിൻ ക്രെഡൻഷ്യലുകൾ വാട്ട്സ്ആപ്പ് വഴി അയയ്ക്കും.',
+  'login.register.namePlaceholder': 'നിൻറെ പേര്.',
+  'login.register.phonePlaceholder': 'വാട്ട്സ്ആപ്പ് നമ്പർ (ഉദാഃ 9876543210)',
+  'login.register.btn': 'വാട്ട്സ്ആപ്പ് വഴി രജിസ്റ്റർ ചെയ്യുക',
+  'login.register.creating': 'അക്കൌണ്ട് സൃഷ്ടിക്കുന്നു...',
+  'login.register.checkWhatsapp': 'നിങ്ങളുടെ വാട്ട്സ്ആപ്പ് പരിശോധിക്കുക',
+  'login.register.another': 'മറ്റൊന്ന് രജിസ്റ്റർ ചെയ്യുക',
+  'login.register.already': 'ഇതിനകം രജിസ്റ്റർ ചെയ്തിട്ടുണ്ടോ?',
+  'login.register.useSignIn': 'ലോഗിൻ ചെയ്യാൻ സൈൻ ഇൻ പാനൽ ഉപയോഗിക്കുക',
+  'login.signin.title': 'സൈൻ ഇൻ ചെയ്യുക',
+  'login.signin.subtitle': 'നിങ്ങളുടെ വാട്ട്സ്ആപ്പ് നമ്പർ നൽകുക, ഞങ്ങൾ ഒരു ഒറ്റത്തവണ പാസ്കോഡ് അയയ്ക്കും.',
+  'login.signin.sendOtp': 'വാട്ട്സ്ആപ്പ് വഴി ഒടിപി അയയ്ക്കുക',
+  'login.signin.sendingOtp': 'ഒടിപി അയയ്ക്കുന്നു...',
+  'login.signin.codeSentTo': 'കോഡ് അയച്ചു',
+  'login.signin.verifyBtn': 'പരിശോധിക്കുകയും സൈൻ ഇൻ ചെയ്യുക',
+  'login.signin.verifying': 'പരിശോധിക്കുന്നു...',
+  'login.signin.verified': 'പരിശോധിച്ചു! റീഡയറക്ട് ചെയ്യുന്നു...',
+  'login.signin.changeNumber': 'നമ്പർ മാറ്റുക',
+  'login.signin.resendCode': 'കോഡ് വീണ്ടും അയയ്ക്കുക',
+  'login.signin.codeExpiresIn': 'കോഡ് കാലഹരണപ്പെടുന്നു',
+  'login.signin.codeExpired': 'കോഡ് കാലഹരണപ്പെട്ടു',
+  'login.signin.orPasscode': 'അല്ലെങ്കിൽ സ്ഥിരമായ പാസ്കോഡ് ഉപയോഗിക്കുക',
+  'login.signin.passcodeHint': 'നിങ്ങളുടെ വാട്ട്സ്ആപ്പ് നമ്പറും രജിസ്ട്രേഷൻ സമയത്ത് നിങ്ങൾക്ക് ലഭിച്ച 4 അക്ക പാസ്കോഡും നൽകുക.',
+  'login.signin.passcodePlaceholder': '4 അക്ക പാസ്കോഡ്',
+  'login.signin.passcodeBtn': 'പാസ്കോഡ് ഉപയോഗിച്ച് തുടരുക',
+  'login.signin.newUser': 'പുതിയ ഉപയോക്താവ്?',
+  'login.signin.useRegister': 'നിങ്ങളുടെ അക്കൌണ്ട് സൃഷ്ടിക്കാൻ രജിസ്റ്റർ പാനൽ ഉപയോഗിക്കുക',
+  'login.error.enterName': 'ദയവായി നിങ്ങളുടെ പേര് നൽകുക.',
+  'login.error.validPhone': 'ദയവായി സാധുവായ ഒരു വാട്ട്സ്ആപ്പ് നമ്പർ നൽകുക.',
+  'login.error.validPhoneShort': 'സാധുവായ ഒരു വാട്ട്സ്ആപ്പ് നമ്പർ നൽകുക.',
+  'login.error.regFailed': 'രജിസ്ട്രേഷൻ പരാജയപ്പെട്ടു.',
+  'login.error.otpFailed': 'ഒടിപി അയക്കുന്നതിൽ പരാജയപ്പെട്ടു.',
+  'login.error.invalidOtp': 'അസാധുവായതോ കാലഹരണപ്പെട്ടതോ ആയ പാസ്കോഡ്.',
+  'login.error.enter4digit': '4 അക്ക കോഡ് നൽകുക.',
+  'login.error.enter4passcode': '4 അക്ക പാസ്കോഡ് നൽകുക.',
 };
 
 export default ml;
