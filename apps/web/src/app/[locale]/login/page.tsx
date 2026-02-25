@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, FormEvent, useRef, useEffect } from 'react';
+import { TranslationProvider, useTranslation } from '@/lib/i18n';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
@@ -40,7 +41,8 @@ async function resilientFetch(
 type Step = 'idle' | 'sending' | 'otp' | 'verifying' | 'success';
 type RegStep = 'idle' | 'registering' | 'done';
 
-export default function LoginPage() {
+function LoginContent() {
+  const { t } = useTranslation();
   const { locale } = useParams<{ locale: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -81,8 +83,8 @@ export default function LoginPage() {
     setRegMsg('');
     const trimName = regName.trim();
     const trimPhone = regPhone.trim().replace(/[^\d]/g, '');
-    if (!trimName) { setRegErr('Please enter your name.'); return; }
-    if (!trimPhone || trimPhone.length < 10) { setRegErr('Please enter a valid WhatsApp number.'); return; }
+    if (!trimName) { setRegErr(t('login.error.enterName')); return; }
+    if (!trimPhone || trimPhone.length < 10) { setRegErr(t('login.error.validPhone')); return; }
     setRegStep('registering');
     try {
       const res = await resilientFetch(`${API_BASE}/auth/whatsapp/register`, {
@@ -91,7 +93,7 @@ export default function LoginPage() {
         body: JSON.stringify({ whatsapp: trimPhone, fname: trimName, usertype: 'GW' }),
       });
       const data = await res.json();
-      if (!res.ok) { setRegErr(data.message || 'Registration failed.'); setRegStep('idle'); return; }
+      if (!res.ok) { setRegErr(data.message || t('login.error.regFailed')); setRegStep('idle'); return; }
       setRegStep('done');
       setRegMsg(`Welcome ${data.user?.fname || trimName}! Check WhatsApp for your passcode.`);
       setPhone(trimPhone);
@@ -105,7 +107,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     const trimPhone = phone.trim().replace(/[^\d]/g, '');
-    if (!trimPhone || trimPhone.length < 10) { setError('Enter a valid WhatsApp number.'); return; }
+    if (!trimPhone || trimPhone.length < 10) { setError(t('login.error.validPhoneShort')); return; }
     setStep('sending');
     try {
       const res = await resilientFetch(`${API_BASE}/auth/whatsapp/request-otp`, {
@@ -115,7 +117,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || 'Failed to send OTP.');
+        setError(data.message || t('login.error.otpFailed'));
         setStep('idle');
         return;
       }
@@ -171,7 +173,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || 'Invalid or expired passcode.');
+        setError(data.message || t('login.error.invalidOtp'));
         setStep('otp');
         setOtp(['', '', '', '']);
         setTimeout(() => otpRefs.current[0]?.focus(), 100);
@@ -193,7 +195,7 @@ export default function LoginPage() {
   const handleVerifySubmit = (e: FormEvent) => {
     e.preventDefault();
     const code = otp.join('');
-    if (code.length !== 4) { setError('Enter the 4-digit code.'); return; }
+    if (code.length !== 4) { setError(t('login.error.enter4digit')); return; }
     verifyOtp(code);
   };
 
@@ -339,8 +341,8 @@ export default function LoginPage() {
             <section className="lp-card lp-card-left">
               <div className="lp-card-inner">
                 <div>
-                  <h2 className="lp-title">👤 New here? Register</h2>
-                  <p className="lp-subtitle">Create your account instantly. We&apos;ll send your login credentials via WhatsApp.</p>
+                  <h2 className="lp-title">{t('login.register.title')}</h2>
+                  <p className="lp-subtitle">{t('login.register.subtitle')}</p>
                 </div>
 
                 {regStep === 'done' ? (
@@ -350,11 +352,11 @@ export default function LoginPage() {
                     </div>
                     <div className="lp-success" style={{textAlign:'center'}}>{regMsg}</div>
                     <div style={{textAlign:'center',marginTop:'12px'}}>
-                      <span className="lp-wa-badge">📱 Check your WhatsApp</span>
+                      <span className="lp-wa-badge">{t('login.register.checkWhatsapp')}</span>
                     </div>
                     <div style={{textAlign:'center',marginTop:'12px'}}>
                       <span className="lp-link" onClick={() => { setRegStep('idle'); setRegMsg(''); }}>
-                        Register another →
+                        {t('login.register.another')}
                       </span>
                     </div>
                   </div>
@@ -365,7 +367,7 @@ export default function LoginPage() {
                       <input
                         className="lp-input"
                         type="text"
-                        placeholder="Your name"
+                        placeholder={t('login.register.namePlaceholder')}
                         value={regName}
                         onChange={(e) => setRegName(e.target.value)}
                         disabled={regStep === 'registering'}
@@ -374,7 +376,7 @@ export default function LoginPage() {
                         className="lp-input"
                         type="tel"
                         inputMode="numeric"
-                        placeholder="WhatsApp number (e.g. 9876543210)"
+                        placeholder={t('login.register.phonePlaceholder')}
                         value={regPhone}
                         onChange={(e) => setRegPhone(e.target.value.replace(/[^\d+\s-]/g, ''))}
                         disabled={regStep === 'registering'}
@@ -385,16 +387,16 @@ export default function LoginPage() {
                         disabled={regStep === 'registering'}
                       >
                         {regStep === 'registering'
-                          ? <><span className="lp-spinner" />Creating account...</>
-                          : '📱 Register via WhatsApp'}
+                          ? <><span className="lp-spinner" />{t('login.register.creating')}</>
+                          : t('login.register.btn')}
                       </button>
                     </form>
                   </div>
                 )}
 
-                <div className="lp-divider">already registered?</div>
+                <div className="lp-divider">{t('login.register.already')}</div>
                 <p className="lp-subtitle" style={{textAlign:'center'}}>
-                  Use the <b>Sign In</b> panel to login →
+                  {t('login.register.useSignIn')}
                 </p>
               </div>
             </section>
@@ -402,8 +404,8 @@ export default function LoginPage() {
             <section className="lp-card lp-card-right">
               <div className="lp-card-inner">
                 <div>
-                  <h2 className="lp-title">🔐 Sign In</h2>
-                  <p className="lp-subtitle">Enter your WhatsApp number and we&apos;ll send a one-time passcode.</p>
+                  <h2 className="lp-title">{t('login.signin.title')}</h2>
+                  <p className="lp-subtitle">{t('login.signin.subtitle')}</p>
                 </div>
 
                 {step === 'success' ? (
@@ -412,13 +414,13 @@ export default function LoginPage() {
                       <div className="lp-check-icon">✓</div>
                     </div>
                     <div className="lp-success" style={{textAlign:'center'}}>
-                      Verified! Redirecting...
+                      {t('login.signin.verified')}
                     </div>
                   </div>
                 ) : step === 'otp' || step === 'verifying' ? (
                   <div className="lp-block">
                     <div style={{textAlign:'center',marginBottom:'8px'}}>
-                      <span className="lp-wa-badge">📱 Code sent to {phone}</span>
+                      <span className="lp-wa-badge">{t('login.signin.codeSentTo')} {phone}</span>
                     </div>
                     {error && <div className="lp-err">{error}</div>}
                     <form className="lp-form" onSubmit={handleVerifySubmit}>
@@ -441,30 +443,30 @@ export default function LoginPage() {
                       </div>
                       {step === 'verifying' ? (
                         <div style={{textAlign:'center',padding:'8px',color:'rgba(255,255,255,.5)'}}>
-                          <span className="lp-spinner" /> Verifying...
+                          <span className="lp-spinner" /> {t('login.signin.verifying')}
                         </div>
                       ) : (
                         <button className="lp-btn lp-btn-violet" type="submit">
-                          Verify &amp; Sign In
+                          {t('login.signin.verifyBtn')}
                         </button>
                       )}
                     </form>
                     <div className="lp-timer">
                       {countdown > 0
-                        ? <>Code expires in <b>{Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}</b></>
-                        : <span style={{color:'var(--pink)'}}>Code expired</span>
+                        ? <>{t('login.signin.codeExpiresIn')} <b>{Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}</b></>
+                        : <span style={{color:'var(--pink)'}}>{t('login.signin.codeExpired')}</span>
                       }
                     </div>
                     <div style={{display:'flex',justifyContent:'space-between',marginTop:'8px'}}>
                       <span className="lp-link" onClick={() => { setStep('idle'); setError(''); setOtp(['','','','']); }}>
-                        ← Change number
+                        {t('login.signin.changeNumber')}
                       </span>
                       <span
                         className="lp-link"
                         style={{opacity: countdown > 90 ? 0.3 : 1, pointerEvents: countdown > 90 ? 'none' : 'auto'}}
                         onClick={handleRequestOtp as any}
                       >
-                        Resend code
+                        {t('login.signin.resendCode')}
                       </span>
                     </div>
                   </div>
@@ -476,7 +478,7 @@ export default function LoginPage() {
                         className="lp-input"
                         type="tel"
                         inputMode="numeric"
-                        placeholder="WhatsApp number (e.g. 9876543210)"
+                        placeholder={t('login.register.phonePlaceholder')}
                         value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/[^\d+\s-]/g, ''))}
                         disabled={step === 'sending'}
@@ -487,18 +489,18 @@ export default function LoginPage() {
                         disabled={step === 'sending'}
                       >
                         {step === 'sending'
-                          ? <><span className="lp-spinner" />Sending OTP...</>
-                          : '📲 Send OTP via WhatsApp'}
+                          ? <><span className="lp-spinner" />{t('login.signin.sendingOtp')}</>
+                          : t('login.signin.sendOtp')}
                       </button>
                     </form>
-                    <div className="lp-divider">or use permanent passcode</div>
+                    <div className="lp-divider">{t('login.signin.orPasscode')}</div>
                     <p className="lp-subtitle" style={{textAlign:'center'}}>
-                      Enter your WhatsApp number and the 4-digit passcode you received during registration.
+                      {t('login.signin.passcodeHint')}
                     </p>
                     <form className="lp-form" onSubmit={(e) => {
                       e.preventDefault();
                       const code = (document.getElementById('staticPass') as HTMLInputElement)?.value || '';
-                      if (code.length !== 4) { setError('Enter a 4-digit passcode.'); return; }
+                      if (code.length !== 4) { setError(t('login.error.enter4passcode')); return; }
                       verifyOtp(code);
                     }}>
                       <input
@@ -507,18 +509,18 @@ export default function LoginPage() {
                         type="password"
                         inputMode="numeric"
                         maxLength={4}
-                        placeholder="4-digit passcode"
+                        placeholder={t('login.signin.passcodePlaceholder')}
                       />
                       <button className="lp-btn lp-btn-ghost" type="submit">
-                        Continue with Passcode
+                        {t('login.signin.passcodeBtn')}
                       </button>
                     </form>
                   </div>
                 )}
 
-                <div className="lp-divider">new user?</div>
+                <div className="lp-divider">{t('login.signin.newUser')}</div>
                 <p className="lp-subtitle" style={{textAlign:'center'}}>
-                  Use the <b>Register</b> panel to create your account ←
+                  {t('login.signin.useRegister')}
                 </p>
               </div>
             </section>
@@ -526,5 +528,13 @@ export default function LoginPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <TranslationProvider>
+      <LoginContent />
+    </TranslationProvider>
   );
 }
