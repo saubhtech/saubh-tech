@@ -276,9 +276,18 @@ export default function ProfilePage() {
   };
 
   const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current) {
+      console.error('capturePhoto: refs missing', { video: !!videoRef.current, canvas: !!canvasRef.current });
+      setError('Camera not ready. Please wait a moment and try again.');
+      return;
+    }
     const video = videoRef.current;
     const canvas = canvasRef.current;
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.error('capturePhoto: video dimensions zero', { w: video.videoWidth, h: video.videoHeight, readyState: video.readyState });
+      setError('Camera still loading. Please wait a moment and tap Capture again.');
+      return;
+    }
     const size = Math.min(video.videoWidth, video.videoHeight);
     canvas.width = size;
     canvas.height = size;
