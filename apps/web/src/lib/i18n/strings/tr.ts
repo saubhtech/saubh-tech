@@ -20,7 +20,7 @@ const tr: TranslationStrings = {
   'hero.badge.escrow': 'Emanet Korumalı',
   'hero.title': 'Phygital Gig Pazaryeri',
   'hero.subtitle': 'Güvenli iş ödemeleri için dünya çapında doğrulanmış kişiler ve işletmelerle bağlantı kurun.',
-  'hero.btn.register': "Gig-Work'e kaydolun",
+  'hero.btn.register': 'Register for Gig-Work',
   'hero.btn.post': 'Gönderi Gereksinimleri',
   'hero.btn.demo': 'Demo Planlayın',
 
@@ -38,7 +38,7 @@ const tr: TranslationStrings = {
   'steps.3': 'Ödevlere Teklif Verme',
   'steps.4': 'Gereksinimleri yerine getirin',
   'steps.5': 'Güvenli bir şekilde Anında Ödeme Alın',
-  'steps.btn.register': "Gig-Work'e kaydolun",
+  'steps.btn.register': 'Register for Gig-Work',
   'steps.btn.post': 'Gönderi Gereksinimleri',
   'steps.btn.demo': 'Demo Planlayın',
 
@@ -96,11 +96,11 @@ const tr: TranslationStrings = {
 
   // ─── Proven ───
   'proven.tag': 'Kanıtlanmış Sonuçlar',
-  'proven.stat1.text': "UGC'den geleneksel reklamlara kıyasla daha yüksek dönüşüm oranları",
+  'proven.stat1.text': 'higher conversion rates from UGC vs traditional ads',
   'proven.stat2.text': 'ücretli reklamlara kıyasla daha düşük müşteri edinme maliyetleri',
   'proven.stat3.text': 'Organik potansiyel müşteriler aracılığıyla daha fazla etkileşim, güven ve dönüşüm',
   'proven.stat4.text': 'akran tavsiyeleri nedeniyle tekrarlanan siparişlerde artış',
-  'proven.btn.register': "Gig-Work'e kaydolun",
+  'proven.btn.register': 'Register for Gig-Work',
   'proven.btn.post': 'Gönderi Gereksinimleri',
   'proven.btn.demo': 'Demo Planlayın',
 
@@ -114,7 +114,7 @@ const tr: TranslationStrings = {
   'saubhos.card3.desc': 'İK Yönetiminizi otomatikleştirin. Gereksinimleri gönderin, ilgilenen adayların sizinle iletişime geçmesine ve vizyonunuzu gerçeğe dönüştürmek için en iyi yetenekleri elde etmesine izin verin.',
   'saubhos.card4.title': 'Kariyer Seçimi',
   'saubhos.card4.desc': 'Yetenek, Faaliyet, Sektör, İlgi Alanı, Bilgi, Görünüm, Yol, Tercih, Sektör, Beceriler, STEM, Teknoloji, Özellikler ve Bölgeye dayalı 1500 meslek.',
-  'saubhos.btn.free': "Ücretsiz SaubhOS'u edinin",
+  'saubhos.btn.free': 'Get Free SaubhOS',
   'saubhos.btn.demo': 'Demo Planlayın',
 
   // ─── Learning ───
@@ -142,11 +142,11 @@ const tr: TranslationStrings = {
   'blog.art3.title': 'Neden Yalnızca Dijital Platformlar Artık Yeterli Değil?',
   'blog.art3.desc': 'Başarılı platformların neden fiziksel temas noktalarını dijital altyapıyla entegre etmesi gerektiğini öğrenin.',
   'blog.art4.title': 'Kullanıcı Tarafından Oluşturulan İçerik (UGC) Neden Ücretli Reklamlardan Daha İyi Dönüştürür?',
-  'blog.art4.desc': "UGC'nin geleneksel reklamcılıktan neden daha iyi performans gösterdiğine dair veriye dayalı bilgiler.",
+  'blog.art4.desc': 'Data-driven insights into why UGC outperforms traditional advertising.',
   'blog.art5.title': 'UGC, Güveni Geleneksel Reklamcılığa Göre Nasıl Daha Hızlı Oluşturur?',
   'blog.art5.desc': 'Tüketicilerin akranlar tarafından oluşturulan içeriğe neden güvendiğinin ardındaki psikoloji.',
-  'blog.art6.title': "UGC ve Etkileyici Pazarlama: Hint KOBİ'leri için Ne Daha İyi İşe Yarar?",
-  'blog.art6.desc': "Hindistan'daki küçük ve orta ölçekli işletmeler için pratik bir karşılaştırma.",
+  'blog.art6.title': 'UGC vs Influencer Marketing: What Works Better for Indian SMEs?',
+  'blog.art6.desc': 'A practical comparison for small and medium businesses in India.',
   'blog.viewAll': 'Tüm Makaleleri Görüntüle',
 
   // ─── Faq ───
@@ -154,8 +154,8 @@ const tr: TranslationStrings = {
   'faq.title': 'Sıkça Sorulan Sorular (SSS)',
   'faq.subtitle': 'Saubh.Tech hakkında sık sorulan soruların yanıtlarını bulun',
   'faq.q1': 'Saubh.Tech güvenli mi?',
-  'faq.a1': "Saubh'da en büyük önceliğimiz emniyet ve güvenliktir. Kişisel bilgilerinizi korumak için en son şifreleme teknolojisini kullanıyoruz. Ayrıca dolandırıcılık ve diğer kötü amaçlı etkinlikleri önlemek için platformumuzu 7/24 izleyen uzmanlardan oluşan bir ekibimiz de var.",
-  'faq.q2': "Neden Saubh.Tech'i kullanmalısınız?",
+  'faq.a1': 'At Saubh, our top priority is safety and security. We use the latest encryption technology to protect your personal information. We also have a team of experts who monitor our platform 24/7 to prevent fraud and other malicious activity.',
+  'faq.q2': 'Why use Saubh.Tech?',
   'faq.a2': 'Saubh, güvenilir hizmet sağlayıcılarla bağlantı kurmak, mükemmel işi bulmak veya diğer profesyonellerden tavsiye almak için mükemmel bir yerdir. Başarılı olmanıza yardımcı olacak çok çeşitli özellik ve kaynaklarımız var ve ekibimiz sizi desteklemek için her zaman burada.',
   'faq.q3': 'Saubh.Tech nasıl çalışır?',
   'faq.a3': 'Saubh, ihtiyaçlarınız için sizi doğru insanlarla buluşturur. İster iş, ister hizmet sağlayıcı, ister sadece tavsiye arıyor olun, aradığınızı bulmanıza yardımcı olabiliriz. Platformumuzun kullanımı kolaydır ve ekibimiz sizi desteklemek için her zaman buradadır.',
@@ -206,7 +206,7 @@ const tr: TranslationStrings = {
   'pricing.growth.f3': 'Ayda 4 LinkedIn gönderisi/blogu',
   'pricing.pro.tier': 'PRO',
   'pricing.pro.name': 'Markalaşma',
-  'pricing.pro.desc': "Yüksek etkili sosyal varlık, hızlı ölçeklendirme ve güçlü markalaşma için KOBİ'ler ve e-ticaret işletmeleri.",
+  'pricing.pro.desc': 'SMEs and e-commerce businesses for high-impact social presence, rapid scaling and strong branding.',
   'pricing.pro.f1': 'Ayda 50 resim gönderisi',
   'pricing.pro.f2': 'Ayda 20 makara/atlıkarınca/kısa film/referanslar',
   'pricing.pro.f3': 'Ayda 10 LinkedIn gönderisi/blogu',
@@ -216,7 +216,7 @@ const tr: TranslationStrings = {
 
   // ─── Newsletter ───
   'newsletter.title': 'Bülten',
-  'newsletter.subtitle': "Saubh.Tech'ten en son gelişmelerden haberdar olun",
+  'newsletter.subtitle': 'Stay updated with the latest from Saubh.Tech',
   'newsletter.name': 'İsim',
   'newsletter.whatsapp': 'WhatsApp',
   'newsletter.email': 'E-posta',

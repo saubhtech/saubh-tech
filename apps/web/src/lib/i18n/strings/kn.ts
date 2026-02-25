@@ -256,7 +256,7 @@ const kn: TranslationStrings = {
 
   // ─── Login Page ───
   'login.register.title': 'ಇಲ್ಲಿ ಹೊಸದೇ? ನೋಂದಾಯಿಸಿ',
-  'login.register.subtitle': 'ತಕ್ಷಣವೇ ನಿಮ್ಮ ಖಾತೆಯನ್ನು ರಚಿಸಿ. ನಾವು'll send your login credentials via WhatsApp.',
+  'login.register.subtitle': 'ತಕ್ಷಣವೇ ನಿಮ್ಮ ಖಾತೆಯನ್ನು ರಚಿಸಿ. ನಾವು\'ll send your login credentials via WhatsApp.',
   'login.register.namePlaceholder': 'ನಿಮ್ಮ ಹೆಸರು.',
   'login.register.phonePlaceholder': 'ವಾಟ್ಸ್ಆ್ಯಪ್ ಸಂಖ್ಯೆ (ಉದಾಹರಣೆಗೆ 9876543210)',
   'login.register.btn': 'ವಾಟ್ಸಪ್ ಮೂಲಕ ನೋಂದಾಯಿಸಿ',
@@ -266,7 +266,7 @@ const kn: TranslationStrings = {
   'login.register.already': 'ಈಗಾಗಲೇ ನೋಂದಾಯಿಸಲಾಗಿದೆಯೇ?',
   'login.register.useSignIn': 'ಲಾಗಿನ್ ಮಾಡಲು ಸೈನ್ ಇನ್ ಫಲಕವನ್ನು ಬಳಸಿ',
   'login.signin.title': 'ಸೈನ್ ಇನ್ ಮಾಡಿ',
-  'login.signin.subtitle': 'ನಿಮ್ಮ ವಾಟ್ಸಪ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ ಮತ್ತು ನಾವು'll send a one-time passcode.',
+  'login.signin.subtitle': 'ನಿಮ್ಮ ವಾಟ್ಸಪ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ ಮತ್ತು ನಾವು\'ll send a one-time passcode.',
   'login.signin.sendOtp': 'ವಾಟ್ಸಪ್ ಮೂಲಕ ಒಟಿಪಿಯನ್ನು ಕಳುಹಿಸಿ',
   'login.signin.sendingOtp': 'ಒಟಿಪಿಯನ್ನು ಕಳುಹಿಸುತ್ತಿದೆ...',
   'login.signin.codeSentTo': 'ಕೋಡ್ ಅನ್ನು ಕಳುಹಿಸಲಾಗಿದೆ',

@@ -256,7 +256,7 @@ const as: TranslationStrings = {
 
   // ─── Login Page ───
   'login.register.title': 'ইয়াত নতুন? পঞ্জীয়ন কৰক',
-  'login.register.subtitle': 'তৎক্ষণাত আপোনাৰ একাউণ্ট সৃষ্টি কৰক। আমি'll send your login credentials via WhatsApp.',
+  'login.register.subtitle': 'তৎক্ষণাত আপোনাৰ একাউণ্ট সৃষ্টি কৰক। আমি\'ll send your login credentials via WhatsApp.',
   'login.register.namePlaceholder': 'তোমাৰ নাম।',
   'login.register.phonePlaceholder': 'হোৱাটছআপ নম্বৰ (যেনে 9876543210)',
   'login.register.btn': 'হোৱাটছএপত পঞ্জীয়ন কৰক',
@@ -266,7 +266,7 @@ const as: TranslationStrings = {
   'login.register.already': 'ইতিমধ্যে পঞ্জীয়ন কৰা হৈছে নেকি?',
   'login.register.useSignIn': 'লগইন কৰিবলৈ ছাইন ইন পেনেল ব্যৱহাৰ কৰক',
   'login.signin.title': 'ছাইন ইন কৰক',
-  'login.signin.subtitle': 'আপোনাৰ হোৱাটছআপ নম্বৰটো প্ৰবিষ্ট কৰক আৰু আমি'll send a one-time passcode.',
+  'login.signin.subtitle': 'আপোনাৰ হোৱাটছআপ নম্বৰটো প্ৰবিষ্ট কৰক আৰু আমি\'ll send a one-time passcode.',
   'login.signin.sendOtp': 'হোৱাট্ছআপৰ জৰিয়তে অ\'টিপি প্ৰেৰণ কৰক',
   'login.signin.sendingOtp': 'অ\'টিপি প্ৰেৰণ কৰা হৈছে...',
   'login.signin.codeSentTo': 'কোড পঠিওৱা হৈছে',

@@ -255,7 +255,7 @@ const ks: TranslationStrings = {
 
   // ─── Login Page ───
   'login.register.title': 'नई यहाँ? रजिस्टर करो',
-  'login.register.subtitle': 'तुरन्त बनाओ खाता। हम।'ll send your login credentials via WhatsApp.',
+  'login.register.subtitle': 'तुरन्त बनाओ खाता। हम।\'ll send your login credentials via WhatsApp.',
   'login.register.namePlaceholder': 'नाम तेरा, आस तेरी',
   'login.register.phonePlaceholder': 'वाट्सऐप नंबर (मिसाल 9876543210)',
   'login.register.btn': 'व्हॉटसअप ज़रिये रजिस्टर करा',
