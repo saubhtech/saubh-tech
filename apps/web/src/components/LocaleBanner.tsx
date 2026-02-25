@@ -72,7 +72,7 @@ export default function LocaleBanner() {
         color: 'rgba(255,255,255,0.85)',
       }}
     >
-      <span>\u{1F310} <strong style={{ color: '#fff' }}>{displayName}</strong></span>
+      <span>🌐 <strong style={{ color: '#fff' }}>{displayName}</strong></span>
 
       <div style={{ position: 'relative' }}>
         <button
@@ -86,7 +86,7 @@ export default function LocaleBanner() {
             cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
-          Change \u25BE
+          Change ▾
         </button>
 
         {dropdownOpen && (
