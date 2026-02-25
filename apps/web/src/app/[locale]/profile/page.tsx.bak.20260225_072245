@@ -248,20 +248,11 @@ export default function ProfilePage() {
         videoRef.current.play();
       }
       setCameraActive(true);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Camera access denied:', err);
-      const msg = err?.message || String(err);
       setCameraError(true);
-      // Show error to user instead of silent fallback
-      if (msg.includes('Permission denied') || msg.includes('NotAllowedError')) {
-        setError('Camera permission denied. Please allow camera access in your browser settings, or upload a photo instead.');
-      } else if (msg.includes('NotFoundError') || msg.includes('DevicesNotFound')) {
-        setError('No camera found on this device. Please upload a photo instead.');
-      } else if (msg.includes('NotReadableError') || msg.includes('TrackStartError')) {
-        setError('Camera is in use by another app. Close other apps using the camera and try again.');
-      } else {
-        setError(`Camera error: ${msg}. You can upload a photo instead.`);
-      }
+      // Fallback: open file picker
+      fileRef.current?.click();
     }
   };
 
