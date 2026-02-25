@@ -286,10 +286,10 @@ const fr: TranslationStrings = {
   'login.error.validPhone': 'Please enter a valid WhatsApp number.',
   'login.error.validPhoneShort': 'Enter a valid WhatsApp number.',
   'login.error.regFailed': 'Registration failed.',
-  'login.error.otpFailed': 'Failed to send OTP.',
-  'login.error.invalidOtp': 'Invalid or expired passcode.',
-  'login.error.enter4digit': 'Enter the 4-digit code.',
-  'login.error.enter4passcode': 'Enter a 4-digit passcode.',
+  'login.error.otpFailed': 'J\'ai échoué à envoyer un OTP.',
+  'login.error.invalidOtp': 'Code de passe invalide ou expiré.',
+  'login.error.enter4digit': 'Entrez le code à quatre chiffres.',
+  'login.error.enter4passcode': 'Entrez un mot de passe à 4 chiffres.',
 };
 
 export default fr;
