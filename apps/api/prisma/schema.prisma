@@ -782,6 +782,8 @@ model Requirement {
 
   bids          Bid[]
 
+  @@index([userid])
+  @@index([marketid])
   @@map("requirements")
   @@schema("public")
 }
@@ -798,6 +800,8 @@ model Offering {
   created_at    DateTime @default(now()) @db.Timestamptz()
   updated_at    DateTime @updatedAt @db.Timestamptz()
 
+  @@index([userid])
+  @@index([marketid])
   @@map("offerings")
   @@schema("public")
 }
@@ -815,6 +819,8 @@ model Bid {
   requirement   Requirement @relation(fields: [requirid], references: [requirid])
   bid_agree     BidAgree?
 
+  @@index([requirid])
+  @@index([userid])
   @@map("bid")
   @@schema("public")
 }
