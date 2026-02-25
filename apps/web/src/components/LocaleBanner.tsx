@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { localeToLang } from '@/lib/i18n/locale-map';
+import { useParams, useRouter, usePathname } from 'next/navigation';
+import { localeToLang, langToLocale, isValidLocale } from '@/lib/i18n/locale-map';
 import { LANGUAGES } from '@/lib/i18n/languages';
 
 const COOKIE_ACK = 'saubh_locale_ack';
@@ -22,16 +21,17 @@ function setCookie(name: string, value: string, days: number) {
 }
 
 /**
- * Shows a dismissable banner confirming the auto-detected language.
- * Hidden once the user clicks "OK" (sets saubh_locale_ack cookie).
- * Accessible: role="status", keyboard-dismissable.
+ * Shows a dismissable banner confirming the auto-detected language
+ * with an inline dropdown to switch languages instantly.
  */
 export default function LocaleBanner() {
   const { locale } = useParams<{ locale: string }>();
+  const router = useRouter();
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
-    // Only show if ack cookie is not set
     if (!getCookie(COOKIE_ACK)) {
       setVisible(true);
     }
@@ -42,11 +42,36 @@ export default function LocaleBanner() {
     setVisible(false);
   };
 
+  const handleLanguageChange = (langCode: string) => {
+    const newLocale = langToLocale(langCode);
+    if (!isValidLocale(newLocale)) return;
+
+    // Replace current locale in the URL path
+    const pathAfterLocale = pathname.replace(/^\/[^/]+/, '');
+    const newPath = `/${newLocale}${pathAfterLocale}`;
+
+    // Update cookie
+    setCookie('saubh-lang', langCode, 365);
+    setCookie(COOKIE_ACK, '1', 365);
+
+    setDropdownOpen(false);
+    setVisible(false);
+    router.push(newPath);
+  };
+
   if (!visible) return null;
 
   const lang = localeToLang(locale);
   const langDef = LANGUAGES.find((l) => l.code === lang);
-  const displayName = langDef ? `${langDef.name} (${langDef.name !== langDef.english ? langDef.english : langDef.name})` : lang;
+  const displayName = langDef
+    ? `${langDef.name}${langDef.name !== langDef.english ? ` (${langDef.english})` : ''}`
+    : lang;
+
+  // Only show Indian locales in dropdown (23 languages with URL locales)
+  const selectableLanguages = LANGUAGES.filter((l) => {
+    const loc = langToLocale(l.code);
+    return isValidLocale(loc) && loc !== 'en-in' || l.code === 'en';
+  });
 
   return (
     <div
@@ -78,17 +103,84 @@ export default function LocaleBanner() {
         Language set to <strong style={{ color: '#fff' }}>{displayName}</strong>.
       </span>
 
-      <Link
-        href={`/${locale}/language`}
-        style={{
-          color: '#6db33f',
-          textDecoration: 'underline',
-          textUnderlineOffset: '3px',
-          fontWeight: 600,
-        }}
-      >
-        Change
-      </Link>
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          aria-label="Change language"
+          style={{
+            color: '#6db33f',
+            background: 'none',
+            border: 'none',
+            textDecoration: 'underline',
+            textUnderlineOffset: '3px',
+            fontWeight: 600,
+            fontSize: '0.88rem',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            padding: 0,
+          }}
+        >
+          Change ▾
+        </button>
+
+        {dropdownOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              marginBottom: '8px',
+              background: 'rgba(15, 18, 25, 0.98)',
+              border: '1px solid rgba(109, 179, 63, 0.3)',
+              borderRadius: '12px',
+              padding: '8px 0',
+              maxHeight: '320px',
+              overflowY: 'auto',
+              width: '240px',
+              boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
+              zIndex: 10000,
+            }}
+          >
+            {selectableLanguages.map((l) => {
+              const isActive = l.code === lang;
+              return (
+                <button
+                  key={l.code}
+                  onClick={() => handleLanguageChange(l.code)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: '8px 16px',
+                    background: isActive ? 'rgba(109, 179, 63, 0.15)' : 'transparent',
+                    border: 'none',
+                    color: isActive ? '#6db33f' : 'rgba(255,255,255,0.8)',
+                    fontWeight: isActive ? 700 : 400,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    textAlign: 'left',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <span>{l.name}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>
+                    {l.english}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <button
         onClick={dismiss}
