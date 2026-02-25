@@ -466,21 +466,7 @@ export class ProfileController {
       : value.trim().replace(/\D/g, '');
     const key = `verified:profile:${userid}:${type}:${cleanValue}`;
     const result = await this.redis.get(key);
-    if (result === '1') return true;
-
-    // Permanent fix: if user already has a fully complete profile,
-    // they must have verified before (email/phone can only be saved via OTP).
-    // Don't force re-verification after Redis TTL expires.
-    const user = await this.prisma.user.findUnique({
-      where: { userid: BigInt(userid) },
-    });
-    if (user && this.checkComplete(user)) {
-      // Re-populate Redis so subsequent checks are fast
-      await this.redis.set(key, '1', 'EX', 86400);
-      return true;
-    }
-
-    return false;
+    return result === '1';
   }
 
   /**
