@@ -766,7 +766,7 @@ model WaTemplate {
 model Requirement {
   requirid      BigInt    @id @default(autoincrement())
   userid        BigInt
-  marketed      Int
+  marketid      Int
   delivery_mode String?   @db.Char(2)
   requirements  String?
   eligibility   String?
@@ -789,7 +789,7 @@ model Requirement {
 model Offering {
   offerid       BigInt   @id @default(autoincrement())
   userid        BigInt
-  marketed      Int
+  marketid      Int
   delivery_mode String?  @db.Char(2)
   offerings     String?
   doc_url       String?
