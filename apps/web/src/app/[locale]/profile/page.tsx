@@ -315,12 +315,25 @@ export default function ProfilePage() {
     startCamera();
   };
 
-  // Cleanup camera on unmount
+  // Cleanup camera on unmount + page visibility change
   useEffect(() => {
-    return () => {
+    const cleanup = () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
+        streamRef.current = null;
       }
+      setCameraActive(false);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') cleanup();
+    };
+    const handleUnload = () => cleanup();
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      cleanup();
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('beforeunload', handleUnload);
     };
   }, []);
 
