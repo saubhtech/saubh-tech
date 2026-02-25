@@ -53,7 +53,7 @@ export default function LocaleBanner() {
     // Update cookie
     setCookie('saubh-lang', langCode, 365);
     // Clear ack cookie so banner reappears after language switch
-    document.cookie = `${COOKIE_ACK}=;path=/;max-age=0;SameSite=Lax`;
+    setCookie(COOKIE_ACK, '', -1);
     setDropdownOpen(false);
     window.location.href = newPath;
   };
