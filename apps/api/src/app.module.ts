@@ -15,6 +15,7 @@ import { CrmModule } from './crm/crm.module';
 import { ProfileModule } from './auth/profile.module';
 import { BackupModule } from './backup/backup.module';
 @Module({
+  imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     BullModule.forRoot({
       connection: {
