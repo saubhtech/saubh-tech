@@ -52,11 +52,8 @@ export default function LocaleBanner() {
 
     // Update cookie
     setCookie('saubh-lang', langCode, 365);
-    setCookie(COOKIE_ACK, '1', 365);
-
     setDropdownOpen(false);
-    setVisible(false);
-    router.push(newPath);
+    window.location.href = newPath;
   };
 
   if (!visible) return null;
