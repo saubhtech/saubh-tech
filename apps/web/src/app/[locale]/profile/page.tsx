@@ -253,18 +253,7 @@ export default function ProfilePage() {
         return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // Wait for video metadata to load (so videoWidth/Height are available)
-        await new Promise<void>((resolve) => {
-          const v = videoRef.current!;
-          v.onloadedmetadata = () => {
-            v.play().then(resolve).catch(resolve);
-          };
-          // Fallback timeout in case event already fired
-          setTimeout(resolve, 2000);
-        });
-      }
+      // Video element renders when cameraActive=true, so connect stream via useEffect
       setCameraActive(true);
     } catch (err: any) {
       console.error('Camera access denied:', err);
@@ -334,6 +323,17 @@ export default function ProfilePage() {
     setPhotoPreview(null);
     startCamera();
   };
+
+  // Connect stream to video element when camera becomes active
+  useEffect(() => {
+    if (cameraActive && streamRef.current && videoRef.current) {
+      const v = videoRef.current;
+      v.srcObject = streamRef.current;
+      v.onloadedmetadata = () => {
+        v.play().catch(() => {});
+      };
+    }
+  }, [cameraActive]);
 
   // Cleanup camera on unmount + page visibility change
   useEffect(() => {
