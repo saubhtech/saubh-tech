@@ -99,31 +99,6 @@ export default function ProfilePage() {
   const [placeid, setPlaceid] = useState<number | null>(null);
   const [customPlace, setCustomPlace] = useState('');
   const [showCustomPlace, setShowCustomPlace] = useState(false);
-  const [placeSuggestions, setPlaceSuggestions] = useState<any[]>([]);
-
-  // Fuzzy match: find similar place names from existing list
-  const fuzzyMatchPlaces = (input: string, placeList: any[]) => {
-    if (!input || input.length < 2 || placeList.length === 0) return [];
-    const needle = input.toLowerCase().trim();
-    return placeList
-      .map(p => {
-        const name = (p.place || p.name || '').toLowerCase();
-        // Check contains
-        if (name.includes(needle) || needle.includes(name)) return { ...p, score: 0.9 };
-        // Simple character overlap similarity
-        const longer = name.length > needle.length ? name : needle;
-        const shorter = name.length > needle.length ? needle : name;
-        let matches = 0;
-        for (let i = 0; i < shorter.length; i++) {
-          if (longer.includes(shorter[i])) matches++;
-        }
-        const score = matches / longer.length;
-        return { ...p, score };
-      })
-      .filter(p => p.score >= 0.6)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3);
-  };
   const [pic, setPic] = useState<string | null>(null);
 
   // Photo: selfie camera + upload fallback
@@ -963,45 +938,10 @@ export default function ProfilePage() {
                         <input
                           className="pp-input"
                           value={customPlace}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setCustomPlace(val);
-                            setPlaceSuggestions(fuzzyMatchPlaces(val, places));
-                          }}
+                          onChange={e => setCustomPlace(e.target.value)}
                           placeholder="Enter your place name"
                         />
-                        {placeSuggestions.length > 0 && customPlace.length >= 2 && (
-                          <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '8px 12px' }}>
-                            <span style={{ fontSize: '.72rem', color: '#16a34a', fontWeight: 600 }}>Did you mean:</span>
-                            {placeSuggestions.map((s: any) => (
-                              <div
-                                key={s.placeid}
-                                onClick={() => {
-                                  setPlaceid(Number(s.placeid));
-                                  setCustomPlace('');
-                                  setShowCustomPlace(false);
-                                  setPlaceSuggestions([]);
-                                }}
-                                style={{
-                                  padding: '6px 10px', margin: '4px 0', cursor: 'pointer',
-                                  borderRadius: '6px', fontSize: '.85rem', fontWeight: 500,
-                                  background: 'white', border: '1px solid #d1fae5',
-                                  transition: '.15s',
-                                }}
-                                onMouseEnter={e => (e.currentTarget.style.background = '#dcfce7')}
-                                onMouseLeave={e => (e.currentTarget.style.background = 'white')}
-                              >
-                                ✅ {s.place || s.name}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {placeSuggestions.length === 0 && customPlace.length >= 3 && (
-                          <span style={{ fontSize: '.72rem', color: '#6b7280', fontStyle: 'italic' }}>
-                            No similar place found — your entry will be reviewed and added to our directory
-                          </span>
-                        )}
-                        <span className="pp-custom-place-link" onClick={() => { setShowCustomPlace(false); setCustomPlace(''); setPlaceSuggestions([]); }}>
+                        <span className="pp-custom-place-link" onClick={() => { setShowCustomPlace(false); setCustomPlace(''); }}>
                           ← Select from list instead
                         </span>
                       </div>
