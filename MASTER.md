@@ -200,3 +200,14 @@ docker exec saubh-postgres pg_dumpall -U saubh_admin > /data/backups/dump.sql
 cd apps/api && pnpm prisma generate && pnpm prisma migrate dev --name <desc>
 /data/scripts/list-backups.sh
 ```
+
+## 🌐 PUBLIC ENDPOINTS (NO AUTH)
+| URL | Serves | Source |
+|-----|--------|--------|
+| `saubh.tech/langengine` | i18n status JSON | `apps/web/public/langengine.json` |
+
+## 📊 i18n STATUS INFRASTRUCTURE
+- **Status script:** `/data/scripts/i18n/i18n-status.mjs` (run from project root)
+- **Cron:** 5min refresh → `apps/web/public/langengine.json`
+- **Translation server:** `:5050` — IndicTrans2 + NLLB + FastText
+- **Coverage:** 36 langs, 239 keys, 31/36 at 100% (Feb 25, 2026)
