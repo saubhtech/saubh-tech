@@ -35,6 +35,7 @@ import { BackupModule } from './backup/backup.module';
     CrmModule,
     ProfileModule,
     BackupModule,
+    I18nModule,
   ],
 })
 export class AppModule {}
