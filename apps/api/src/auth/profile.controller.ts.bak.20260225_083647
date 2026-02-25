@@ -188,14 +188,8 @@ export class ProfileController {
       data.stateid = body.stateid ? parseInt(body.stateid, 10) : null;
     if (body.districtid !== undefined)
       data.districtid = body.districtid ? parseInt(body.districtid, 10) : null;
-    if (body.placeid !== undefined) {
+    if (body.placeid !== undefined)
       data.placeid = body.placeid ? parseInt(body.placeid, 10) : null;
-      if (data.placeid) data.place_request = null;
-    }
-    if (body.customPlace !== undefined && String(body.customPlace).trim()) {
-      data.place_request = String(body.customPlace).trim().substring(0, 200);
-      data.placeid = null;
-    }
 
     // ─── Email: only accept if verified via OTP ───────────────────────
     if (body.email !== undefined) {
@@ -491,7 +485,7 @@ export class ProfileController {
       user.stateid &&
       user.districtid &&
       user.pincode &&
-      (user.placeid || user.place_request)
+      user.placeid
     );
   }
 
@@ -515,7 +509,6 @@ export class ProfileController {
       districtid: user.districtid,
       pincode: user.pincode,
       placeid: user.placeid ? user.placeid.toString() : null,
-      place_request: user.place_request || null,
       verified: user.verified,
       status: user.status,
       createdAt: user.createdAt,

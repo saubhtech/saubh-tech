@@ -156,6 +156,7 @@ model User {
   districtid     Int?                                      /// (step 2)
   pincode        String?       @db.VarChar(10)             /// (step 2)
   placeid        Int?                                      /// (step 2)
+  place_request  String?   @db.VarChar(200)   @map("place_request")
   verified       VerifiedType?
   status         UserStatus    @default(A)
   reason         String?       @db.VarChar(500)
