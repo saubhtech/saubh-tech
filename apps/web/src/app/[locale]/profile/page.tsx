@@ -237,10 +237,20 @@ export default function ProfilePage() {
 
   const startCamera = async () => {
     setCameraError(false);
+    setError('');
+    // Stop any existing stream first (prevents "device busy")
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
         audio: false,
+      }).catch(async (firstErr) => {
+        // Retry once with relaxed constraints (fixes "Starting videoinput failed")
+        console.warn('Camera first attempt failed, retrying with basic constraints...', firstErr);
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -258,7 +268,7 @@ export default function ProfilePage() {
       } else if (msg.includes('NotFoundError') || msg.includes('DevicesNotFound')) {
         setError('No camera found on this device. Please upload a photo instead.');
       } else if (msg.includes('NotReadableError') || msg.includes('TrackStartError')) {
-        setError('Camera is in use by another app. Close other apps using the camera and try again.');
+        setError('Camera is busy — close other tabs or apps using the camera, then try again. Or upload a photo below.');
       } else {
         setError(`Camera error: ${msg}. You can upload a photo instead.`);
       }
