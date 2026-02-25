@@ -480,7 +480,6 @@ export default function DashboardPage() {
           {/* Quick Links */}
           <div className="db-block">
             <div className="db-minilinks">
-              <button className="db-minilink" onClick={() => router.push(`/${locale}/gig`)}>🚀 Gig</button>
               <button className="db-minilink">💸 Income</button>
               <button className="db-minilink">🧾 My Bids</button>
               <button className="db-minilink">🛡️ Escrow Money</button>
@@ -498,7 +497,6 @@ export default function DashboardPage() {
               <p className="db-top-sub">|| Real Clients || Verified Providers || Secured Payments ||</p>
             </div>
             <div className="db-top-pills">
-              <div className="db-pill" style={{cursor:"pointer"}} onClick={() => router.push(`/${locale}/gig`)}>🚀 Gig</div>
               <div className="db-pill">💸 Income</div>
               <div className="db-pill">🧾 My Bids</div>
               <div className="db-pill">🛡️ Escrow Money</div>

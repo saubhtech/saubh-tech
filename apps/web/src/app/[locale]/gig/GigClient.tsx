@@ -1,0 +1,473 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+
+// ── Types ───────────────────────────────────────
+interface Requirement {
+  requirid: string; userid: string; marketid: number; delivery_mode: string | null;
+  requirements: string | null; eligibility: string | null; doc_url: string | null;
+  audio_url: string | null; video_url: string | null; budget: string | null;
+  escrow: string | null; bidate: string | null; delivdate: string | null;
+  created_at: string; bids?: Bid[];
+}
+interface Offering {
+  offerid: string; userid: string; marketid: number; delivery_mode: string | null;
+  offerings: string | null; doc_url: string | null; audio_url: string | null;
+  video_url: string | null; created_at: string;
+}
+interface Bid {
+  bidid: string; requirid: string; userid: string; amount: string | null;
+  escrow: string | null; selected: boolean; created_at: string;
+  requirement?: Requirement; bid_agree?: BidAgree;
+}
+interface BidAgree {
+  agreeid: string; bidid: string; agreement: string | null;
+  client_sign: string | null; provider_sign: string | null; created_at: string;
+  bid?: Bid;
+}
+type Tab = 'requirements' | 'offerings' | 'bids' | 'agreements';
+
+const API = '/api/gig';
+const DM = { PH: 'Physical', DG: 'Digital', PD: 'Phygital' };
+
+// ── API Helper ──────────────────────────────────
+async function api<T>(path: string, opts?: RequestInit): Promise<T> {
+  const res = await fetch(`${API}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  if (res.status === 204) return null as T;
+  return res.json();
+}
+
+// ── Styles ──────────────────────────────────────
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root {
+    --bg: #080b12; --surface: rgba(255,255,255,0.04); --surface-hover: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.08); --border-focus: rgba(0,240,255,0.4);
+    --text: #e2e8f0; --text-dim: #64748b; --text-bright: #f8fafc;
+    --cyan: #00f0ff; --purple: #a855f7; --emerald: #10b981; --rose: #f43f5e;
+    --amber: #f59e0b; --font: 'Outfit', sans-serif; --mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .gig-root {
+    min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--font);
+    background-image:
+      radial-gradient(ellipse 80% 60% at 10% 20%, rgba(0,240,255,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 80%, rgba(168,85,247,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(16,185,129,0.03) 0%, transparent 60%);
+  }
+  .gig-container { max-width: 1280px; margin: 0 auto; padding: 24px 20px; }
+  .gig-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+  .gig-title { font-size: 28px; font-weight: 800; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple)); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; background-clip: text; }
+  .gig-subtitle { font-size: 13px; color: var(--text-dim); margin-top: 4px; font-weight: 400; }
+  /* Tabs */
+  .gig-tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 14px;
+    padding: 4px; border: 1px solid var(--border); margin-bottom: 28px; overflow-x: auto; }
+  .gig-tab { padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; color: var(--text-dim); border: none; background: none;
+    white-space: nowrap; font-family: var(--font); }
+  .gig-tab:hover { color: var(--text); background: var(--surface-hover); }
+  .gig-tab.active { color: var(--bg); background: var(--cyan); font-weight: 600; }
+  /* Cards */
+  .gig-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 20px; transition: all 0.2s; backdrop-filter: blur(20px); }
+  .gig-card:hover { border-color: rgba(0,240,255,0.15); background: var(--surface-hover); }
+  .gig-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+  .gig-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .gig-card-id { font-family: var(--mono); font-size: 12px; color: var(--cyan); opacity: 0.7; }
+  .gig-card-actions { display: flex; gap: 6px; }
+  .gig-badge { display: inline-flex; padding: 3px 10px; border-radius: 20px; font-size: 11px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .gig-badge.ph { background: rgba(0,240,255,0.1); color: var(--cyan); }
+  .gig-badge.dg { background: rgba(168,85,247,0.1); color: var(--purple); }
+  .gig-badge.pd { background: rgba(16,185,129,0.1); color: var(--emerald); }
+  .gig-badge.selected { background: rgba(16,185,129,0.15); color: var(--emerald); }
+  .gig-badge.pending { background: rgba(245,158,11,0.12); color: var(--amber); }
+  .gig-field { margin-bottom: 8px; }
+  .gig-field-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 0.8px; margin-bottom: 2px; }
+  .gig-field-value { font-size: 14px; color: var(--text-bright); }
+  .gig-money { font-family: var(--mono); color: var(--emerald); font-weight: 500; }
+  .gig-date { font-family: var(--mono); font-size: 13px; color: var(--text-dim); }
+  /* Buttons */
+  .gig-btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; border: 1px solid var(--border);
+    font-family: var(--font); display: inline-flex; align-items: center; gap: 6px; }
+  .gig-btn-primary { background: var(--cyan); color: var(--bg); border-color: var(--cyan); font-weight: 600; }
+  .gig-btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+  .gig-btn-ghost { background: transparent; color: var(--text-dim); }
+  .gig-btn-ghost:hover { color: var(--text); background: var(--surface-hover); }
+  .gig-btn-danger { background: transparent; color: var(--rose); border-color: rgba(244,63,94,0.3); }
+  .gig-btn-danger:hover { background: rgba(244,63,94,0.1); }
+  .gig-btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+  .gig-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .gig-count { font-size: 13px; color: var(--text-dim); }
+  /* Modal */
+  .gig-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;
+    animation: fadeIn 0.2s ease; }
+  .gig-modal { background: #0f1319; border: 1px solid var(--border); border-radius: 20px;
+    width: 100%; max-width: 560px; max-height: 85vh; overflow-y: auto; padding: 28px;
+    animation: slideUp 0.3s ease; }
+  .gig-modal-title { font-size: 20px; font-weight: 700; margin-bottom: 24px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple)); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; background-clip: text; }
+  .gig-input-group { margin-bottom: 16px; }
+  .gig-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .gig-input { width: 100%; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text-bright); font-size: 14px; font-family: var(--font);
+    transition: border-color 0.2s; outline: none; }
+  .gig-input:focus { border-color: var(--border-focus); }
+  .gig-input::placeholder { color: var(--text-dim); opacity: 0.5; }
+  select.gig-input { appearance: none; cursor: pointer; }
+  textarea.gig-input { resize: vertical; min-height: 80px; }
+  .gig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .gig-modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;
+    padding-top: 16px; border-top: 1px solid var(--border); }
+  /* Empty state */
+  .gig-empty { text-align: center; padding: 60px 20px; }
+  .gig-empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+  .gig-empty-text { font-size: 16px; color: var(--text-dim); margin-bottom: 20px; }
+  /* Animations */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .gig-card { animation: slideUp 0.3s ease backwards; }
+  .gig-grid .gig-card:nth-child(1) { animation-delay: 0.02s; }
+  .gig-grid .gig-card:nth-child(2) { animation-delay: 0.04s; }
+  .gig-grid .gig-card:nth-child(3) { animation-delay: 0.06s; }
+  .gig-grid .gig-card:nth-child(4) { animation-delay: 0.08s; }
+  .gig-grid .gig-card:nth-child(5) { animation-delay: 0.10s; }
+  .gig-grid .gig-card:nth-child(6) { animation-delay: 0.12s; }
+  /* Scrollbar */
+  .gig-modal::-webkit-scrollbar { width: 6px; }
+  .gig-modal::-webkit-scrollbar-track { background: transparent; }
+  .gig-modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  /* Loading */
+  .gig-spinner { width: 24px; height: 24px; border: 2px solid var(--border);
+    border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.6s linear infinite; margin: 40px auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 640px) {
+    .gig-grid { grid-template-columns: 1fr; }
+    .gig-row { grid-template-columns: 1fr; }
+    .gig-tabs { flex-wrap: nowrap; }
+    .gig-tab { padding: 8px 14px; font-size: 13px; }
+  }
+`;
+
+// ── Modal Form Component ────────────────────────
+function FormModal({ title, fields, data, onSave, onClose }: {
+  title: string; fields: { key: string; label: string; type: string; options?: { v: string; l: string }[]; required?: boolean }[];
+  data: Record<string, any>; onSave: (d: Record<string, any>) => void; onClose: () => void;
+}) {
+  const [form, setForm] = useState<Record<string, any>>(data);
+  const [saving, setSaving] = useState(false);
+
+  const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try { await onSave(form); } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="gig-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <form className="gig-modal" onSubmit={handleSubmit}>
+        <div className="gig-modal-title">{title}</div>
+        {fields.map((f) => (
+          <div key={f.key} className="gig-input-group">
+            <label className="gig-label">{f.label}{f.required && ' *'}</label>
+            {f.type === 'select' ? (
+              <select className="gig-input" value={form[f.key] || ''} onChange={(e) => set(f.key, e.target.value)} required={f.required}>
+                <option value="">Select...</option>
+                {f.options?.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+              </select>
+            ) : f.type === 'textarea' ? (
+              <textarea className="gig-input" value={form[f.key] || ''} onChange={(e) => set(f.key, e.target.value)}
+                placeholder={f.label} required={f.required} />
+            ) : f.type === 'checkbox' ? (
+              <input type="checkbox" checked={!!form[f.key]} onChange={(e) => set(f.key, e.target.checked)} />
+            ) : (
+              <input className="gig-input" type={f.type} value={form[f.key] || ''} onChange={(e) => set(f.key, e.target.value)}
+                placeholder={f.label} required={f.required} step={f.type === 'number' ? '0.01' : undefined} />
+            )}
+          </div>
+        ))}
+        <div className="gig-modal-footer">
+          <button type="button" className="gig-btn gig-btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="gig-btn gig-btn-primary" disabled={saving}>
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ── Confirm Dialog ──────────────────────────────
+function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="gig-overlay" onClick={(e) => e.target === e.currentTarget && onCancel()}>
+      <div className="gig-modal" style={{ maxWidth: 400, textAlign: 'center' }}>
+        <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
+        <p style={{ fontSize: 15, marginBottom: 24, color: 'var(--text)' }}>{message}</p>
+        <div className="gig-modal-footer" style={{ justifyContent: 'center' }}>
+          <button className="gig-btn gig-btn-ghost" onClick={onCancel}>Cancel</button>
+          <button className="gig-btn gig-btn-danger" onClick={onConfirm}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Field Configs ───────────────────────────────
+const dmOptions = [{ v: 'PH', l: 'Physical' }, { v: 'DG', l: 'Digital' }, { v: 'PD', l: 'Phygital' }];
+
+const reqFields = [
+  { key: 'userid', label: 'User ID', type: 'number', required: true },
+  { key: 'marketid', label: 'Market ID', type: 'number', required: true },
+  { key: 'delivery_mode', label: 'Delivery Mode', type: 'select', options: dmOptions },
+  { key: 'requirements', label: 'Requirements', type: 'textarea' },
+  { key: 'eligibility', label: 'Eligibility', type: 'textarea' },
+  { key: 'budget', label: 'Budget', type: 'number' },
+  { key: 'escrow', label: 'Escrow', type: 'number' },
+  { key: 'bidate', label: 'Bid Date', type: 'date' },
+  { key: 'delivdate', label: 'Delivery Date', type: 'date' },
+  { key: 'doc_url', label: 'Document URL', type: 'text' },
+  { key: 'audio_url', label: 'Audio URL', type: 'text' },
+  { key: 'video_url', label: 'Video URL', type: 'text' },
+];
+
+const offFields = [
+  { key: 'userid', label: 'User ID', type: 'number', required: true },
+  { key: 'marketid', label: 'Market ID', type: 'number', required: true },
+  { key: 'delivery_mode', label: 'Delivery Mode', type: 'select', options: dmOptions },
+  { key: 'offerings', label: 'Offerings', type: 'textarea' },
+  { key: 'doc_url', label: 'Document URL', type: 'text' },
+  { key: 'audio_url', label: 'Audio URL', type: 'text' },
+  { key: 'video_url', label: 'Video URL', type: 'text' },
+];
+
+const bidFields = [
+  { key: 'requirid', label: 'Requirement ID', type: 'number', required: true },
+  { key: 'userid', label: 'User ID', type: 'number', required: true },
+  { key: 'amount', label: 'Amount', type: 'number' },
+  { key: 'escrow', label: 'Escrow', type: 'number' },
+  { key: 'selected', label: 'Selected', type: 'checkbox' },
+];
+
+const agreeFields = [
+  { key: 'bidid', label: 'Bid ID', type: 'number', required: true },
+  { key: 'agreement', label: 'Agreement', type: 'textarea' },
+  { key: 'client_sign', label: 'Client Signature', type: 'text' },
+  { key: 'provider_sign', label: 'Provider Signature', type: 'text' },
+];
+
+// ── Main Component ──────────────────────────────
+export default function GigMarketplace() {
+  const [tab, setTab] = useState<Tab>('requirements');
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [modal, setModal] = useState<{ mode: 'create' | 'edit'; item?: any } | null>(null);
+  const [deleting, setDeleting] = useState<any>(null);
+
+  const endpoints: Record<Tab, string> = {
+    requirements: '/requirements', offerings: '/offerings', bids: '/bids', agreements: '/agreements',
+  };
+
+  const idKeys: Record<Tab, string> = {
+    requirements: 'requirid', offerings: 'offerid', bids: 'bidid', agreements: 'agreeid',
+  };
+
+  const fieldMap: Record<Tab, typeof reqFields> = {
+    requirements: reqFields, offerings: offFields, bids: bidFields, agreements: agreeFields,
+  };
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api<{ data: any[]; total: number }>(endpoints[tab]);
+      setData(res.data);
+      setTotal(res.total);
+    } catch { setData([]); setTotal(0); }
+    setLoading(false);
+  }, [tab]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSave = async (form: Record<string, any>) => {
+    if (modal?.mode === 'create') {
+      await api(endpoints[tab], { method: 'POST', body: JSON.stringify(form) });
+    } else {
+      const id = modal?.item?.[idKeys[tab]];
+      await api(`${endpoints[tab]}/${id}`, { method: 'PUT', body: JSON.stringify(form) });
+    }
+    setModal(null);
+    load();
+  };
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+    await api(`${endpoints[tab]}/${deleting[idKeys[tab]]}`, { method: 'DELETE' });
+    setDeleting(null);
+    load();
+  };
+
+  const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const fmtMoney = (v: string | null) => v ? `₹${Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—';
+  const dmBadge = (m: string | null) => m ? <span className={`gig-badge ${m.toLowerCase()}`}>{(DM as any)[m] || m}</span> : null;
+
+  const renderCard = (item: any) => {
+    switch (tab) {
+      case 'requirements': return (
+        <div key={item.requirid} className="gig-card">
+          <div className="gig-card-header">
+            <div>
+              <div className="gig-card-id">#REQ-{item.requirid}</div>
+              {dmBadge(item.delivery_mode)}
+            </div>
+            <div className="gig-card-actions">
+              <button className="gig-btn gig-btn-ghost gig-btn-sm" onClick={() => setModal({ mode: 'edit', item })}>Edit</button>
+              <button className="gig-btn gig-btn-danger gig-btn-sm" onClick={() => setDeleting(item)}>Del</button>
+            </div>
+          </div>
+          {item.requirements && <div className="gig-field"><div className="gig-field-label">Requirements</div><div className="gig-field-value">{item.requirements}</div></div>}
+          {item.eligibility && <div className="gig-field"><div className="gig-field-label">Eligibility</div><div className="gig-field-value">{item.eligibility}</div></div>}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+            <div className="gig-field"><div className="gig-field-label">Budget</div><div className="gig-money">{fmtMoney(item.budget)}</div></div>
+            <div className="gig-field"><div className="gig-field-label">Escrow</div><div className="gig-money">{fmtMoney(item.escrow)}</div></div>
+            <div className="gig-field"><div className="gig-field-label">Bid Date</div><div className="gig-date">{fmtDate(item.bidate)}</div></div>
+            <div className="gig-field"><div className="gig-field-label">Delivery</div><div className="gig-date">{fmtDate(item.delivdate)}</div></div>
+          </div>
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)' }}>User: {item.userid} · Market: {item.marketid} · Bids: {item.bids?.length || 0}</div>
+        </div>
+      );
+      case 'offerings': return (
+        <div key={item.offerid} className="gig-card">
+          <div className="gig-card-header">
+            <div>
+              <div className="gig-card-id">#OFF-{item.offerid}</div>
+              {dmBadge(item.delivery_mode)}
+            </div>
+            <div className="gig-card-actions">
+              <button className="gig-btn gig-btn-ghost gig-btn-sm" onClick={() => setModal({ mode: 'edit', item })}>Edit</button>
+              <button className="gig-btn gig-btn-danger gig-btn-sm" onClick={() => setDeleting(item)}>Del</button>
+            </div>
+          </div>
+          {item.offerings && <div className="gig-field"><div className="gig-field-label">Offerings</div><div className="gig-field-value">{item.offerings}</div></div>}
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)' }}>User: {item.userid} · Market: {item.marketid}</div>
+        </div>
+      );
+      case 'bids': return (
+        <div key={item.bidid} className="gig-card">
+          <div className="gig-card-header">
+            <div>
+              <div className="gig-card-id">#BID-{item.bidid}</div>
+              <span className={`gig-badge ${item.selected ? 'selected' : 'pending'}`}>
+                {item.selected ? 'Selected' : 'Pending'}
+              </span>
+            </div>
+            <div className="gig-card-actions">
+              <button className="gig-btn gig-btn-ghost gig-btn-sm" onClick={() => setModal({ mode: 'edit', item })}>Edit</button>
+              <button className="gig-btn gig-btn-danger gig-btn-sm" onClick={() => setDeleting(item)}>Del</button>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div className="gig-field"><div className="gig-field-label">Amount</div><div className="gig-money">{fmtMoney(item.amount)}</div></div>
+            <div className="gig-field"><div className="gig-field-label">Escrow</div><div className="gig-money">{fmtMoney(item.escrow)}</div></div>
+          </div>
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)' }}>Req: #{item.requirid} · User: {item.userid}</div>
+        </div>
+      );
+      case 'agreements': return (
+        <div key={item.agreeid} className="gig-card">
+          <div className="gig-card-header">
+            <div><div className="gig-card-id">#AGR-{item.agreeid}</div></div>
+            <div className="gig-card-actions">
+              <button className="gig-btn gig-btn-ghost gig-btn-sm" onClick={() => setModal({ mode: 'edit', item })}>Edit</button>
+              <button className="gig-btn gig-btn-danger gig-btn-sm" onClick={() => setDeleting(item)}>Del</button>
+            </div>
+          </div>
+          {item.agreement && <div className="gig-field"><div className="gig-field-label">Agreement</div><div className="gig-field-value">{item.agreement}</div></div>}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+            <div className="gig-field"><div className="gig-field-label">Client Sign</div><div className="gig-field-value">{item.client_sign || '—'}</div></div>
+            <div className="gig-field"><div className="gig-field-label">Provider Sign</div><div className="gig-field-value">{item.provider_sign || '—'}</div></div>
+          </div>
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)' }}>Bid: #{item.bidid}</div>
+        </div>
+      );
+    }
+  };
+
+  const tabLabels: Record<Tab, string> = {
+    requirements: '📋 Requirements', offerings: '🎯 Offerings', bids: '💰 Bids', agreements: '🤝 Agreements',
+  };
+
+  return (
+    <div className="gig-root">
+      <style>{styles}</style>
+      <div className="gig-container">
+        <div className="gig-header">
+          <div>
+            <h1 className="gig-title">Gig Marketplace</h1>
+            <p className="gig-subtitle">Manage requirements, offerings, bids & agreements</p>
+          </div>
+        </div>
+
+        <div className="gig-tabs">
+          {(Object.keys(tabLabels) as Tab[]).map((t) => (
+            <button key={t} className={`gig-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+              {tabLabels[t]}
+            </button>
+          ))}
+        </div>
+
+        <div className="gig-toolbar">
+          <span className="gig-count">{total} record{total !== 1 ? 's' : ''}</span>
+          <button className="gig-btn gig-btn-primary" onClick={() => setModal({ mode: 'create' })}>
+            + New {tab.slice(0, -1)}
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="gig-spinner" />
+        ) : data.length === 0 ? (
+          <div className="gig-empty">
+            <div className="gig-empty-icon">📭</div>
+            <div className="gig-empty-text">No {tab} yet. Create your first one!</div>
+            <button className="gig-btn gig-btn-primary" onClick={() => setModal({ mode: 'create' })}>
+              + Create {tab.slice(0, -1)}
+            </button>
+          </div>
+        ) : (
+          <div className="gig-grid">{data.map(renderCard)}</div>
+        )}
+      </div>
+
+      {modal && (
+        <FormModal
+          title={modal.mode === 'create' ? `New ${tab.slice(0, -1)}` : `Edit ${tab.slice(0, -1)}`}
+          fields={fieldMap[tab]}
+          data={modal.mode === 'edit' ? modal.item : {}}
+          onSave={handleSave}
+          onClose={() => setModal(null)}
+        />
+      )}
+
+      {deleting && (
+        <ConfirmDialog
+          message={`Delete ${tab.slice(0, -1)} #${deleting[idKeys[tab]]}? This cannot be undone.`}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
+    </div>
+  );
+}
