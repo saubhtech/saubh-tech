@@ -57,7 +57,7 @@ function calcProgress(u: {
   if (u.stateid) filled++;
   if (u.districtid) filled++;
   if (u.pincode) filled++;
-  if (u.placeid) filled++;
+  if (u.placeid || (typeof (u as any).customPlace === 'string' && (u as any).customPlace)) filled++;
   if (u.pic || photoFile) filled++;
   return Math.round((filled / TOTAL_REQUIRED) * 100);
 }
@@ -97,6 +97,8 @@ export default function ProfilePage() {
   const [districtid, setDistrictid] = useState<number | null>(null);
   const [pincode, setPincode] = useState('');
   const [placeid, setPlaceid] = useState<number | null>(null);
+  const [customPlace, setCustomPlace] = useState('');
+  const [showCustomPlace, setShowCustomPlace] = useState(false);
   const [pic, setPic] = useState<string | null>(null);
 
   // Photo: selfie camera + upload fallback
@@ -433,7 +435,7 @@ export default function ProfilePage() {
       if (!stateid) { setError('State is required.'); return; }
       if (!districtid) { setError('District is required.'); return; }
       if (!pincode) { setError('Pin code is required.'); return; }
-      if (!placeid) { setError('Place is required.'); return; }
+      if (!placeid && !customPlace.trim()) { setError('Place is required.'); return; }
       if (!pic && !photoFile) { setError('Please take a selfie or upload a photo.'); return; }
     }
 
@@ -469,6 +471,7 @@ export default function ProfilePage() {
       if (districtid) body.districtid = districtid;
       if (pincode) body.pincode = pincode;
       if (placeid) body.placeid = placeid;
+      if (customPlace.trim()) body.customPlace = customPlace.trim();
 
       const res = await authFetch(`${API}/auth/profile`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -675,8 +678,14 @@ export default function ProfilePage() {
                               ) : (
                                 <span className="pp-otp-expired">Code expired</span>
                               )}
-                              <span className="pp-otp-resend" style={{ opacity: emailCountdown > 550 ? 0.3 : 1, pointerEvents: emailCountdown > 550 ? 'none' : 'auto' }}
-                                onClick={() => sendOtp('email', email)}>Resend</span>
+                              {emailCountdown > 0 ? (
+                                <span className="pp-otp-resend" style={{ opacity: emailCountdown > 550 ? 0.3 : 1, pointerEvents: emailCountdown > 550 ? 'none' : 'auto' }}
+                                  onClick={() => sendOtp('email', email)}>Resend</span>
+                              ) : (
+                                <button type="button" className="pp-otp-btn" style={{ height: '32px', fontSize: '.78rem', padding: '0 12px' }}
+                                  onClick={() => { setEmailOtpSent(false); setEmailOtp(['', '', '', '', '', '']); }}
+                                >Send New Code</button>
+                              )}
                             </div>
                           </div>
                         )}
@@ -733,8 +742,14 @@ export default function ProfilePage() {
                               ) : (
                                 <span className="pp-otp-expired">Code expired</span>
                               )}
-                              <span className="pp-otp-resend" style={{ opacity: mobileCountdown > 90 ? 0.3 : 1, pointerEvents: mobileCountdown > 90 ? 'none' : 'auto' }}
-                                onClick={() => sendOtp('mobile', phone)}>Resend</span>
+                              {mobileCountdown > 0 ? (
+                                <span className="pp-otp-resend" style={{ opacity: mobileCountdown > 250 ? 0.3 : 1, pointerEvents: mobileCountdown > 250 ? 'none' : 'auto' }}
+                                  onClick={() => sendOtp('mobile', phone)}>Resend</span>
+                              ) : (
+                                <button type="button" className="pp-otp-btn" style={{ height: '32px', fontSize: '.78rem', padding: '0 12px' }}
+                                  onClick={() => { setMobileOtpSent(false); setMobileOtp(['', '', '', '']); }}
+                                >Send New Code</button>
+                              )}
                             </div>
                           </div>
                         )}
@@ -838,10 +853,31 @@ export default function ProfilePage() {
                 <div className="pp-row">
                   <div className="pp-field" style={{ gridColumn: 'span 2' }}>
                     <label className="pp-label">Place *</label>
-                    <select className="pp-input pp-select" value={placeid || ''} onChange={e => setPlaceid(e.target.value ? +e.target.value : null)} disabled={!pincode}>
-                      <option value="">{pincode ? 'Select place' : 'Select pincode first'}</option>
-                      {places.map((p: any) => <option key={p.placeid} value={Number(p.placeid)}>{p.place}</option>)}
-                    </select>
+                    {!showCustomPlace ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <select className="pp-input pp-select" value={placeid || ''} onChange={e => { setPlaceid(e.target.value ? +e.target.value : null); setCustomPlace(''); }} disabled={!pincode}>
+                          <option value="">{pincode ? 'Select place' : 'Select pincode first'}</option>
+                          {places.map((p: any) => <option key={p.placeid} value={Number(p.placeid)}>{p.place}</option>)}
+                        </select>
+                        {pincode && (
+                          <span className="pp-custom-place-link" onClick={() => { setShowCustomPlace(true); setPlaceid(null); }}>
+                            + Add new place (not in list)
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <input
+                          className="pp-input"
+                          value={customPlace}
+                          onChange={e => setCustomPlace(e.target.value)}
+                          placeholder="Enter your place name"
+                        />
+                        <span className="pp-custom-place-link" onClick={() => { setShowCustomPlace(false); setCustomPlace(''); }}>
+                          ← Select from list instead
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1058,6 +1094,12 @@ const baseStyles = `
 /* Submit */
 .pp-submit-row{display:flex;justify-content:flex-end;padding-top:4px;gap:12px;}
 /* Save Draft button */
+.pp-custom-place-link{
+  font-size:.78rem;color:#7c3aed;cursor:pointer;font-weight:600;
+  transition:.2s;user-select:none;
+}
+.pp-custom-place-link:hover{text-decoration:underline;color:#6d28d9;}
+
 .pp-draft-btn{
   height:46px;padding:0 24px;border:2px solid rgba(124,58,237,0.3);border-radius:12px;
   background:transparent;color:#7c3aed;
