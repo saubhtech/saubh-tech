@@ -10,7 +10,7 @@ const ks: TranslationStrings = {
   // ─── Nav ───
   'nav.gigWork': 'گِگ ورک',
   'nav.branding': 'برانڈنگ',
-  'nav.saubhos': 'SaubhOS',
+  'nav.saubhos': 'सोबोस',
   'nav.academy': 'اکیڈمی',
   'nav.support': 'حمایت',
   'nav.login': 'لاگ ان',
@@ -223,8 +223,8 @@ const ks: TranslationStrings = {
   'newsletter.subscribe': 'سبسکرائب کریں۔',
 
   // ─── Footer ───
-  'footer.gstn': 'GSTN: 10AAUPS8603H1ZH',
-  'footer.udyam': 'UDYAM-BR-31-0056281',
+  'footer.gstn': 'जी एस टी एनः 10 ए ए ओ पी एस 8603 एच 1 जेड एच',
+  'footer.udyam': 'उदयम-बी. आर.-31-0056281',
   'footer.community': 'برادری',
   'footer.community.about': 'سبھ گلوبل کے بارے میں',
   'footer.community.founders': 'بانی شریک مالکان',
@@ -254,12 +254,12 @@ const ks: TranslationStrings = {
   'meta.description': 'محفوظ ٹمٹم کام، UGC مواد کی تخلیق، اور ڈیجیٹل برانڈنگ کے لیے دنیا بھر میں تصدیق شدہ افراد اور کاروبار سے جڑیں۔ یسکرو سے محفوظ ادائیگیاں۔',
 
   // ─── Login Page ───
-  'login.register.title': '👤 New here? Register',
-  'login.register.subtitle': 'Create your account instantly. We\'ll send your login credentials via WhatsApp.',
-  'login.register.namePlaceholder': 'Your name',
-  'login.register.phonePlaceholder': 'WhatsApp number (e.g. 9876543210)',
-  'login.register.btn': '📱 Register via WhatsApp',
-  'login.register.creating': 'Creating account...',
+  'login.register.title': 'नई यहाँ? रजिस्टर करो',
+  'login.register.subtitle': 'तुरन्त बनाओ खाता। हम।'ll send your login credentials via WhatsApp.',
+  'login.register.namePlaceholder': 'नाम तेरा, आस तेरी',
+  'login.register.phonePlaceholder': 'वाट्सऐप नंबर (मिसाल 9876543210)',
+  'login.register.btn': 'व्हॉटसअप ज़रिये रजिस्टर करा',
+  'login.register.creating': 'अकाउंट बनाये _',
   'login.register.checkWhatsapp': '📱 Check your WhatsApp',
   'login.register.another': 'Register another →',
   'login.register.already': 'already registered?',
