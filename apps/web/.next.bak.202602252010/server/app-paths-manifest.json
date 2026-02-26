@@ -1,0 +1,20 @@
+{
+  "/[locale]/dashboard/page": "app/[locale]/dashboard/page.js",
+  "/[locale]/gig/page": "app/[locale]/gig/page.js",
+  "/[locale]/language/page": "app/[locale]/language/page.js",
+  "/[locale]/login/page": "app/[locale]/login/page.js",
+  "/[locale]/page": "app/[locale]/page.js",
+  "/[locale]/profile/page": "app/[locale]/profile/page.js",
+  "/[locale]/sitemap.xml/route": "app/[locale]/sitemap.xml/route.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/gig/[...path]/route": "app/api/gig/[...path]/route.js",
+  "/api/healthz/route": "app/api/healthz/route.js",
+  "/api/lang/detect/route": "app/api/lang/detect/route.js",
+  "/api/lang/page/route": "app/api/lang/page/route.js",
+  "/api/lang/validate/route": "app/api/lang/validate/route.js",
+  "/api/translate/route": "app/api/translate/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/robots.txt/route": "app/robots.txt/route.js",
+  "/sitemap.xml/route": "app/sitemap.xml/route.js"
+}

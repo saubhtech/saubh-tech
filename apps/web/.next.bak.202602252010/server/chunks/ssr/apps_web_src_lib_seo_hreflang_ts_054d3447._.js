@@ -1,0 +1,3 @@
+module.exports=[42750,a=>{"use strict";let b=["en-in","hi-in","bn-in","ta-in","te-in","mr-in","gu-in","kn-in","ml-in","pa-in","or-in","as-in","ur-in","ks-in","sd-in","sa-in","ne-in","mai-in","kok-in","mni-in","doi-in","sat-in","brx-in"],c=process.env.NEXT_PUBLIC_BASE_URL||"https://saubh.tech";function d(a=""){return b.map(b=>({locale:b,url:`${c}/${b}${a}`}))}function e(a,b=""){return`${c}/${a}${b}`}a.s(["getCanonicalUrl",()=>e,"getHreflangLinks",()=>d],42750)}];
+
+//# sourceMappingURL=apps_web_src_lib_seo_hreflang_ts_054d3447._.js.map

@@ -1,0 +1,20 @@
+{
+  "/[locale]/dashboard/page": "/[locale]/dashboard",
+  "/[locale]/gig/page": "/[locale]/gig",
+  "/[locale]/language/page": "/[locale]/language",
+  "/[locale]/login/page": "/[locale]/login",
+  "/[locale]/page": "/[locale]",
+  "/[locale]/profile/page": "/[locale]/profile",
+  "/[locale]/sitemap.xml/route": "/[locale]/sitemap.xml",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/gig/[...path]/route": "/api/gig/[...path]",
+  "/api/healthz/route": "/api/healthz",
+  "/api/lang/detect/route": "/api/lang/detect",
+  "/api/lang/page/route": "/api/lang/page",
+  "/api/lang/validate/route": "/api/lang/validate",
+  "/api/translate/route": "/api/translate",
+  "/favicon.ico/route": "/favicon.ico",
+  "/robots.txt/route": "/robots.txt",
+  "/sitemap.xml/route": "/sitemap.xml"
+}
