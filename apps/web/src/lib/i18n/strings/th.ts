@@ -10,7 +10,7 @@ const th: TranslationStrings = {
   // ─── Nav ───
   'nav.gigWork': 'งานกิ๊ก',
   'nav.branding': 'การสร้างแบรนด์',
-  'nav.saubhos': 'SaubhOS',
+  'nav.saubhos': 'ซาอบอส',
   'nav.academy': 'สถาบันการศึกษา',
   'nav.support': 'สนับสนุน',
   'nav.login': 'เข้าสู่ระบบ',
@@ -270,7 +270,7 @@ const th: TranslationStrings = {
   'login.signin.sendingOtp': 'ส่ง OTP...',
   'login.signin.codeSentTo': 'รหัสที่ส่งไปยัง',
   'login.signin.verifyBtn': 'ยืนยัน & เข้าระบบ',
-  'login.signin.verifying': 'Verifying...',
+  'login.signin.verifying': 'ตรวจสอบ...',
   'login.signin.verified': 'ยืนยันแล้ว เปลี่ยนทาง',
   'login.signin.changeNumber': '← เปลี่ยนเบอร์',
   'login.signin.resendCode': 'รหัสส่งกลับ',

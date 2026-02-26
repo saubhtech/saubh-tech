@@ -11,7 +11,7 @@ const te: TranslationStrings = {
   // ─── Navbar ───
   'nav.gigWork': 'గిగ్-వర్క్',
   'nav.branding': 'బ్రాండింగ్',
-  'nav.saubhos': 'SaubhOS',
+  'nav.saubhos': 'సౌభోస్',
   'nav.academy': 'అకాడమీ',
   'nav.support': 'సహాయం',
   'nav.login': 'లాగిన్',
@@ -151,7 +151,7 @@ const te: TranslationStrings = {
   'blog.viewAll': 'అన్ని ఆర్టికల్స్ చూడండి',
 
   // ─── FAQ ───
-  'faq.tag': 'FAQ',
+  'faq.tag': 'తరచుగా అడిగే ప్రశ్నలు',
   'faq.title': 'తరచుగా అడిగే ప్రశ్నలు (FAQ)',
   'faq.subtitle': 'Saubh.Tech గురించి సాధారణ ప్రశ్నలకు సమాధానాలు కనుగొనండి',
   'faq.q1': 'Saubh.Tech సురక్షితమా?',
@@ -247,7 +247,7 @@ const te: TranslationStrings = {
   'footer.addr2': '5వ అంతస్తు, S.B. ప్లాజా, అస్సాం సచివాలయం ఎదురుగా, దిస్పూర్ - 781006',
   'footer.tagline': 'గిగ్ వర్క్. ధృవీకరించబడిన వ్యక్తులు. సురక్షిత ఆదాయం',
   'footer.credit': 'మణి చేత ఊహించబడింది, భూమికి ఒక రత్నం.',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'అన్ని హక్కులు రిజర్వ్ చేయబడ్డాయి.',
 
   // ─── SEO / Meta ───
@@ -271,7 +271,7 @@ const te: TranslationStrings = {
   'login.signin.sendingOtp': 'ఓటిపి పంపుతోంది...',
   'login.signin.codeSentTo': 'కోడ్ పంపబడింది',
   'login.signin.verifyBtn': 'ధృవీకరించండి & సైన్ ఇన్ చేయండి',
-  'login.signin.verifying': 'Verifying...',
+  'login.signin.verifying': 'ధృవీకరిస్తోంది...',
   'login.signin.verified': 'ధృవీకరించబడింది! దారి మళ్లిస్తోంది...',
   'login.signin.changeNumber': 'సంఖ్యను మార్చండి',
   'login.signin.resendCode': 'కోడ్ను తిరిగి పంపండి',
