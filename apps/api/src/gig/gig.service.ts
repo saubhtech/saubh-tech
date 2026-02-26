@@ -5,100 +5,153 @@ import { PrismaService } from '../prisma/prisma.service';
 export class GigService {
   constructor(private prisma: PrismaService) {}
 
-  // Requirements
-  async getRequirements(page = 1, limit = 20) {
-    const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      this.prisma.requirement.findMany({ skip, take: limit, orderBy: { created_at: 'desc' }, include: { bids: true } }),
-      this.prisma.requirement.count(),
-    ]);
-    return { data, total, page, limit, pages: Math.ceil(total / limit) };
+  // ─── Market Data (master schema) ─────────────────────────────────
+  async getSectors() {
+    return this.prisma.$queryRaw`
+      SELECT sectorid, sector, code
+      FROM master.sector
+      WHERE is_active = true
+      ORDER BY sort_order, sector
+    `;
   }
 
-  async getRequirement(id: bigint) {
-    return this.prisma.requirement.findUniqueOrThrow({ where: { requirid: id }, include: { bids: { include: { bid_agree: true } } } });
+  async getFieldsBySector(sectorid: number) {
+    return this.prisma.$queryRaw`
+      SELECT fieldid, field, sectorid, code
+      FROM master.field
+      WHERE sectorid = ${sectorid} AND is_active = true
+      ORDER BY sort_order, field
+    `;
   }
 
-  async createRequirement(dto: any) {
-    return this.prisma.requirement.create({ data: dto });
+  async getMarketItems(sectorid: number, fieldid: number, p_s_ps?: string) {
+    if (p_s_ps) {
+      return this.prisma.$queryRaw`
+        SELECT marketid, sectorid, fieldid, p_s_ps, item, delivery_mode, code
+        FROM master.market
+        WHERE sectorid = ${sectorid}
+          AND fieldid = ${fieldid}
+          AND p_s_ps = ${p_s_ps}
+          AND is_active = true
+        ORDER BY sort_order, item
+      `;
+    }
+    return this.prisma.$queryRaw`
+      SELECT marketid, sectorid, fieldid, p_s_ps, item, delivery_mode, code
+      FROM master.market
+      WHERE sectorid = ${sectorid}
+        AND fieldid = ${fieldid}
+        AND is_active = true
+      ORDER BY sort_order, item
+    `;
   }
 
-  async updateRequirement(id: bigint, dto: any) {
-    return this.prisma.requirement.update({ where: { requirid: id }, data: dto });
+  // Get distinct p_s_ps values for a sector+field combo
+  async getProductServiceOptions(sectorid: number, fieldid: number) {
+    return this.prisma.$queryRaw`
+      SELECT DISTINCT p_s_ps
+      FROM master.market
+      WHERE sectorid = ${sectorid}
+        AND fieldid = ${fieldid}
+        AND is_active = true
+      ORDER BY p_s_ps
+    `;
   }
 
-  async deleteRequirement(id: bigint) {
-    return this.prisma.requirement.delete({ where: { requirid: id } });
+  // ─── Requirements CRUD ───────────────────────────────────────────
+  async getRequirements(userid?: bigint) {
+    if (userid) {
+      return this.prisma.requirement.findMany({ where: { userid }, orderBy: { created_at: 'desc' } });
+    }
+    return this.prisma.requirement.findMany({ orderBy: { created_at: 'desc' } });
   }
 
-  // Offerings
-  async getOfferings(page = 1, limit = 20) {
-    const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      this.prisma.offering.findMany({ skip, take: limit, orderBy: { created_at: 'desc' } }),
-      this.prisma.offering.count(),
-    ]);
-    return { data, total, page, limit, pages: Math.ceil(total / limit) };
+  async getRequirementById(requirid: bigint) {
+    return this.prisma.requirement.findUnique({ where: { requirid } });
   }
 
-  async getOffering(id: bigint) {
-    return this.prisma.offering.findUniqueOrThrow({ where: { offerid: id } });
+  async createRequirement(data: {
+    userid: bigint;
+    marketid: number;
+    delivery_mode?: string;
+    requirements?: string;
+    eligibility?: string;
+    doc_url?: string;
+    audio_url?: string;
+    video_url?: string;
+    budget?: number;
+    escrow?: number;
+    bidate?: Date;
+    delivdate?: Date;
+  }) {
+    return this.prisma.requirement.create({ data });
   }
 
-  async createOffering(dto: any) {
-    return this.prisma.offering.create({ data: dto });
+  async updateRequirement(requirid: bigint, data: any) {
+    return this.prisma.requirement.update({ where: { requirid }, data });
   }
 
-  async updateOffering(id: bigint, dto: any) {
-    return this.prisma.offering.update({ where: { offerid: id }, data: dto });
+  async deleteRequirement(requirid: bigint) {
+    return this.prisma.requirement.delete({ where: { requirid } });
   }
 
-  async deleteOffering(id: bigint) {
-    return this.prisma.offering.delete({ where: { offerid: id } });
+  // ─── Offerings CRUD ──────────────────────────────────────────────
+  async getOfferings(userid?: bigint) {
+    if (userid) {
+      return this.prisma.offering.findMany({ where: { userid }, orderBy: { created_at: 'desc' } });
+    }
+    return this.prisma.offering.findMany({ orderBy: { created_at: 'desc' } });
   }
 
-  // Bids
-  async getBids(requirid?: bigint, page = 1, limit = 20) {
-    const skip = (page - 1) * limit;
-    const where = requirid ? { requirid } : {};
-    const [data, total] = await Promise.all([
-      this.prisma.bid.findMany({ where, skip, take: limit, orderBy: { created_at: 'desc' }, include: { requirement: true, bid_agree: true } }),
-      this.prisma.bid.count({ where }),
-    ]);
-    return { data, total, page, limit, pages: Math.ceil(total / limit) };
+  async createOffering(data: any) {
+    return this.prisma.offering.create({ data });
   }
 
-  async createBid(dto: any) {
-    return this.prisma.bid.create({ data: dto, include: { requirement: true } });
+  async updateOffering(offerid: bigint, data: any) {
+    return this.prisma.offering.update({ where: { offerid }, data });
   }
 
-  async updateBid(id: bigint, dto: any) {
-    return this.prisma.bid.update({ where: { bidid: id }, data: dto });
+  async deleteOffering(offerid: bigint) {
+    return this.prisma.offering.delete({ where: { offerid } });
   }
 
-  async deleteBid(id: bigint) {
-    return this.prisma.bid.delete({ where: { bidid: id } });
+  // ─── Bids CRUD ───────────────────────────────────────────────────
+  async getBids(requirid?: bigint) {
+    if (requirid) {
+      return this.prisma.bid.findMany({ where: { requirid }, orderBy: { created_at: 'desc' } });
+    }
+    return this.prisma.bid.findMany({ orderBy: { created_at: 'desc' } });
   }
 
-  // Agreements
-  async getAgreements(page = 1, limit = 20) {
-    const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      this.prisma.bidAgree.findMany({ skip, take: limit, orderBy: { created_at: 'desc' }, include: { bid: { include: { requirement: true } } } }),
-      this.prisma.bidAgree.count(),
-    ]);
-    return { data, total, page, limit, pages: Math.ceil(total / limit) };
+  async createBid(data: any) {
+    return this.prisma.bid.create({ data });
   }
 
-  async createAgreement(dto: any) {
-    return this.prisma.bidAgree.create({ data: dto, include: { bid: true } });
+  async updateBid(bidid: bigint, data: any) {
+    return this.prisma.bid.update({ where: { bidid }, data });
   }
 
-  async updateAgreement(id: bigint, dto: any) {
-    return this.prisma.bidAgree.update({ where: { agreeid: id }, data: dto });
+  async deleteBid(bidid: bigint) {
+    return this.prisma.bid.delete({ where: { bidid } });
   }
 
-  async deleteAgreement(id: bigint) {
-    return this.prisma.bidAgree.delete({ where: { agreeid: id } });
+  // ─── Agreements CRUD ─────────────────────────────────────────────
+  async getAgreements(bidid?: bigint) {
+    if (bidid) {
+      return this.prisma.bidAgree.findMany({ where: { bidid }, orderBy: { created_at: 'desc' } });
+    }
+    return this.prisma.bidAgree.findMany({ orderBy: { created_at: 'desc' } });
+  }
+
+  async createAgreement(data: any) {
+    return this.prisma.bidAgree.create({ data });
+  }
+
+  async updateAgreement(agreeid: bigint, data: any) {
+    return this.prisma.bidAgree.update({ where: { agreeid }, data });
+  }
+
+  async deleteAgreement(agreeid: bigint) {
+    return this.prisma.bidAgree.delete({ where: { agreeid } });
   }
 }
