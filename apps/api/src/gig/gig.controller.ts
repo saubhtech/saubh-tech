@@ -1,34 +1,19 @@
-import {
-  Controller, Get, Post, Put, Delete, Res,
+python3 -c "
+content = '''import {
+  Controller, Get, Post, Put, Delete,
   Body, Param, Query, UseInterceptors,
-  UploadedFile, ParseIntPipe, BadRequestException,
-  NotFoundException, StreamableFile,
+  ParseIntPipe,
 } from '@nestjs/common';
-import type { Response } from 'express';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
 import { GigService } from './gig.service';
 import { BigIntInterceptor } from './bigint.interceptor';
-
-const UPLOAD_DIR = '/data/uploads/gig';
-
-// Ensure upload directory exists
-if (!existsSync(UPLOAD_DIR)) {
-  mkdirSync(UPLOAD_DIR, { recursive: true });
-}
 
 @Controller('gig')
 @UseInterceptors(BigIntInterceptor)
 export class GigController {
   constructor(private readonly gigService: GigService) {}
 
-  // ─── Market Data Endpoints ─────────────────────────────────────
   @Get('sectors')
-  async getSectors() {
-    return this.gigService.getSectors();
-  }
+  async getSectors() { return this.gigService.getSectors(); }
 
   @Get('fields/:sectorid')
   async getFieldsBySector(@Param('sectorid', ParseIntPipe) sectorid: number) {
@@ -39,80 +24,15 @@ export class GigController {
   async getProductServiceOptions(
     @Query('sectorid', ParseIntPipe) sectorid: number,
     @Query('fieldid', ParseIntPipe) fieldid: number,
-  ) {
-    return this.gigService.getProductServiceOptions(sectorid, fieldid);
-  }
+  ) { return this.gigService.getProductServiceOptions(sectorid, fieldid); }
 
   @Get('market-items')
   async getMarketItems(
     @Query('sectorid', ParseIntPipe) sectorid: number,
     @Query('fieldid', ParseIntPipe) fieldid: number,
     @Query('p_s_ps') p_s_ps?: string,
-  ) {
-    return this.gigService.getMarketItems(sectorid, fieldid, p_s_ps);
-  }
+  ) { return this.gigService.getMarketItems(sectorid, fieldid, p_s_ps); }
 
-  // ─── File Upload ───────────────────────────────────────────────
-  @Post('upload')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-        filename: (_req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname) || '.bin';
-          cb(null, `${uniqueSuffix}${ext}`);
-        },
-      }),
-      limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
-      fileFilter: (_req, file, cb) => {
-        const allowed = /\.(pdf|doc|docx|jpg|jpeg|png|gif|webp|mp3|wav|ogg|webm|mp4|mov|avi)$/i;
-        if (allowed.test(extname(file.originalname))) {
-          cb(null, true);
-        } else {
-          cb(new BadRequestException('File type not allowed'), false);
-        }
-      },
-    }),
-  )
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('No file provided');
-    return {
-      url: `/api/gig/files/${file.filename}`,
-      originalName: file.originalname,
-      size: file.size,
-      mimetype: file.mimetype,
-    };
-  }
-
-  // ─── Serve uploaded files ──────────────────────────────────────
-  @Get('files/:filename')
-  getFile(
-    @Param('filename') filename: string,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const { createReadStream, statSync } = require('fs');
-    const filePath = join(UPLOAD_DIR, filename);
-    try {
-      const stat = statSync(filePath);
-      const stream = createReadStream(filePath);
-      // Set content type based on extension
-      const ext = filename.split('.').pop()?.toLowerCase() || '';
-      const mimeMap: Record<string, string> = {
-        pdf: 'application/pdf', doc: 'application/msword',
-        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
-        webp: 'image/webp', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
-        webm: 'video/webm', mp4: 'video/mp4', mov: 'video/quicktime',
-      };
-      res.set({ 'Content-Type': mimeMap[ext] || 'application/octet-stream' });
-      return new StreamableFile(stream, { length: stat.size });
-    } catch {
-      throw new NotFoundException('File not found');
-    }
-  }
-
-  // ─── Requirements CRUD ─────────────────────────────────────────
   @Get('requirements')
   async getRequirements(@Query('userid') userid?: string) {
     return this.gigService.getRequirements(userid ? BigInt(userid) : undefined);
@@ -128,12 +48,12 @@ export class GigController {
     const data = {
       userid: BigInt(body.userid),
       marketid: parseInt(body.marketid),
-      delivery_mode: body.delivery_mode || null,
-      requirements: body.requirements || null,
-      eligibility: body.eligibility || null,
-      doc_url: body.doc_url || null,
-      audio_url: body.audio_url || null,
-      video_url: body.video_url || null,
+      delivery_mode: body.delivery_mode || undefined,
+      requirements: body.requirements || undefined,
+      eligibility: body.eligibility || undefined,
+      doc_url: body.doc_url || undefined,
+      audio_url: body.audio_url || undefined,
+      video_url: body.video_url || undefined,
       budget: body.budget ? parseFloat(body.budget) : undefined,
       escrow: body.escrow ? parseFloat(body.escrow) : undefined,
       bidate: body.bidate ? new Date(body.bidate) : undefined,
@@ -164,7 +84,6 @@ export class GigController {
     return this.gigService.deleteRequirement(BigInt(id));
   }
 
-  // ─── Offerings CRUD ────────────────────────────────────────────
   @Get('offerings')
   async getOfferings(@Query('userid') userid?: string) {
     return this.gigService.getOfferings(userid ? BigInt(userid) : undefined);
@@ -172,16 +91,11 @@ export class GigController {
 
   @Post('offerings')
   async createOffering(@Body() body: any) {
-    const data = {
-      userid: BigInt(body.userid),
-      marketid: parseInt(body.marketid),
-      delivery_mode: body.delivery_mode || null,
-      offerings: body.offerings || null,
-      doc_url: body.doc_url || null,
-      audio_url: body.audio_url || null,
-      video_url: body.video_url || null,
-    };
-    return this.gigService.createOffering(data);
+    return this.gigService.createOffering({
+      userid: BigInt(body.userid), marketid: parseInt(body.marketid),
+      delivery_mode: body.delivery_mode || null, offerings: body.offerings || null,
+      doc_url: body.doc_url || null, audio_url: body.audio_url || null, video_url: body.video_url || null,
+    });
   }
 
   @Put('offerings/:id')
@@ -194,7 +108,6 @@ export class GigController {
     return this.gigService.deleteOffering(BigInt(id));
   }
 
-  // ─── Bids CRUD ─────────────────────────────────────────────────
   @Get('bids')
   async getBids(@Query('requirid') requirid?: string) {
     return this.gigService.getBids(requirid ? BigInt(requirid) : undefined);
@@ -202,13 +115,11 @@ export class GigController {
 
   @Post('bids')
   async createBid(@Body() body: any) {
-    const data = {
-      requirid: BigInt(body.requirid),
-      userid: BigInt(body.userid),
+    return this.gigService.createBid({
+      requirid: BigInt(body.requirid), userid: BigInt(body.userid),
       amount: body.amount ? parseFloat(body.amount) : null,
       escrow: body.escrow ? parseFloat(body.escrow) : undefined,
-    };
-    return this.gigService.createBid(data);
+    });
   }
 
   @Put('bids/:id')
@@ -221,7 +132,6 @@ export class GigController {
     return this.gigService.deleteBid(BigInt(id));
   }
 
-  // ─── Agreements CRUD ───────────────────────────────────────────
   @Get('agreements')
   async getAgreements(@Query('bidid') bidid?: string) {
     return this.gigService.getAgreements(bidid ? BigInt(bidid) : undefined);
@@ -229,13 +139,10 @@ export class GigController {
 
   @Post('agreements')
   async createAgreement(@Body() body: any) {
-    const data = {
-      bidid: BigInt(body.bidid),
-      agreement: body.agreement || null,
-      client_sign: body.client_sign || null,
-      provider_sign: body.provider_sign || null,
-    };
-    return this.gigService.createAgreement(data);
+    return this.gigService.createAgreement({
+      bidid: BigInt(body.bidid), agreement: body.agreement || null,
+      client_sign: body.client_sign || null, provider_sign: body.provider_sign || null,
+    });
   }
 
   @Put('agreements/:id')
@@ -248,3 +155,8 @@ export class GigController {
     return this.gigService.deleteAgreement(BigInt(id));
   }
 }
+'''
+with open('apps/api/src/gig/gig.controller.ts', 'w') as f:
+    f.write(content)
+print('Written successfully')
+"
