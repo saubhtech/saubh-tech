@@ -1,3 +1,4 @@
+import { GigModule } from './gig/gig.module';
 import { Module } from '@nestjs/common';
 import { I18nModule } from './i18n/i18n.module';
 import { ConfigModule } from '@nestjs/config';
@@ -37,6 +38,7 @@ import { BackupModule } from './backup/backup.module';
     ProfileModule,
     BackupModule,
     I18nModule,
+    GigModule,
   ],
 })
 export class AppModule {}
