@@ -220,7 +220,7 @@ const fr: TranslationStrings = {
   'newsletter.name': 'Nom',
   'newsletter.whatsapp': 'Appel d\'offres',
   'newsletter.email': 'E-mail',
-  'newsletter.subscribe': 'Subscribe',
+  'newsletter.subscribe': 'Abonnez-vous',
 
   // ─── Footer ───
   'footer.gstn': 'Résultats de l\'enquête',
@@ -242,7 +242,7 @@ const fr: TranslationStrings = {
   'footer.legal.escrow': 'Système de dépôt',
   'footer.legal.refund': 'Politique de remboursement',
   'footer.legal.payment': 'Paiement en ligne',
-  'footer.addr1': '01 Tola-Tari, Sarha, Dahiawan, Chapra, Saran, Bihar \u2013 841301',
+  'footer.addr1': '01 Tola-Tari, Sarha, Dahiawan, Chapra, Saran, Bihar \\u2013 841301',
   'footer.addr2': '5ème étage, S.B. Plaza, Opp Assam Secretariat, Dispur - 781006',
   'footer.tagline': 'Travail de concert. Personnes vérifiées. Revenu garanti',
   'footer.credit': 'Imaginé par Mani, un joyau de la terre.',

@@ -270,7 +270,7 @@ const ru: TranslationStrings = {
   'login.signin.sendingOtp': 'Посылаю OTP...',
   'login.signin.codeSentTo': 'Код, отправленный на',
   'login.signin.verifyBtn': 'Проверка и вход',
-  'login.signin.verifying': 'Verifying...',
+  'login.signin.verifying': 'Проверяю...',
   'login.signin.verified': 'Перенаправление...',
   'login.signin.changeNumber': '← Изменение номера',
   'login.signin.resendCode': 'Код пересылки',

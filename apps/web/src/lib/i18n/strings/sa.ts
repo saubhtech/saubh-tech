@@ -218,7 +218,7 @@ const sa: TranslationStrings = {
   'newsletter.title': 'समाचार पत्रिका',
   'newsletter.subtitle': 'Saubh.Tech की नवीनतम जानकारी से अपडेट रहें',
   'newsletter.name': 'नाम',
-  'newsletter.whatsapp': 'WhatsApp',
+  'newsletter.whatsapp': 'वाट्सप्',
   'newsletter.email': 'ईमेल',
   'newsletter.subscribe': 'सदस्यता लें',
 
@@ -270,7 +270,7 @@ const sa: TranslationStrings = {
   'login.signin.sendingOtp': 'ओटिपि प्रेषयति...',
   'login.signin.codeSentTo': 'कोड् इत्यस्मै प्रेषितम्।',
   'login.signin.verifyBtn': 'सत्यापयतु तथा प्रवेशं कुरु।',
-  'login.signin.verifying': 'Verifying...',
+  'login.signin.verifying': 'सत्यापनं कुर्वन् -',
   'login.signin.verified': 'परीक्षितम्! पुनर्निर्दिशति...',
   'login.signin.changeNumber': 'संख्या परिवर्तय।',
   'login.signin.resendCode': 'कोड् पुनः प्रेषयतु।',

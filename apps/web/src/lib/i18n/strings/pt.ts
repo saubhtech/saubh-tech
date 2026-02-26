@@ -242,11 +242,11 @@ const pt: TranslationStrings = {
   'footer.legal.escrow': 'Sistema de Garantia',
   'footer.legal.refund': 'Política de Reembolso',
   'footer.legal.payment': 'Pagamento on-line',
-  'footer.addr1': '01 Tola-Tari, Sarha, Dahiawan, Chapra, Saran, Bihar \u2013 841301',
+  'footer.addr1': '01 Tola-Tari, Sarha, Dahiawan, Chapra, Saran, Bihar \\u2013 841301',
   'footer.addr2': '5º andar, S. B. Plaza, Secretariado Opp Assam, Dispur - 781006',
   'footer.tagline': 'Trabalho de show. Pessoas verificadas. Renda garantida',
   'footer.credit': 'Idealizado por Mani, uma joia da terra.',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'Todos os direitos reservados.',
 
   // ─── Meta ───
@@ -270,7 +270,7 @@ const pt: TranslationStrings = {
   'login.signin.sendingOtp': 'Enviando o OTP...',
   'login.signin.codeSentTo': 'Código enviado para',
   'login.signin.verifyBtn': 'Verificar e Inscrever',
-  'login.signin.verifying': 'Verifying...',
+  'login.signin.verifying': 'Verificando...',
   'login.signin.verified': 'Verificado, redirecionamento...',
   'login.signin.changeNumber': '← Alterar o número',
   'login.signin.resendCode': 'Código de reenvio',

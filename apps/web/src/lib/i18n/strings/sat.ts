@@ -218,7 +218,7 @@ const sat: TranslationStrings = {
   'newsletter.title': 'समाचार पत्रिका',
   'newsletter.subtitle': 'Saubh.Tech की नवीनतम जानकारी से अपडेट रहें',
   'newsletter.name': 'नाम',
-  'newsletter.whatsapp': 'WhatsApp',
+  'newsletter.whatsapp': 'ᱳᱭᱟᱴᱥᱯᱟᱯ ᱾',
   'newsletter.email': 'ईमेल',
   'newsletter.subscribe': 'सदस्यता लें',
 
@@ -270,7 +270,7 @@ const sat: TranslationStrings = {
   'login.signin.sendingOtp': 'ᱳᱴᱤᱯᱤ ᱮᱢ ᱮᱢᱚᱜ ᱠᱟᱱᱟ ᱾',
   'login.signin.codeSentTo': 'ᱠᱳᱰ ᱮᱢ ᱥᱮᱱ ᱟᱠᱟᱱᱟ ᱾',
   'login.signin.verifyBtn': 'ᱵᱤᱰᱟᱹᱣ ᱢᱮ ᱟᱨ ᱥᱟᱭᱤᱱ ᱤᱱ ᱢᱮ',
-  'login.signin.verifying': 'Verifying...',
+  'login.signin.verifying': 'ᱵᱤᱰᱟᱹᱣ ᱠᱟᱛᱮ ᱾',
   'login.signin.verified': 'ᱵᱤᱰᱟᱹᱣ ᱦᱩᱭ ᱟᱠᱟᱱᱟ ᱾ ᱨᱤᱼᱰᱮᱨᱮᱴ ᱠᱚᱨᱟᱣ ᱦᱩᱭᱩᱜ ᱠᱟᱱᱟ ᱾',
   'login.signin.changeNumber': 'ᱼᱱᱟᱹᱢᱟᱨ ᱵᱚᱱᱚᱫᱚᱞ ᱢᱮ',
   'login.signin.resendCode': 'ᱠᱳᱰ ᱫᱚ ᱫᱚᱥᱟᱨ ᱛᱮ ᱵᱷᱮᱡᱟ ᱢᱮ ᱾',

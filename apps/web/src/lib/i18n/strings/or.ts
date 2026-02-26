@@ -11,7 +11,7 @@ const or: TranslationStrings = {
   // ─── Navbar ───
   'nav.gigWork': 'ଗିଗ୍-ୱର୍କ',
   'nav.branding': 'ବ୍ରାଣ୍ଡିଂ',
-  'nav.saubhos': 'SaubhOS',
+  'nav.saubhos': 'ସୋବୋସ୍',
   'nav.academy': 'ଏକାଡେମୀ',
   'nav.support': 'ସହାୟତା',
   'nav.login': 'ଲଗଇନ',
@@ -247,7 +247,7 @@ const or: TranslationStrings = {
   'footer.addr2': '5ମ ମହଲା, S.B. ପ୍ଲାଜା, ଅସମ ସଚିବାଳୟ ସାମ୍ନାରେ, ଦିସପୁର - 781006',
   'footer.tagline': 'ଗିଗ୍ ୱର୍କ। ଭେରିଫାଏଡ୍ ଲୋକ। ସୁରକ୍ଷିତ ଆୟ',
   'footer.credit': 'ମଣି ଦ୍ୱାରା ପରିକଳ୍ପିତ, ପୃଥିବୀର ଏକ ରତ୍ନ।',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'ସମସ୍ତ ଅଧିକାର ସଂରକ୍ଷିତ।',
 
   // ─── SEO / Meta ───
@@ -271,7 +271,7 @@ const or: TranslationStrings = {
   'login.signin.sendingOtp': 'ଓଟିପି ପଠାଉଛି...',
   'login.signin.codeSentTo': 'Âକୁ ପଠାଯାଇଥିବା କୋଡ୍',
   'login.signin.verifyBtn': 'ଯାଞ୍ଚ କରନ୍ତୁ ଏବଂ ସାଇନ୍ ଇନ୍ କରନ୍ତୁ',
-  'login.signin.verifying': 'Verifying...',
+  'login.signin.verifying': 'ଯାଞ୍ଚ...',
   'login.signin.verified': 'ଯାଞ୍ଚ କରାଯାଇଛି! ପୁନଃନିର୍ଦେଶିତ...',
   'login.signin.changeNumber': 'Â ନମ୍ବର ବଦଳାନ୍ତୁ',
   'login.signin.resendCode': 'କୋଡ୍ ପୁନଃ ପଠାନ୍ତୁ',

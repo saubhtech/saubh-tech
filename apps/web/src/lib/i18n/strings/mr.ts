@@ -242,7 +242,7 @@ const mr: TranslationStrings = {
   'footer.addr2': '5वा मजला, S.B. प्लाझा, आसाम सचिवालयासमोर, दिसपूर - 781006',
   'footer.tagline': 'गिग वर्क. सत्यापित लोक. सुरक्षित उत्पन्न',
   'footer.credit': 'मणी यांनी कल्पना केलेले, पृथ्वीचे एक रत्न.',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'सर्व हक्क राखीव.',
 
   // ─── SEO / Meta ───

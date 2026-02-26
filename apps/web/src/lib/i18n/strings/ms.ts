@@ -242,11 +242,11 @@ const ms: TranslationStrings = {
   'footer.legal.escrow': 'Sistem Escrow',
   'footer.legal.refund': 'Polisi Bayaran Balik',
   'footer.legal.payment': 'Pembayaran Dalam Talian',
-  'footer.addr1': '01 Tola-Tari, Sarha, Dahiawan, Chapra, Saran, Bihar \u2013 841301',
+  'footer.addr1': '01 Tola-Tari, Sarha, Dahiawan, Chapra, Saran, Bihar \\u2013 841301',
   'footer.addr2': 'Tingkat 5, S.B. Plaza, Sekretariat Opp Assam, Dispur - 781006',
   'footer.tagline': 'Kerja Gig. Orang Yang Disahkan. Pendapatan Terjamin',
   'footer.credit': 'Dibayangkan oleh Mani, permata bumi.',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'Hak Cipta Terpelihara.',
 
   // ─── Meta ───

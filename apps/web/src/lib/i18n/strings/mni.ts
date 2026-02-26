@@ -246,7 +246,7 @@ const mni: TranslationStrings = {
   'footer.addr2': '৫ম তলা, এস.বি. প্লাজা, অসম সচিবালয়ের বিপরীতে, দিসপুর - 781006',
   'footer.tagline': 'গিগ কাজ। যাচাইকৃত মানুষ। নিরাপদ আয়',
   'footer.credit': 'পৃথিবীর রত্ন মণি দ্বারা কল্পনা করা হয়েছিল।',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'সর্বস্বত্ব সংরক্ষিত।',
 
   // ─── Meta ───

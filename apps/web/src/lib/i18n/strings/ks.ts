@@ -246,7 +246,7 @@ const ks: TranslationStrings = {
   'footer.addr2': '5ویں منزل، S.B. پلازہ، آسام سیکرٹریٹ کے بالمقابل، دیسپور - 781006',
   'footer.tagline': 'گِگ ورک۔ تصدیق شدہ لوگ۔ محفوظ آمدنی',
   'footer.credit': 'منی کے ذریعہ تصور کیا گیا، زمین کا ایک زیور۔',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'جملہ حقوق محفوظ ہیں۔',
 
   // ─── Meta ───

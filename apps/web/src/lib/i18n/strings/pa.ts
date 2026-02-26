@@ -11,7 +11,7 @@ const pa: TranslationStrings = {
   // ─── Navbar ───
   'nav.gigWork': 'ਗਿਗ-ਵਰਕ',
   'nav.branding': 'ਬ੍ਰਾਂਡਿੰਗ',
-  'nav.saubhos': 'SaubhOS',
+  'nav.saubhos': 'ਸੌਬੋਸ',
   'nav.academy': 'ਅਕੈਡਮੀ',
   'nav.support': 'ਸਹਾਇਤਾ',
   'nav.login': 'ਲੌਗਇਨ',
@@ -247,7 +247,7 @@ const pa: TranslationStrings = {
   'footer.addr2': '5ਵੀਂ ਮੰਜ਼ਿਲ, S.B. ਪਲਾਜ਼ਾ, ਅਸਾਮ ਸਕੱਤਰੇਤ ਦੇ ਸਾਹਮਣੇ, ਦਿਸਪੁਰ - 781006',
   'footer.tagline': 'ਗਿਗ ਵਰਕ। ਵੈਰੀਫਾਈਡ ਲੋਕ। ਸੁਰੱਖਿਅਤ ਆਮਦਨ',
   'footer.credit': 'ਮਣੀ ਦੁਆਰਾ ਕਲਪਿਤ, ਧਰਤੀ ਦਾ ਇੱਕ ਰਤਨ।',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'ਸਾਰੇ ਅਧਿਕਾਰ ਰਾਖਵੇਂ ਹਨ।',
 
   // ─── SEO / Meta ───
@@ -271,7 +271,7 @@ const pa: TranslationStrings = {
   'login.signin.sendingOtp': 'ਓ. ਟੀ. ਪੀ. ਭੇਜਣਾ...',
   'login.signin.codeSentTo': 'ਕੋਡ ਨੂੰ ਭੇਜਿਆ ਗਿਆ',
   'login.signin.verifyBtn': 'ਜਾਂਚ ਕਰੋ ਅਤੇ ਸਾਈਨ ਇਨ ਕਰੋ',
-  'login.signin.verifying': 'Verifying...',
+  'login.signin.verifying': 'ਤਸਦੀਕ...',
   'login.signin.verified': 'ਤਸਦੀਕ ਕੀਤਾ! ਮੁਡ਼ ਨਿਰਦੇਸ਼ਿਤ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ...',
   'login.signin.changeNumber': 'ਸੰਖਿਆ ਬਦਲੋ',
   'login.signin.resendCode': 'ਕੋਡ ਮੁਡ਼ ਭੇਜੋ',

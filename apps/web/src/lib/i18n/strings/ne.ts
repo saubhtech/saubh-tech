@@ -246,7 +246,7 @@ const ne: TranslationStrings = {
   'footer.addr2': 'पाँचौं तला, S.B. प्लाजा, असम सचिवालयको सामने, दिसपुर - 781006',
   'footer.tagline': 'Gig काम। प्रमाणित व्यक्तिहरू। सुरक्षित आय',
   'footer.credit': 'पृथ्वीको रत्न, मणि द्वारा परिकल्पना।',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'सबै अधिकार सुरक्षित।',
 
   // ─── Meta ───

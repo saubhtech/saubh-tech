@@ -247,7 +247,7 @@ const ml: TranslationStrings = {
   'footer.addr2': '5-ാം നില, S.B. പ്ലാസ, അസം സെക്രട്ടേറിയറ്റിന് എതിര്‍വശം, ദിസ്പൂര്‍ - 781006',
   'footer.tagline': 'ഗിഗ് വര്‍ക്ക്. വെരിഫൈഡ് ആളുകള്‍. സുരക്ഷിത വരുമാനം',
   'footer.credit': 'മണി വിഭാവനം ചെയ്തത്, ഭൂമിയുടെ ഒരു രത്നം.',
-  'footer.copyright': '\u00a92026 Saubh.Tech',
+  'footer.copyright': '\\u00a92026 Saubh.Tech',
   'footer.rights': 'എല്ലാ അവകാശങ്ങളും സംരക്ഷിതം.',
 
   // ─── SEO / Meta ───
