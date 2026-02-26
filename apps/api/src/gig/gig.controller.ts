@@ -134,10 +134,10 @@ export class GigController {
       doc_url: body.doc_url || null,
       audio_url: body.audio_url || null,
       video_url: body.video_url || null,
-      budget: body.budget ? parseFloat(body.budget) : null,
-      escrow: body.escrow ? parseFloat(body.escrow) : null,
-      bidate: body.bidate ? new Date(body.bidate) : null,
-      delivdate: body.delivdate ? new Date(body.delivdate) : null,
+      budget: body.budget ? parseFloat(body.budget) : undefined,
+      escrow: body.escrow ? parseFloat(body.escrow) : undefined,
+      bidate: body.bidate ? new Date(body.bidate) : undefined,
+      delivdate: body.delivdate ? new Date(body.delivdate) : undefined,
     };
     return this.gigService.createRequirement(data);
   }
@@ -206,7 +206,7 @@ export class GigController {
       requirid: BigInt(body.requirid),
       userid: BigInt(body.userid),
       amount: body.amount ? parseFloat(body.amount) : null,
-      escrow: body.escrow ? parseFloat(body.escrow) : null,
+      escrow: body.escrow ? parseFloat(body.escrow) : undefined,
     };
     return this.gigService.createBid(data);
   }
