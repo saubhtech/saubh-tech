@@ -1,0 +1,969 @@
+'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+
+interface Sector { sectorid: number; sector: string; }
+interface Field { fieldid: number; field: string; sectorid: number; }
+interface MarketItem { marketid: number; sectorid: number; fieldid: number; p_s_ps: string; item: string; delivery_mode: string; }
+interface Requirement { requirid: string; userid: string; marketid: number; delivery_mode: string | null; requirements: string | null; eligibility: string | null; doc_url: string | null; audio_url: string | null; video_url: string | null; budget: string | null; escrow: string | null; bidate: string | null; delivdate: string | null; created_at: string; }
+
+const API = '/api/gig';
+const DM: Record<string, string> = { PH: 'Physical', DG: 'Digital', PD: 'Phygital' };
+const PS: Record<string, string> = { P: 'Product', S: 'Service', B: 'Both' };
+
+function getAudioMime(): string {
+  if (typeof MediaRecorder === 'undefined') return 'audio/webm';
+  if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
+  if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm';
+  if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) return 'audio/ogg;codecs=opus';
+  if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4';
+  return '';
+}
+
+function getVideoMime(): string {
+  if (typeof MediaRecorder === 'undefined') return 'video/webm';
+  if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) return 'video/webm;codecs=vp9,opus';
+  if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) return 'video/webm;codecs=vp8,opus';
+  if (MediaRecorder.isTypeSupported('video/webm')) return 'video/webm';
+  if (MediaRecorder.isTypeSupported('video/mp4')) return 'video/mp4';
+  return '';
+}
+
+function fmtTimer(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+export default function GigPage() {
+  const router = useRouter();
+  const { locale } = useParams<{ locale: string }>();
+
+  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [fields, setFields] = useState<Field[]>([]);
+  const [psOptions, setPsOptions] = useState<string[]>([]);
+  const [items, setItems] = useState<MarketItem[]>([]);
+
+  const [sectorid, setSectorid] = useState<number | ''>('');
+  const [fieldid, setFieldid] = useState<number | ''>('');
+  const [psType, setPsType] = useState('');
+  const [marketid, setMarketid] = useState<number | ''>('');
+  const [deliveryMode, setDeliveryMode] = useState('');
+  const [requirements, setRequirements] = useState('');
+  const [eligibility, setEligibility] = useState('');
+  const [docUrl, setDocUrl] = useState('');
+  const [audioUrl, setAudioUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [budget, setBudget] = useState('');
+  const [escrow, setEscrow] = useState('');
+  const [bidate, setBidate] = useState('');
+  const [delivdate, setDelivdate] = useState('');
+
+  const docRef = useRef<HTMLInputElement>(null);
+  const audioFileRef = useRef<HTMLInputElement>(null);
+  const videoFileRef = useRef<HTMLInputElement>(null);
+  const [docName, setDocName] = useState('');
+  const [audioName, setAudioName] = useState('');
+  const [videoName, setVideoName] = useState('');
+
+  // ── Audio recording state ──
+  const [audioRecording, setAudioRecording] = useState(false);
+  const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
+  const [audioTimer, setAudioTimer] = useState(0);
+  const audioMRRef = useRef<MediaRecorder | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Video recording state ──
+  const [videoRecording, setVideoRecording] = useState(false);
+  const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null);
+  const [videoTimer, setVideoTimer] = useState(0);
+  const videoMRRef = useRef<MediaRecorder | null>(null);
+  const videoStreamRef = useRef<MediaStream | null>(null);
+  const videoChunksRef = useRef<Blob[]>([]);
+  const videoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
+  const videoPlaybackRef = useRef<HTMLVideoElement>(null);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  // Requirements list
+  const [reqList, setReqList] = useState<Requirement[]>([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Load sectors
+  useEffect(() => {
+    fetch(API + '/sectors')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setSectors(d); })
+      .catch(() => {});
+  }, []);
+
+  // Load requirements list
+  const loadRequirements = useCallback(() => {
+    setLoadingList(true);
+    fetch(API + '/requirements', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d)) setReqList(d);
+        else if (d && Array.isArray(d.data)) setReqList(d.data);
+        else setReqList([]);
+      })
+      .catch(() => setReqList([]))
+      .finally(() => setLoadingList(false));
+  }, []);
+
+  useEffect(() => { loadRequirements(); }, [loadRequirements]);
+
+  // Cascade: sector -> fields
+  useEffect(() => {
+    setFields([]); setFieldid(''); setPsOptions([]); setPsType(''); setItems([]); setMarketid('');
+    if (!sectorid) return;
+    fetch(API + '/fields/' + sectorid)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setFields(d); })
+      .catch(() => {});
+  }, [sectorid]);
+
+  // Cascade: field -> ps options
+  useEffect(() => {
+    setPsOptions([]); setPsType(''); setItems([]); setMarketid('');
+    if (!sectorid || !fieldid) return;
+    fetch(API + '/product-service-options?sectorid=' + sectorid + '&fieldid=' + fieldid)
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d)) {
+          const opts = d.map((x: any) => {
+            const val = typeof x === 'string' ? x : (x.p_s_ps || '');
+            return val.toString().trim();
+          }).filter((v: string) => v.length > 0);
+          setPsOptions(opts);
+        }
+      })
+      .catch(() => {});
+  }, [sectorid, fieldid]);
+
+  // Cascade: ps -> items
+  useEffect(() => {
+    setItems([]); setMarketid('');
+    if (!sectorid || !fieldid) return;
+    let url = API + '/market-items?sectorid=' + sectorid + '&fieldid=' + fieldid;
+    if (psType) url += '&p_s_ps=' + psType;
+    fetch(url)
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d)) {
+          const normalized = d.map((x: any) => ({
+            ...x,
+            marketid: Number(x.marketid),
+            p_s_ps: (x.p_s_ps || '').toString().trim(),
+          }));
+          setItems(normalized);
+        }
+      })
+      .catch(() => {});
+  }, [sectorid, fieldid, psType]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audioStreamRef.current) audioStreamRef.current.getTracks().forEach(t => t.stop());
+      if (videoStreamRef.current) videoStreamRef.current.getTracks().forEach(t => t.stop());
+      if (audioTimerRef.current) clearInterval(audioTimerRef.current);
+      if (videoTimerRef.current) clearInterval(videoTimerRef.current);
+    };
+  }, []);
+
+  // Connect video stream to preview element after render
+  useEffect(() => {
+    if (videoRecording && videoStreamRef.current && videoPreviewRef.current) {
+      const vid = videoPreviewRef.current;
+      // Small delay to ensure element is visible before assigning stream
+      const timer = setTimeout(() => {
+        if (videoStreamRef.current && vid) {
+          vid.srcObject = videoStreamRef.current;
+          vid.muted = true;
+          vid.play().catch(() => {});
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [videoRecording]);
+
+  // Connect video stream to preview element when recording starts
+  useEffect(() => {
+    if (videoRecording && videoStreamRef.current && videoPreviewRef.current) {
+      videoPreviewRef.current.srcObject = videoStreamRef.current;
+      videoPreviewRef.current.muted = true;
+      videoPreviewRef.current.play().catch(() => {});
+    }
+  }, [videoRecording]);
+
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [audioBlobData, setAudioBlobData] = useState<Blob | null>(null);
+  const [videoBlobData, setVideoBlobData] = useState<Blob | null>(null);
+
+  const handleFile = (file: File | undefined, setName: (n: string) => void, setUrl: (u: string) => void, setFileObj?: (f: File | null) => void) => {
+    if (!file) return;
+    setName(file.name);
+    setUrl('pending://' + file.name);
+    if (setFileObj) setFileObj(file);
+  };
+
+  const uploadFiles = async (): Promise<{ doc_url?: string; audio_url?: string; video_url?: string }> => {
+    const result: { doc_url?: string; audio_url?: string; video_url?: string } = {};
+    const toUpload: { file: File | Blob; name: string; field: 'doc_url' | 'audio_url' | 'video_url' }[] = [];
+    if (docFile) toUpload.push({ file: docFile, name: docFile.name, field: 'doc_url' });
+    if (audioBlobData) toUpload.push({ file: audioBlobData, name: audioName || 'recording.webm', field: 'audio_url' });
+    else if (audioFile) toUpload.push({ file: audioFile, name: audioFile.name, field: 'audio_url' });
+    if (videoBlobData) toUpload.push({ file: videoBlobData, name: videoName || 'video.webm', field: 'video_url' });
+    else if (videoFile) toUpload.push({ file: videoFile, name: videoFile.name, field: 'video_url' });
+    if (toUpload.length === 0) return result;
+    const fd = new FormData();
+    const fields: string[] = [];
+    toUpload.forEach(({ file, name, field }) => {
+      let mime = file.type || '';
+      if (!mime || mime === 'text/plain') {
+        if (field === 'audio_url') mime = 'audio/webm';
+        else if (field === 'video_url') mime = 'video/webm';
+        else mime = 'application/octet-stream';
+      }
+      const f = file instanceof File ? new File([file], name, { type: mime }) : new File([file], name, { type: mime });
+      fd.append('files', f, name);
+      fields.push(field);
+    });
+    const res = await fetch('/api/gig/upload', { method: 'POST', body: fd, credentials: 'include' });
+    if (!res.ok) throw new Error('Upload failed: ' + (await res.text()));
+    const uploaded = await res.json();
+    if (Array.isArray(uploaded)) uploaded.forEach((u: any, i: number) => { if (fields[i]) (result as any)[fields[i]] = u.url; });
+    return result;
+  };
+
+  // ═══════════════════════════════════════════
+  //  AUDIO RECORDING
+  // ═══════════════════════════════════════════
+  const startAudioRec = async () => {
+    setError('');
+    try {
+      const mime = getAudioMime();
+      if (!mime) { setError('Your browser does not support audio recording'); return; }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const mr = new MediaRecorder(stream, { mimeType: mime });
+      audioMRRef.current = mr;
+
+      mr.ondataavailable = (e: BlobEvent) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mr.onstop = () => {
+        // Build blob from collected chunks
+        const blob = new Blob(audioChunksRef.current, { type: mime });
+        const url = URL.createObjectURL(blob);
+        setAudioBlobUrl(url);
+        setAudioBlobData(blob);
+        setAudioName('audio-recording-' + Date.now() + '.webm');
+        setAudioUrl('pending://audio-recording.webm');
+        // Cleanup stream
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach(t => t.stop());
+          audioStreamRef.current = null;
+        }
+      };
+
+      // Start with timeslice so ondataavailable fires periodically
+      mr.start(500);
+      setAudioRecording(true);
+      setAudioTimer(0);
+      setAudioBlobUrl(null);
+
+      // Timer
+      audioTimerRef.current = setInterval(() => {
+        setAudioTimer(prev => prev + 1);
+      }, 1000);
+
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError('🎙️ Microphone permission denied. Please allow microphone access in your browser settings.');
+      } else if (err.name === 'NotFoundError') {
+        setError('🎙️ No microphone found. Please connect a microphone.');
+      } else {
+        setError('🎙️ Could not start audio recording: ' + (err.message || err));
+      }
+    }
+  };
+
+  const stopAudioRec = () => {
+    if (audioMRRef.current && audioMRRef.current.state !== 'inactive') {
+      audioMRRef.current.stop();
+    }
+    audioMRRef.current = null;
+    setAudioRecording(false);
+    if (audioTimerRef.current) {
+      clearInterval(audioTimerRef.current);
+      audioTimerRef.current = null;
+    }
+  };
+
+  const clearAudioRec = () => {
+    if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+    setAudioBlobUrl(null);
+    setAudioBlobData(null);
+    setAudioFile(null);
+    setAudioName('');
+    setAudioUrl('');
+    setAudioTimer(0);
+  };
+
+  // ═══════════════════════════════════════════
+  //  VIDEO RECORDING
+  // ═══════════════════════════════════════════
+  const startVideoRec = async () => {
+    setError('');
+    try {
+      const mime = getVideoMime();
+      if (!mime) { setError('Your browser does not support video recording'); return; }
+
+      // Prefer real camera over virtual cameras
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter(d => d.kind === 'videoinput');
+      const realCam = cameras.find(c => !c.label.toLowerCase().includes('virtual'));
+      const videoConstraints: any = { width: { ideal: 1280 }, height: { ideal: 720 } };
+      if (realCam) {
+        videoConstraints.deviceId = { exact: realCam.deviceId };
+      } else {
+        videoConstraints.facingMode = 'user';
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: videoConstraints,
+        audio: true,
+      });
+      videoStreamRef.current = stream;
+      videoChunksRef.current = [];
+
+      // Stream will be connected by useEffect after state update
+
+      const mr = new MediaRecorder(stream, { mimeType: mime });
+      videoMRRef.current = mr;
+
+      mr.ondataavailable = (e: BlobEvent) => {
+        if (e.data && e.data.size > 0) {
+          videoChunksRef.current.push(e.data);
+        }
+      };
+
+      mr.onstop = () => {
+        const blob = new Blob(videoChunksRef.current, { type: mime });
+        const url = URL.createObjectURL(blob);
+        setVideoBlobUrl(url);
+        setVideoBlobData(blob);
+        setVideoName('video-recording-' + Date.now() + '.webm');
+        setVideoUrl('pending://video-recording.webm');
+
+        // Stop live preview - clear after blob is ready
+        if (videoPreviewRef.current) {
+          videoPreviewRef.current.srcObject = null;
+          videoPreviewRef.current.load();
+        }
+        // Cleanup stream
+        if (videoStreamRef.current) {
+          videoStreamRef.current.getTracks().forEach(t => t.stop());
+          videoStreamRef.current = null;
+        }
+      };
+
+      mr.start(500);
+      setVideoRecording(true);
+      setVideoTimer(0);
+      setVideoBlobUrl(null);
+
+      videoTimerRef.current = setInterval(() => {
+        setVideoTimer(prev => prev + 1);
+      }, 1000);
+
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError('🎥 Camera/mic permission denied. Please allow access in your browser settings.');
+      } else if (err.name === 'NotFoundError') {
+        setError('🎥 No camera found. Please connect a camera.');
+      } else {
+        setError('🎥 Could not start video recording: ' + (err.message || err));
+      }
+    }
+  };
+
+  const stopVideoRec = () => {
+    if (videoMRRef.current && videoMRRef.current.state !== 'inactive') {
+      videoMRRef.current.stop();
+    }
+    videoMRRef.current = null;
+    setVideoRecording(false);
+    if (videoTimerRef.current) {
+      clearInterval(videoTimerRef.current);
+      videoTimerRef.current = null;
+    }
+  };
+
+  const clearVideoRec = () => {
+    if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
+    setVideoBlobUrl(null);
+    setVideoBlobData(null);
+    setVideoFile(null);
+    setVideoName('');
+    setVideoUrl('');
+    setVideoTimer(0);
+  };
+
+  // ═══════════════════════════════════════════
+  //  FORM SUBMIT / EDIT / DELETE
+  // ═══════════════════════════════════════════
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!marketid) { setError('Please select a market item'); return; }
+    if (!deliveryMode) { setError('Please select a delivery mode'); return; }
+    setSubmitting(true);
+    try {
+      const endpoint = editingId ? API + '/requirements/' + editingId : API + '/requirements';
+      const method = editingId ? 'PUT' : 'POST';
+      const uploadedUrls = await uploadFiles();
+      const payload: any = {
+        marketid,
+        delivery_mode: deliveryMode,
+        requirements: requirements || undefined,
+        eligibility: eligibility || undefined,
+        doc_url: uploadedUrls.doc_url || (docUrl && !docUrl.startsWith('pending://') ? docUrl : undefined),
+        audio_url: uploadedUrls.audio_url || (audioUrl && !audioUrl.startsWith('pending://') ? audioUrl : undefined),
+        video_url: uploadedUrls.video_url || (videoUrl && !videoUrl.startsWith('pending://') ? videoUrl : undefined),
+        budget: budget || undefined,
+        escrow: escrow || undefined,
+        bidate: bidate || undefined,
+        delivdate: delivdate || undefined,
+      };
+      if (!editingId) payload.userid = '0';
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setSuccess(true);
+      loadRequirements();
+      setTimeout(() => { resetForm(); }, 2000);
+    } catch (err: any) { setError(err.message || 'Failed to submit'); }
+    setSubmitting(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch(API + '/requirements/' + id, { method: 'DELETE', credentials: 'include' });
+      if (!res.ok) throw new Error('Delete failed');
+      loadRequirements();
+    } catch (err: any) { setError(err.message); }
+    setDeletingId(null);
+  };
+
+  const handleEdit = (req: Requirement) => {
+    setEditingId(req.requirid);
+    setMarketid(req.marketid);
+    setDeliveryMode((req.delivery_mode || '').trim());
+    setRequirements(req.requirements || '');
+    setEligibility(req.eligibility || '');
+    setDocUrl(req.doc_url || '');
+    setAudioUrl(req.audio_url || '');
+    setVideoUrl(req.video_url || '');
+    setBudget(req.budget || '');
+    setEscrow(req.escrow || '');
+    setBidate(req.bidate ? req.bidate.substring(0, 10) : '');
+    setDelivdate(req.delivdate ? req.delivdate.substring(0, 10) : '');
+    setSuccess(false); setError('');
+    clearAudioRec(); clearVideoRec();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const resetForm = () => {
+    setSectorid(''); setFieldid(''); setPsType(''); setMarketid(''); setDeliveryMode('');
+    setRequirements(''); setEligibility(''); setDocUrl(''); setAudioUrl(''); setVideoUrl('');
+    setBudget(''); setEscrow(''); setBidate(''); setDelivdate('');
+    setDocName(''); setAudioName(''); setVideoName('');
+    setDocFile(null); setAudioFile(null); setVideoFile(null); setAudioBlobData(null); setVideoBlobData(null);
+    setSuccess(false); setError(''); setEditingId(null);
+    clearAudioRec(); clearVideoRec();
+  };
+
+  const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const fmtMoney = (v: string | null) => { if (!v) return '—'; const n = Number(v); return isNaN(n) ? '—' : '\u20B9' + n.toLocaleString('en-IN', { minimumFractionDigits: 2 }); };
+
+  return (
+    <>
+      <style>{css}</style>
+      <div className="gr-root">
+        <div className="gr-topbar">
+          <div className="gr-topbar-inner">
+            <div className="gr-logo-box">
+              <div className="gr-logo-icon">S</div>
+              <div>
+                <div className="gr-logo-title">Saubh.Tech</div>
+                <div className="gr-logo-sub">Gig Marketplace</div>
+              </div>
+            </div>
+            <div className="gr-hero-center">
+              <h1 className="gr-hero-title">🚀 Gig Marketplace</h1>
+              <p className="gr-hero-subtitle">|| Real Clients || Verified Providers || Secured Payments ||</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="gr-tabbar">
+          <div className="gr-tabbar-inner">
+            <button className="gr-tab gr-tab-active">📋 Requirements</button>
+            <button className="gr-tab" onClick={() => router.push('/' + locale + '/gig')}>🎯 Offerings</button>
+            <button className="gr-tab" onClick={() => router.push('/' + locale + '/gig')}>💰 Bids</button>
+            <button className="gr-tab" onClick={() => router.push('/' + locale + '/gig')}>🤝 Agreements</button>
+          </div>
+        </div>
+
+        <div className="gr-content">
+          {/* ── Form ── */}
+          {success && !editingId ? (
+            <div className="gf-success">
+              <div className="gf-success-icon">✓</div>
+              <h2>Requirement Posted Successfully!</h2>
+              <p>Providers can now bid on your requirement.</p>
+              <button className="gf-btn gf-btn-primary" onClick={resetForm} style={{ marginTop: 16 }}>Post Another Requirement</button>
+            </div>
+          ) : (
+            <form className="gf-form" onSubmit={handleSubmit}>
+              <h2 className="gf-form-title">{editingId ? '✏️ Edit Requirement #' + editingId : 'Create New Requirement'}</h2>
+              {error && <div className="gf-error">{error}</div>}
+
+              {/* Sector */}
+              <div className="gf-field">
+                <label className="gf-label">Sector <span className="gf-req">*</span></label>
+                <select className="gf-select" value={sectorid} onChange={e => setSectorid(e.target.value ? Number(e.target.value) : '')} required={!editingId}>
+                  <option value="">Select a sector...</option>
+                  {sectors.map(s => <option key={s.sectorid} value={s.sectorid}>{s.sector}</option>)}
+                </select>
+              </div>
+
+              {/* Field */}
+              <div className="gf-field">
+                <label className="gf-label">Field <span className="gf-req">*</span></label>
+                <select className="gf-select" value={fieldid} onChange={e => setFieldid(e.target.value ? Number(e.target.value) : '')} disabled={!sectorid} required={!editingId}>
+                  <option value="">{sectorid ? 'Select a field...' : 'Select a sector first'}</option>
+                  {fields.map(f => <option key={f.fieldid} value={f.fieldid}>{f.field}</option>)}
+                </select>
+              </div>
+
+              {/* Product/Service */}
+              <div className="gf-field">
+                <label className="gf-label">Product / Service</label>
+                <div className="gf-radio-row">
+                  <label className={'gf-radio-pill' + (psType === '' ? ' active' : '')}>
+                    <input type="radio" name="ps" value="" checked={psType === ''} onChange={() => setPsType('')} /> All
+                  </label>
+                  {psOptions.map(ps => (
+                    <label key={ps} className={'gf-radio-pill' + (psType === ps ? ' active' : '')}>
+                      <input type="radio" name="ps" value={ps} checked={psType === ps} onChange={() => setPsType(ps)} /> {PS[ps] || ps}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Item */}
+              <div className="gf-field">
+                <label className="gf-label">Item <span className="gf-req">*</span></label>
+                <select className="gf-select" value={marketid} onChange={e => setMarketid(e.target.value ? Number(e.target.value) : '')} disabled={!fieldid && !editingId} required>
+                  <option value="">{fieldid ? 'Select an item...' : 'Select a field first'}</option>
+                  {items.map(m => <option key={m.marketid} value={m.marketid}>{m.item} ({PS[m.p_s_ps] || m.p_s_ps})</option>)}
+                </select>
+              </div>
+
+              {/* Delivery Mode */}
+              <div className="gf-field">
+                <label className="gf-label">Delivery Mode <span className="gf-req">*</span></label>
+                <div className="gf-radio-row">
+                  {[{ key: 'PH', label: 'Physical' }, { key: 'DG', label: 'Digital' }, { key: 'PD', label: 'Phygital' }].map(opt => (
+                    <label key={opt.key} className={'gf-radio-pill' + (deliveryMode === opt.key ? ' active' : '')}>
+                      <input type="radio" name="dm" value={opt.key} checked={deliveryMode === opt.key} onChange={() => setDeliveryMode(opt.key)} /> {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Requirements */}
+              <div className="gf-field">
+                <label className="gf-label">Requirements</label>
+                <textarea className="gf-textarea" rows={4} placeholder="Describe what you need in detail..." value={requirements} onChange={e => setRequirements(e.target.value)} />
+              </div>
+
+              {/* Eligibility */}
+              <div className="gf-field">
+                <label className="gf-label">Eligibility</label>
+                <textarea className="gf-textarea" rows={3} placeholder="Who can bid? Any qualifications needed..." value={eligibility} onChange={e => setEligibility(e.target.value)} />
+              </div>
+
+              {/* Documents */}
+              <div className="gf-field">
+                <label className="gf-label">Documents</label>
+                <div className="gf-file-row">
+                  <button type="button" className="gf-btn gf-btn-outline" onClick={() => docRef.current?.click()}>📁 Browse</button>
+                  <input ref={docRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp" hidden onChange={e => handleFile(e.target.files?.[0], setDocName, setDocUrl, setDocFile)} />
+                  {docName && <span className="gf-file-name">📄 {docName}</span>}
+                  {!docName && docUrl && <span className="gf-file-name">{docUrl}</span>}
+                </div>
+              </div>
+
+              {/* ═══ Audio ═══ */}
+              <div className="gf-field">
+                <label className="gf-label">Audio</label>
+                <div className="gf-media-box">
+                  <div className="gf-file-row">
+                    {!audioRecording ? (
+                      <button type="button" className="gf-btn gf-btn-rec-start" onClick={startAudioRec} disabled={!!audioBlobUrl}>
+                        🎙️ Record Audio
+                      </button>
+                    ) : (
+                      <button type="button" className="gf-btn gf-btn-rec-stop" onClick={stopAudioRec}>
+                        <span className="gf-pulse" /> ⏹ Stop &nbsp;{fmtTimer(audioTimer)}
+                      </button>
+                    )}
+                    <button type="button" className="gf-btn gf-btn-outline" onClick={() => audioFileRef.current?.click()} disabled={audioRecording}>
+                      📁 Browse
+                    </button>
+                    <input ref={audioFileRef} type="file" accept=".mp3,.wav,.ogg,.webm,.m4a" hidden onChange={e => { clearAudioRec(); handleFile(e.target.files?.[0], setAudioName, setAudioUrl, setAudioFile); }} />
+                  </div>
+
+                  {/* Audio Playback */}
+                  {audioBlobUrl && (
+                    <div className="gf-playback">
+                      <audio controls src={audioBlobUrl} style={{ width: '100%', height: 40 }} />
+                      <div className="gf-playback-meta">
+                        <span className="gf-file-name">🎙️ {audioName} ({fmtTimer(audioTimer)})</span>
+                        <button type="button" className="gf-btn gf-btn-sm gf-btn-danger" onClick={clearAudioRec}>✕ Remove</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* File selected (no recording) */}
+                  {!audioBlobUrl && audioName && (
+                    <div className="gf-playback-meta" style={{ marginTop: 8 }}>
+                      <span className="gf-file-name">📁 {audioName}</span>
+                      <button type="button" className="gf-btn gf-btn-sm gf-btn-danger" onClick={() => { setAudioName(''); setAudioUrl(''); }}>✕</button>
+                    </div>
+                  )}
+                  {!audioBlobUrl && !audioName && audioUrl && (
+                    <div className="gf-playback-meta" style={{ marginTop: 8 }}>
+                      <span className="gf-file-name">{audioUrl}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ═══ Video ═══ */}
+              <div className="gf-field">
+                <label className="gf-label">Video</label>
+                <div className="gf-media-box">
+                  <div className="gf-file-row">
+                    {!videoRecording ? (
+                      <button type="button" className="gf-btn gf-btn-rec-start" onClick={startVideoRec} disabled={!!videoBlobUrl}>
+                        🎥 Record Video
+                      </button>
+                    ) : (
+                      <button type="button" className="gf-btn gf-btn-rec-stop" onClick={stopVideoRec}>
+                        <span className="gf-pulse" /> ⏹ Stop &nbsp;{fmtTimer(videoTimer)}
+                      </button>
+                    )}
+                    <button type="button" className="gf-btn gf-btn-outline" onClick={() => videoFileRef.current?.click()} disabled={videoRecording}>
+                      📁 Browse
+                    </button>
+                    <input ref={videoFileRef} type="file" accept=".mp4,.mov,.avi,.webm,.mkv" hidden onChange={e => { clearVideoRec(); handleFile(e.target.files?.[0], setVideoName, setVideoUrl, setVideoFile); }} />
+                  </div>
+
+                  {/* Live Preview (always rendered, hidden when not recording) */}
+                  <div className="gf-video-container" style={{ position: videoRecording ? 'relative' : 'absolute', width: videoRecording ? '100%' : 0, height: videoRecording ? 'auto' : 0, overflow: 'hidden', opacity: videoRecording ? 1 : 0 }}>
+                    <video ref={videoPreviewRef} className="gf-video-el" autoPlay muted playsInline />
+                    {videoRecording && <div className="gf-video-rec-badge"><span className="gf-pulse" /> REC {fmtTimer(videoTimer)}</div>}
+                  </div>
+
+                  {/* Video Playback (after recording) */}
+                  {videoBlobUrl && !videoRecording && (
+                    <div className="gf-playback">
+                      <div className="gf-video-container">
+                        <video ref={videoPlaybackRef} className="gf-video-el" controls src={videoBlobUrl} playsInline />
+                      </div>
+                      <div className="gf-playback-meta">
+                        <span className="gf-file-name">🎥 {videoName} ({fmtTimer(videoTimer)})</span>
+                        <button type="button" className="gf-btn gf-btn-sm gf-btn-danger" onClick={clearVideoRec}>✕ Remove</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* File selected (no recording) */}
+                  {!videoBlobUrl && !videoRecording && videoName && (
+                    <div className="gf-playback-meta" style={{ marginTop: 8 }}>
+                      <span className="gf-file-name">📁 {videoName}</span>
+                      <button type="button" className="gf-btn gf-btn-sm gf-btn-danger" onClick={() => { setVideoName(''); setVideoUrl(''); }}>✕</button>
+                    </div>
+                  )}
+                  {!videoBlobUrl && !videoRecording && !videoName && videoUrl && (
+                    <div className="gf-playback-meta" style={{ marginTop: 8 }}>
+                      <span className="gf-file-name">{videoUrl}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Budget / Escrow */}
+              <div className="gf-row">
+                <div className="gf-field gf-half">
+                  <label className="gf-label">Budget (₹)</label>
+                  <input className="gf-input" type="number" step="0.01" min="0" placeholder="0.00" value={budget} onChange={e => setBudget(e.target.value)} />
+                </div>
+                <div className="gf-field gf-half">
+                  <label className="gf-label">Escrow (₹)</label>
+                  <input className="gf-input" type="number" step="0.01" min="0" placeholder="0.00" value={escrow} onChange={e => setEscrow(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="gf-row">
+                <div className="gf-field gf-half">
+                  <label className="gf-label">Bid Closing Date</label>
+                  <input className="gf-input" type="date" value={bidate} onChange={e => setBidate(e.target.value)} />
+                </div>
+                <div className="gf-field gf-half">
+                  <label className="gf-label">Completion Date</label>
+                  <input className="gf-input" type="date" value={delivdate} onChange={e => setDelivdate(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="gf-footer">
+                {editingId && (
+                  <button type="button" className="gf-btn gf-btn-outline" onClick={resetForm} style={{ marginRight: 12 }}>Cancel Edit</button>
+                )}
+                <button type="submit" className="gf-btn gf-btn-primary gf-btn-lg" disabled={submitting || !marketid || !deliveryMode}>
+                  {submitting ? 'Saving...' : editingId ? '✏️ Update Requirement' : '🚀 Submit Requirement'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ── Requirements Table ── */}
+          <div className="gt-section">
+            <h2 className="gt-title">Your Requirements</h2>
+            {loadingList ? (
+              <p className="gt-empty">Loading...</p>
+            ) : reqList.length === 0 ? (
+              <p className="gt-empty">No requirements posted yet.</p>
+            ) : (
+              <div className="gt-table-wrap">
+                <table className="gt-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Market ID</th>
+                      <th>Mode</th>
+                      <th>Files</th>
+                      <th>Budget</th>
+                      <th>Escrow</th>
+                      <th>Bid Close</th>
+                      <th>Completion</th>
+                      <th>Created</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reqList.map(r => (
+                      <tr key={r.requirid}>
+                        <td className="gt-id">#{r.requirid}</td>
+                        <td>{r.marketid}</td>
+                        <td>{r.delivery_mode ? (DM[(r.delivery_mode || '').trim()] || r.delivery_mode) : '—'}</td>
+                        <td className="gt-files">
+                          {r.doc_url && r.doc_url !== 'undefined' && !r.doc_url.startsWith('pending://') && (
+                            <a href={r.doc_url} target="_blank" rel="noopener noreferrer" className="gt-file-link gt-file-doc" title="View Document">📄</a>
+                          )}
+                          {r.audio_url && r.audio_url !== 'undefined' && !r.audio_url.startsWith('pending://') && (
+                            <button type="button" className="gt-file-link gt-file-audio" title="Play Audio" onClick={(e) => {
+                              const existing = (e.currentTarget.parentElement as HTMLElement).querySelector('audio');
+                              if (existing) { existing.remove(); return; }
+                              const audio = document.createElement('audio');
+                              audio.src = r.audio_url!; audio.controls = true; audio.autoplay = true;
+                              audio.className = 'gt-inline-player';
+                              (e.currentTarget.parentElement as HTMLElement).appendChild(audio);
+                            }}>🎧</button>
+                          )}
+                          {r.video_url && r.video_url !== 'undefined' && !r.video_url.startsWith('pending://') && (
+                            <button type="button" className="gt-file-link gt-file-video" title="Play Video" onClick={(e) => {
+                              const existing = (e.currentTarget.parentElement as HTMLElement).querySelector('.gt-video-popup');
+                              if (existing) { existing.remove(); return; }
+                              const wrap = document.createElement('div');
+                              wrap.className = 'gt-video-popup';
+                              wrap.innerHTML = '<div class="gt-video-overlay"></div><div class="gt-video-modal"><video controls autoplay src="' + r.video_url + '"></video><button class="gt-video-close">✕</button></div>';
+                              wrap.querySelector('.gt-video-overlay')!.addEventListener('click', () => wrap.remove());
+                              wrap.querySelector('.gt-video-close')!.addEventListener('click', () => wrap.remove());
+                              document.body.appendChild(wrap);
+                            }}>🎬</button>
+                          )}
+                          {!r.doc_url && !r.audio_url && !r.video_url && '—'}
+                          {(r.doc_url?.startsWith('pending://') || r.audio_url?.startsWith('pending://') || r.video_url?.startsWith('pending://')) && !r.doc_url?.startsWith('/') && !r.audio_url?.startsWith('/') && !r.video_url?.startsWith('/') && '⏳'}
+                        </td>
+                        <td>{fmtMoney(r.budget)}</td>
+                        <td>{fmtMoney(r.escrow)}</td>
+                        <td>{fmtDate(r.bidate)}</td>
+                        <td>{fmtDate(r.delivdate)}</td>
+                        <td>{fmtDate(r.created_at)}</td>
+                        <td className="gt-actions">
+                          <button className="gf-btn gf-btn-sm gf-btn-outline" onClick={() => handleEdit(r)}>✏️ Edit</button>
+                          <button className="gf-btn gf-btn-sm gf-btn-danger" disabled={deletingId === r.requirid} onClick={() => handleDelete(r.requirid)}>
+                            {deletingId === r.requirid ? '...' : '🗑️ Del'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+const css = `
+.gr-root { min-height: 100vh; background: #060a13; color: #e2e8f0; font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif; }
+.gr-topbar { background: linear-gradient(180deg, #0b1a30 0%, #0a1628 100%); border-bottom: 1px solid rgba(255,255,255,0.04); padding: 0 20px; }
+.gr-topbar-inner { max-width: 1440px; margin: 0 auto; padding: 18px 0; display: flex; align-items: center; gap: 24px; }
+.gr-logo-box { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 10px 16px; flex-shrink: 0; }
+.gr-logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #f59e0b, #ef4444); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: #fff; }
+.gr-logo-title { font-weight: 700; font-size: 16px; color: #f8fafc; }
+.gr-logo-sub { font-size: 11px; color: #64748b; margin-top: 1px; }
+.gr-hero-center { flex: 1; padding-left: 12px; }
+.gr-hero-title { font-size: 24px; font-weight: 800; color: #f8fafc; margin: 0 0 4px 0; }
+.gr-hero-subtitle { font-size: 13px; color: #64748b; margin: 0; }
+.gr-tabbar { background: linear-gradient(180deg, #0a1628 0%, #080e1a 100%); border-bottom: 1px solid rgba(255,255,255,0.06); padding: 0 20px; }
+.gr-tabbar-inner { max-width: 1440px; margin: 0 auto; display: flex; gap: 4px; padding: 12px 0; }
+.gr-tab { padding: 10px 22px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: #94a3b8; font-family: inherit; transition: all 0.2s; white-space: nowrap; }
+.gr-tab:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+.gr-tab-active { background: #00d4ff; color: #0a1628; }
+.gr-tab-active:hover { background: #00bce0; color: #0a1628; }
+.gr-content { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+.gf-form { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 32px; }
+.gf-form-title { font-size: 22px; font-weight: 700; color: #f8fafc; margin: 0 0 28px 0; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.gf-field { margin-bottom: 22px; }
+.gf-label { display: block; font-size: 13px; font-weight: 600; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.gf-req { color: #f43f5e; }
+.gf-select, .gf-input, .gf-textarea { width: 100%; padding: 12px 16px; font-size: 15px; font-family: inherit; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #e2e8f0; outline: none; transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box; }
+.gf-select:focus, .gf-input:focus, .gf-textarea:focus { border-color: rgba(0,212,255,0.5); box-shadow: 0 0 0 3px rgba(0,212,255,0.08); }
+.gf-select:disabled { opacity: 0.4; cursor: not-allowed; }
+.gf-select option { background: #1a1f2e; color: #e2e8f0; }
+.gf-textarea { resize: vertical; min-height: 80px; }
+.gf-radio-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.gf-radio-pill { padding: 8px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+.gf-radio-pill input { display: none; }
+.gf-radio-pill:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+.gf-radio-pill.active { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.4); color: #00d4ff; }
+.gf-file-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.gf-file-name { font-size: 13px; color: #94a3b8; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Media Box ── */
+.gf-media-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; }
+.gf-playback { margin-top: 12px; }
+.gf-playback audio { border-radius: 8px; }
+.gf-playback-meta { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+
+/* ── Record Buttons ── */
+.gf-btn-rec-start { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.gf-btn-rec-start:hover:not(:disabled) { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5); }
+.gf-btn-rec-start:disabled { opacity: 0.35; cursor: not-allowed; }
+.gf-btn-rec-stop { background: #dc2626; border: none; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+.gf-btn-rec-stop:hover { background: #b91c1c; }
+
+/* ── Pulse animation ── */
+.gf-pulse { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block; animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+
+/* ── Video Container ── */
+.gf-video-container { position: relative; margin-top: 12px; border-radius: 12px; overflow: hidden; background: #000; max-width: 480px; }
+.gf-video-el { width: 100%; display: block; border-radius: 12px; max-height: 360px; }
+.gf-video-rec-badge { position: absolute; top: 12px; right: 12px; background: rgba(220,38,38,0.9); color: #fff; padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; backdrop-filter: blur(4px); }
+
+.gf-row { display: flex; gap: 16px; }
+.gf-half { flex: 1; }
+@media (max-width: 600px) { .gf-row { flex-direction: column; gap: 0; } }
+.gf-btn { padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.2s; white-space: nowrap; }
+.gf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.gf-btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; }
+.gf-btn-outline { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; }
+.gf-btn-outline:hover:not(:disabled) { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+.gf-btn-danger { background: #dc2626; color: #fff; }
+.gf-btn-danger:hover:not(:disabled) { background: #b91c1c; }
+.gf-btn-primary { background: linear-gradient(135deg, #0ea5e9, #00d4ff); color: #0a1628; }
+.gf-btn-primary:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,212,255,0.25); }
+.gf-btn-lg { padding: 14px 32px; font-size: 16px; border-radius: 14px; }
+.gf-footer { margin-top: 8px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: center; }
+.gf-error { background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); border-radius: 12px; padding: 12px 18px; margin-bottom: 20px; color: #fda4af; font-size: 14px; }
+.gf-success { text-align: center; padding: 60px 20px; }
+.gf-success-icon { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 20px; background: linear-gradient(135deg, #10b981, #34d399); display: flex; align-items: center; justify-content: center; font-size: 36px; color: #fff; animation: pop 0.4s cubic-bezier(0.68,-0.55,0.265,1.55); }
+.gf-success h2 { font-size: 24px; font-weight: 700; color: #f8fafc; margin: 0 0 8px; }
+.gf-success p { color: #64748b; font-size: 15px; margin: 0; }
+@keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+/* ── Requirements Table ── */
+.gt-section { margin-top: 40px; }
+.gt-title { font-size: 20px; font-weight: 700; color: #f8fafc; margin: 0 0 20px 0; }
+.gt-empty { color: #475569; font-size: 14px; }
+.gt-table-wrap { overflow-x: auto; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06); }
+.gt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.gt-table thead { background: rgba(255,255,255,0.04); }
+.gt-table th { padding: 12px 14px; text-align: left; font-weight: 600; color: #94a3b8; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.06); white-space: nowrap; }
+.gt-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #cbd5e1; white-space: nowrap; }
+.gt-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+.gt-table tbody tr:last-child td { border-bottom: none; }
+.gt-id { color: #00d4ff; font-weight: 600; }
+.gt-actions { display: flex; gap: 6px; }
+
+/* ── File links in table ── */
+.gt-files { white-space: nowrap; }
+.gt-file-link { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; font-size: 16px; cursor: pointer; transition: all 0.2s; border: none; background: transparent; text-decoration: none; }
+.gt-file-doc { background: rgba(59,130,246,0.12); }
+.gt-file-doc:hover { background: rgba(59,130,246,0.25); transform: scale(1.1); }
+.gt-file-audio { background: rgba(16,185,129,0.12); color: inherit; }
+.gt-file-audio:hover { background: rgba(16,185,129,0.25); transform: scale(1.1); }
+.gt-file-video { background: rgba(245,158,11,0.12); color: inherit; }
+.gt-file-video:hover { background: rgba(245,158,11,0.25); transform: scale(1.1); }
+.gt-inline-player { display: block; margin-top: 6px; width: 180px; height: 32px; border-radius: 6px; }
+
+/* ── Video popup modal ── */
+.gt-video-popup { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.gt-video-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
+.gt-video-modal { position: relative; z-index: 1; max-width: 90vw; max-height: 85vh; border-radius: 16px; overflow: hidden; background: #000; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.gt-video-modal video { display: block; max-width: 90vw; max-height: 80vh; }
+.gt-video-close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); transition: background 0.2s; }
+.gt-video-close:hover { background: rgba(255,255,255,0.3); }
+
+@media (max-width: 900px) {
+  .gr-topbar-inner { flex-wrap: wrap; }
+  .gr-tabbar-inner { overflow-x: auto; }
+  .gt-table { font-size: 12px; }
+  .gt-table th, .gt-table td { padding: 10px 10px; }
+}
+`;

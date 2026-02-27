@@ -1,0 +1,462 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+
+// ── Types ───────────────────────────────────────
+interface Sector { sectorid: number; sector: string; code: string; }
+interface Field { fieldid: number; field: string; sectorid: number; code: string; }
+interface MarketItem { marketid: number; sectorid: number; fieldid: number; p_s_ps: string; item: string; delivery_mode: string; code: string; }
+
+const API = '/api/gig';
+const DM_LABELS: Record<string, string> = { PHYSICAL: 'Physical', DIGITAL: 'Digital', PHYGITAL: 'Phygital', PH: 'Physical', DG: 'Digital', PD: 'Phygital' };
+const PS_LABELS: Record<string, string> = { P: 'Product', S: 'Service', B: 'Both' };
+
+export default function NewRequirementPage() {
+  const router = useRouter();
+  const { locale } = useParams() as { locale: string };
+
+  // ── Cascading data ─────────────────────────────
+  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [fields, setFields] = useState<Field[]>([]);
+  const [psOptions, setPsOptions] = useState<string[]>([]);
+  const [items, setItems] = useState<MarketItem[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+
+  // ── Form state ─────────────────────────────────
+  const [sectorid, setSectorid] = useState<number | ''>('');
+  const [fieldid, setFieldid] = useState<number | ''>('');
+  const [psType, setPsType] = useState<string>('');
+  const [marketid, setMarketid] = useState<number | ''>('');
+  const [deliveryMode, setDeliveryMode] = useState('');
+  const [requirements, setRequirements] = useState('');
+  const [eligibility, setEligibility] = useState('');
+  const [docUrl, setDocUrl] = useState('');
+  const [audioUrl, setAudioUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [budget, setBudget] = useState('');
+  const [escrow, setEscrow] = useState('');
+  const [bidate, setBidate] = useState('');
+  const [delivdate, setDelivdate] = useState('');
+
+  // ── UI state ───────────────────────────────────
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  // ── Load sectors on mount ──────────────────────
+  useEffect(() => {
+    fetch(`${API}/sectors`).then(r => r.json()).then(d => { setSectors(d); setLoadingData(false); })
+      .catch(() => setLoadingData(false));
+  }, []);
+
+  // ── Load fields when sector changes ────────────
+  useEffect(() => {
+    if (!sectorid) { setFields([]); return; }
+    fetch(`${API}/fields/${sectorid}`).then(r => r.json()).then(setFields).catch(() => setFields([]));
+    setFieldid(''); setPsType(''); setMarketid(''); setDeliveryMode('');
+    setPsOptions([]); setItems([]);
+  }, [sectorid]);
+
+  // ── Load PS options when field changes ─────────
+  useEffect(() => {
+    if (!sectorid || !fieldid) { setPsOptions([]); return; }
+    fetch(`${API}/product-service-options?sectorid=${sectorid}&fieldid=${fieldid}`)
+      .then(r => r.json()).then(setPsOptions).catch(() => setPsOptions([]));
+    setPsType(''); setMarketid(''); setDeliveryMode('');
+    setItems([]);
+  }, [sectorid, fieldid]);
+
+  // ── Load items when PS type changes ────────────
+  useEffect(() => {
+    if (!sectorid || !fieldid) { setItems([]); return; }
+    const psParam = psType ? `&p_s_ps=${psType}` : '';
+    fetch(`${API}/market-items?sectorid=${sectorid}&fieldid=${fieldid}${psParam}`)
+      .then(r => r.json()).then(setItems).catch(() => setItems([]));
+    setMarketid(''); setDeliveryMode('');
+  }, [sectorid, fieldid, psType]);
+
+  // ── Auto-fill delivery mode when item selected ─
+  useEffect(() => {
+    if (!marketid) { setDeliveryMode(''); return; }
+    const item = items.find(i => i.marketid === marketid);
+    if (item) setDeliveryMode(item.delivery_mode || '');
+  }, [marketid, items]);
+
+  // ── Submit ─────────────────────────────────────
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!marketid) { setError('Please select a market item'); return; }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API}/requirements`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          userid: '0', // API should use authenticated user
+          marketid, delivery_mode: deliveryMode || undefined,
+          requirements: requirements || undefined,
+          eligibility: eligibility || undefined,
+          doc_url: docUrl || undefined, audio_url: audioUrl || undefined,
+          video_url: videoUrl || undefined,
+          budget: budget || undefined, escrow: escrow || undefined,
+          bidate: bidate || undefined, delivdate: delivdate || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setSuccess(true);
+      setTimeout(() => router.push(`/${locale}/gig`), 1500);
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit');
+    }
+    setSubmitting(false);
+  };
+
+  // ── Render ─────────────────────────────────────
+  return (
+    <>
+      <style>{css}</style>
+      <div className="nr-root">
+        <div className="nr-bg" />
+        <div className="nr-container">
+
+          {/* Header */}
+          <div className="nr-header">
+            <button className="nr-back" onClick={() => router.push(`/${locale}/gig`)}>
+              ← Back to Marketplace
+            </button>
+            <h1 className="nr-title">Post a New Requirement</h1>
+            <p className="nr-subtitle">Tell us what you need — providers will bid on your requirement</p>
+          </div>
+
+          {success ? (
+            <div className="nr-success">
+              <div className="nr-success-icon">✓</div>
+              <h2>Requirement Posted!</h2>
+              <p>Redirecting to marketplace...</p>
+            </div>
+          ) : (
+            <form className="nr-form" onSubmit={handleSubmit}>
+
+              {error && <div className="nr-error">{error}</div>}
+
+              {/* ─── Section: Market Selection ─── */}
+              <div className="nr-section">
+                <div className="nr-section-title">
+                  <span className="nr-section-num">1</span>
+                  What do you need?
+                </div>
+
+                <div className="nr-field">
+                  <label className="nr-label">Sector <span className="nr-req">*</span></label>
+                  <select className="nr-select" value={sectorid} onChange={e => setSectorid(e.target.value ? Number(e.target.value) : '')} required>
+                    <option value="">Select a sector...</option>
+                    {sectors.map(s => <option key={s.sectorid} value={s.sectorid}>{s.sector}</option>)}
+                  </select>
+                </div>
+
+                <div className="nr-field">
+                  <label className="nr-label">Field <span className="nr-req">*</span></label>
+                  <select className="nr-select" value={fieldid} onChange={e => setFieldid(e.target.value ? Number(e.target.value) : '')} disabled={!sectorid} required>
+                    <option value="">{sectorid ? 'Select a field...' : 'Select a sector first'}</option>
+                    {fields.map(f => <option key={f.fieldid} value={f.fieldid}>{f.field}</option>)}
+                  </select>
+                </div>
+
+                <div className="nr-field">
+                  <label className="nr-label">Type</label>
+                  <div className="nr-radio-group">
+                    <label className={`nr-radio ${psType === '' ? 'active' : ''}`}>
+                      <input type="radio" name="psType" value="" checked={psType === ''} onChange={() => setPsType('')} />
+                      All
+                    </label>
+                    {psOptions.map(ps => (
+                      <label key={ps} className={`nr-radio ${psType === ps ? 'active' : ''}`}>
+                        <input type="radio" name="psType" value={ps} checked={psType === ps} onChange={() => setPsType(ps)} />
+                        {PS_LABELS[ps] || ps}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="nr-field">
+                  <label className="nr-label">Item <span className="nr-req">*</span></label>
+                  <select className="nr-select" value={marketid} onChange={e => setMarketid(e.target.value ? Number(e.target.value) : '')} disabled={!fieldid} required>
+                    <option value="">{fieldid ? 'Select an item...' : 'Select a field first'}</option>
+                    {items.map(m => (
+                      <option key={m.marketid} value={m.marketid}>
+                        {m.item} {PS_LABELS[m.p_s_ps] ? `(${PS_LABELS[m.p_s_ps]})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {deliveryMode && (
+                  <div className="nr-field">
+                    <label className="nr-label">Delivery Mode</label>
+                    <div className="nr-delivery-badge">{DM_LABELS[deliveryMode] || deliveryMode}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* ─── Section: Details ─── */}
+              <div className="nr-section">
+                <div className="nr-section-title">
+                  <span className="nr-section-num">2</span>
+                  Describe your requirement
+                </div>
+
+                <div className="nr-field">
+                  <label className="nr-label">Requirements</label>
+                  <textarea className="nr-textarea" rows={4} placeholder="Describe what you need in detail..." value={requirements} onChange={e => setRequirements(e.target.value)} />
+                </div>
+
+                <div className="nr-field">
+                  <label className="nr-label">Eligibility Criteria</label>
+                  <textarea className="nr-textarea" rows={3} placeholder="Who can bid? Any qualifications needed..." value={eligibility} onChange={e => setEligibility(e.target.value)} />
+                </div>
+              </div>
+
+              {/* ─── Section: Attachments ─── */}
+              <div className="nr-section">
+                <div className="nr-section-title">
+                  <span className="nr-section-num">3</span>
+                  Attachments
+                </div>
+                <p className="nr-section-hint">Upload supporting documents, audio or video (optional)</p>
+
+                <div className="nr-field">
+                  <label className="nr-label">Document URL</label>
+                  <input className="nr-input" type="url" placeholder="https://..." value={docUrl} onChange={e => setDocUrl(e.target.value)} />
+                </div>
+
+                <div className="nr-field">
+                  <label className="nr-label">Audio URL</label>
+                  <input className="nr-input" type="url" placeholder="https://..." value={audioUrl} onChange={e => setAudioUrl(e.target.value)} />
+                </div>
+
+                <div className="nr-field">
+                  <label className="nr-label">Video URL</label>
+                  <input className="nr-input" type="url" placeholder="https://..." value={videoUrl} onChange={e => setVideoUrl(e.target.value)} />
+                </div>
+              </div>
+
+              {/* ─── Section: Budget & Timeline ─── */}
+              <div className="nr-section">
+                <div className="nr-section-title">
+                  <span className="nr-section-num">4</span>
+                  Budget & Timeline
+                </div>
+
+                <div className="nr-row">
+                  <div className="nr-field nr-half">
+                    <label className="nr-label">Budget (₹)</label>
+                    <input className="nr-input" type="number" step="0.01" min="0" placeholder="0.00" value={budget} onChange={e => setBudget(e.target.value)} />
+                  </div>
+                  <div className="nr-field nr-half">
+                    <label className="nr-label">Escrow (₹)</label>
+                    <input className="nr-input" type="number" step="0.01" min="0" placeholder="0.00" value={escrow} onChange={e => setEscrow(e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="nr-row">
+                  <div className="nr-field nr-half">
+                    <label className="nr-label">Bid Closing Date</label>
+                    <input className="nr-input" type="date" value={bidate} onChange={e => setBidate(e.target.value)} />
+                  </div>
+                  <div className="nr-field nr-half">
+                    <label className="nr-label">Completion Date</label>
+                    <input className="nr-input" type="date" value={delivdate} onChange={e => setDelivdate(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              {/* ─── Submit ─── */}
+              <div className="nr-footer">
+                <button type="button" className="nr-btn nr-btn-ghost" onClick={() => router.push(`/${locale}/gig`)}>
+                  Cancel
+                </button>
+                <button type="submit" className="nr-btn nr-btn-primary" disabled={submitting || !marketid}>
+                  {submitting ? 'Posting...' : 'Post Requirement'}
+                </button>
+              </div>
+
+            </form>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── CSS ──────────────────────────────────────────
+const css = `
+
+
+.nr-root {
+  min-height: 100vh; position: relative; overflow: hidden;
+  font-family: 'Outfit', sans-serif; color: #e2e8f0;
+}
+.nr-bg {
+  position: fixed; inset: 0; z-index: 0;
+  background: #080b12;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(168,85,247,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 80%, rgba(236,72,153,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(59,130,246,0.04) 0%, transparent 60%);
+}
+.nr-container {
+  position: relative; z-index: 1;
+  max-width: 720px; margin: 0 auto; padding: 40px 24px 80px;
+}
+
+/* Header */
+.nr-header { margin-bottom: 36px; }
+.nr-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: #94a3b8; font-size: 14px; background: none; border: none;
+  cursor: pointer; font-family: inherit; margin-bottom: 16px;
+  transition: color 0.2s;
+}
+.nr-back:hover { color: #e2e8f0; }
+.nr-title {
+  font-size: 32px; font-weight: 800; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #a855f7, #ec4899, #3b82f6);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 8px;
+}
+.nr-subtitle { color: #64748b; font-size: 15px; }
+
+/* Sections */
+.nr-section {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px; padding: 28px; margin-bottom: 20px;
+  backdrop-filter: blur(20px);
+}
+.nr-section-title {
+  font-size: 18px; font-weight: 700; color: #f8fafc;
+  display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+}
+.nr-section-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.nr-section-hint { color: #64748b; font-size: 13px; margin: -16px 0 20px 40px; }
+
+/* Fields */
+.nr-field { margin-bottom: 20px; }
+.nr-field:last-child { margin-bottom: 0; }
+.nr-label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.nr-req { color: #ec4899; }
+.nr-select, .nr-input, .nr-textarea {
+  width: 100%; padding: 12px 16px; font-size: 15px; font-family: inherit;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px; color: #e2e8f0; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.nr-select:focus, .nr-input:focus, .nr-textarea:focus {
+  border-color: rgba(168,85,247,0.5);
+  box-shadow: 0 0 0 3px rgba(168,85,247,0.1);
+}
+.nr-select:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
+.nr-select option { background: #1a1f2e; color: #e2e8f0; }
+.nr-textarea { resize: vertical; min-height: 80px; }
+
+/* Radio group */
+.nr-radio-group {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.nr-radio {
+  padding: 8px 18px; border-radius: 10px; font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8; display: flex; align-items: center; gap: 6px;
+}
+.nr-radio input { display: none; }
+.nr-radio:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+.nr-radio.active {
+  background: rgba(168,85,247,0.15); border-color: rgba(168,85,247,0.4);
+  color: #c084fc;
+}
+
+/* Delivery badge */
+.nr-delivery-badge {
+  display: inline-block; padding: 8px 20px; border-radius: 10px;
+  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+  color: #34d399; font-size: 14px; font-weight: 600;
+}
+
+/* Row layout */
+.nr-row { display: flex; gap: 16px; }
+.nr-half { flex: 1; }
+@media (max-width: 600px) {
+  .nr-row { flex-direction: column; gap: 0; }
+}
+
+/* Buttons */
+.nr-footer {
+  display: flex; justify-content: flex-end; gap: 12px;
+  margin-top: 8px; padding-top: 20px;
+}
+.nr-btn {
+  padding: 12px 28px; border-radius: 12px; font-size: 15px; font-weight: 600;
+  cursor: pointer; border: 1px solid transparent; font-family: inherit;
+  transition: all 0.2s;
+}
+.nr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.nr-btn-ghost {
+  background: none; border-color: rgba(255,255,255,0.1); color: #94a3b8;
+}
+.nr-btn-ghost:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+.nr-btn-primary {
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  color: #fff; border: none;
+}
+.nr-btn-primary:hover:not(:disabled) {
+  opacity: 0.9; transform: translateY(-1px);
+  box-shadow: 0 8px 30px rgba(168,85,247,0.3);
+}
+
+/* Error */
+.nr-error {
+  background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3);
+  border-radius: 12px; padding: 14px 20px; margin-bottom: 20px;
+  color: #fda4af; font-size: 14px;
+}
+
+/* Success */
+.nr-success {
+  text-align: center; padding: 80px 20px;
+}
+.nr-success-icon {
+  width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 24px;
+  background: linear-gradient(135deg, #10b981, #34d399);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px; color: #fff; font-weight: 700;
+  animation: pop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+.nr-success h2 {
+  font-size: 28px; font-weight: 700; color: #f8fafc; margin-bottom: 8px;
+}
+.nr-success p { color: #64748b; font-size: 15px; }
+
+@keyframes pop {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+/* Scrollbar */
+.nr-root::-webkit-scrollbar { width: 6px; }
+.nr-root::-webkit-scrollbar-track { background: transparent; }
+.nr-root::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+`;

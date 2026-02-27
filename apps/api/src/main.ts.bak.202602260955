@@ -1,5 +1,4 @@
 import { NestFactory } from '@nestjs/core';
-import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
@@ -18,11 +17,7 @@ import { AppModule } from './app.module';
 };
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-
-  // Increase body size limit for file uploads (200MB)
-  app.useBodyParser('json', { limit: '200mb' });
-  app.useBodyParser('urlencoded', { limit: '200mb', extended: true } as any);
+  const app = await NestFactory.create(AppModule);
 
   // ─── Global prefix ──────────────────────────────────────────────────
   app.setGlobalPrefix('api');
