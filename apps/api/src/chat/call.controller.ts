@@ -2,7 +2,7 @@ import { Controller, Get, Post, Query, Body, Req, UseGuards, HttpCode } from '@n
 import { CallService } from './call.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('api/chat/call')
+@Controller('chat/call')
 @UseGuards(JwtAuthGuard)
 export class CallController {
   constructor(private readonly callService: CallService) {}
