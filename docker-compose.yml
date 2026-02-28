@@ -106,6 +106,7 @@ services:
     network_mode: host
     volumes:
       - /data/livekit/livekit.yaml:/etc/livekit.yaml
+      - /data/livekit/certs:/certs:ro
     command: --config /etc/livekit.yaml
     depends_on:
       - redis
