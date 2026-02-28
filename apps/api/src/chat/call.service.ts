@@ -34,7 +34,7 @@ export class CallService {
     }
 
     const user = await this.prisma.$queryRaw<any[]>`
-      SELECT id, name, whatsapp FROM "User" WHERE id = ${userId}
+      SELECT userid as id, fname as name, whatsapp FROM public."user" WHERE id = ${userId}
     `;
     if (!user || user.length === 0) {
       throw new BadRequestException('User not found');
@@ -119,9 +119,9 @@ export class CallService {
 
   async getCallHistory(roomId: number, limit = 20) {
     return this.prisma.$queryRaw<any[]>`
-      SELECT cl.*, u.name as caller_name
+      SELECT cl.*, u.fname as caller_name
       FROM chat_call_log cl
-      LEFT JOIN "User" u ON u.id = cl.caller_id
+      LEFT JOIN public."user" u ON u.userid = cl.caller_id
       WHERE cl.room_id = ${roomId}
       ORDER BY cl.started_at DESC
       LIMIT ${limit}
@@ -130,9 +130,9 @@ export class CallService {
 
   async getUserCallHistory(userId: number, limit = 30) {
     return this.prisma.$queryRaw<any[]>`
-      SELECT cl.*, u.name as caller_name, cr.type as room_type
+      SELECT cl.*, u.fname as caller_name, cr.type as room_type
       FROM chat_call_log cl
-      LEFT JOIN "User" u ON u.id = cl.caller_id
+      LEFT JOIN public."user" u ON u.userid = cl.caller_id
       LEFT JOIN chat_room cr ON cr.id = cl.room_id
       WHERE cl.room_id IN (
         SELECT room_id FROM chat_room_member WHERE user_id = ${userId}
