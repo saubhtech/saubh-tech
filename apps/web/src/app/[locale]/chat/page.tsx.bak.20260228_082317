@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import dynamic from 'next/dynamic';
 const CallView = dynamic(() => import('@/components/CallView'), { ssr: false });
@@ -67,7 +67,6 @@ const LANG_NAMES: Record<string, string> = {
 export default function ChatPage() {
   const { locale } = useParams<{ locale: string }>();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState('');
@@ -388,47 +387,6 @@ export default function ChatPage() {
       });
     } catch (err) { console.error('File upload failed', err); }
   };
-
-  /* ─── Auto-open from query params (dashboard integration) ── */
-  useEffect(() => {
-    if (!rooms.length || !token) return;
-    const dmId = searchParams.get('dm');
-    const callMode = searchParams.get('call');
-    if (dmId) {
-      const target = rooms.find(r => String(r.conversation_id) === dmId);
-      if (target) {
-        setActiveRoom(target);
-        if (callMode === 'video' || callMode === 'audio') {
-          // Auto-start call after a brief delay for room to load
-          setTimeout(() => {
-            const callType = callMode as 'video' | 'audio';
-            (async () => {
-              try {
-                const res = await fetch('/api/chat/call/token', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                  body: JSON.stringify({ room_id: Number(dmId) }),
-                });
-                if (!res.ok) throw new Error('Failed to get call token');
-                const data = await res.json();
-                setCallToken(data.token);
-                setCallLkUrl(data.livekitUrl);
-                setCallType(callType);
-                setInCall(true);
-                socketRef.current?.emit('call:start', {
-                  conversationId: dmId,
-                  callerName: user?.fname || 'Someone',
-                  callType,
-                });
-              } catch (err) { console.error('Auto-call failed:', err); }
-            })();
-          }, 1500);
-        }
-      }
-      // Clean URL
-      window.history.replaceState({}, '', '/' + locale + '/chat');
-    }
-  }, [rooms, token]);
 
   /* ─── DM creation ──────────────────────────────────────── */
   const createDm = async () => {

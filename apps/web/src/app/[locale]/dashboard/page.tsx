@@ -34,6 +34,53 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<Tab>('requirements');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // ── Chat & Video from dashboard ──
+  const handleChat = async (targetUserId: string, label?: string) => {
+    if (chatting) return;
+    setChatting(label || targetUserId);
+    try {
+      const tk = getCookie('saubh_token');
+      if (!tk) { router.push('/' + locale + '/login'); return; }
+      const res = await fetch('/api/chat/dm', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + tk, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_b: targetUserId }),
+      });
+      const data = await res.json();
+      if (data.conversation_id) {
+        router.push('/' + locale + '/chat?dm=' + data.conversation_id);
+      } else {
+        router.push('/' + locale + '/chat');
+      }
+    } catch (err) {
+      console.error('Chat init failed', err);
+      router.push('/' + locale + '/chat');
+    } finally { setChatting(null); }
+  };
+
+  const handleVideo = async (targetUserId: string, label?: string) => {
+    if (chatting) return;
+    setChatting(label || targetUserId);
+    try {
+      const tk = getCookie('saubh_token');
+      if (!tk) { router.push('/' + locale + '/login'); return; }
+      const res = await fetch('/api/chat/dm', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + tk, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_b: targetUserId }),
+      });
+      const data = await res.json();
+      if (data.conversation_id) {
+        router.push('/' + locale + '/chat?dm=' + data.conversation_id + '&call=video');
+      } else {
+        router.push('/' + locale + '/chat');
+      }
+    } catch (err) {
+      console.error('Video call init failed', err);
+      router.push('/' + locale + '/chat');
+    } finally { setChatting(null); }
+  };
+
   // ── Dashboard data ──
   const [requirements, setRequirements] = useState<any[]>([]);
   const [offerings, setOfferings] = useState<any[]>([]);
@@ -783,8 +830,8 @@ export default function DashboardPage() {
 
                     <div className="actions-row">
                       <button className="icon-btn icon-btn-pri" disabled={calling === r.requirid} onClick={() => handleCall(r.userid, r.requirid)}>{calling === r.requirid ? '📞 Calling...' : '📞 Call'}</button>
-                      <button className="icon-btn icon-btn-pri">💬 Chat</button>
-                      <button className="icon-btn icon-btn-pri">🎥 Video</button>
+                      <button className="icon-btn icon-btn-pri" disabled={!!chatting} onClick={() => handleChat(r.userid, r.requirid)}>{chatting === r.requirid ? '💬 Opening...' : '💬 Chat'}</button>
+                      <button className="icon-btn icon-btn-pri" disabled={!!chatting} onClick={() => handleVideo(r.userid, r.requirid)}>🎥 Video</button>
                     </div>
                   </article>
                 ))}
