@@ -29,6 +29,17 @@ export class CallController {
     return this.callService.listActiveRooms();
   }
 
+  @Get('history')
+  async getCallHistory(@Query('room_id') roomId: string, @Query('limit') limit?: string) {
+    return this.callService.getCallHistory(Number(roomId), Number(limit) || 20);
+  }
+
+  @Get('my-history')
+  async getMyCallHistory(@Req() req: any, @Query('limit') limit?: string) {
+    const userId = req.user.sub || req.user.id;
+    return this.callService.getUserCallHistory(Number(userId), Number(limit) || 30);
+  }
+
   @Post('end')
   @HttpCode(200)
   async endCall(@Req() req: any, @Body() body: { room_id: number }) {
