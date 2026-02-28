@@ -38,9 +38,6 @@ export default function LocaleBanner() {
 
   if (!mounted) return null;
 
-  // Hide on chat page — it has its own lang indicator and the banner covers the input
-  if (pathname.includes('/chat')) return null;
-
   const lang = localeToLang(locale);
   const langDef = LANGUAGES.find((l) => l.code === lang);
   const displayName = langDef
