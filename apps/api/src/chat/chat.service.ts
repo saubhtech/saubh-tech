@@ -3,6 +3,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
+import Redis from 'ioredis';
 
 const SYNAPSE_URL = process.env.SYNAPSE_URL || 'http://localhost:8008';
 const SYNAPSE_SHARED_SECRET = process.env.SYNAPSE_SHARED_SECRET || '';
@@ -26,9 +27,15 @@ export class ChatService {
       },
       forcePathStyle: true,
     });
+    this.redisPub = new Redis({
+      host: process.env.REDIS_HOST || '127.0.0.1',
+      port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      password: process.env.REDIS_PASSWORD || undefined,
+    });
   }
 
   private s3: S3Client;
+  private redisPub: Redis;
 
   // ─── Matrix Admin Helpers ──────────────────────────────────
 
@@ -277,6 +284,71 @@ export class ChatService {
   
   
 
+
+
+  // ─── Read Receipts ─────────────────────────────────────────
+
+  async markRead(userId: bigint, roomId: bigint, eventId: string) {
+    await this.prisma.chatReadReceipt.upsert({
+      where: { roomId_userId: { roomId, userId } },
+      create: { roomId, userId, lastEventId: eventId, lastReadAt: new Date() },
+      update: { lastEventId: eventId, lastReadAt: new Date() },
+    });
+
+    // Broadcast read receipt via Redis
+    await this.publishChatEvent(roomId, {
+      type: 'read_receipt',
+      room_id: roomId.toString(),
+      user_id: userId.toString(),
+      last_event_id: eventId,
+    });
+
+    return { marked: true };
+  }
+
+  async getUnreadCounts(userId: bigint): Promise<Record<string, number>> {
+    // Get all rooms for user
+    const memberships = await this.prisma.chatRoomMember.findMany({
+      where: { userId },
+      select: { roomId: true },
+    });
+
+    const counts: Record<string, number> = {};
+    for (const m of memberships) {
+      const receipt = await this.prisma.chatReadReceipt.findUnique({
+        where: { roomId_userId: { roomId: m.roomId, userId } },
+      });
+
+      if (!receipt) {
+        // Never read - count all enrichments in room
+        const total = await this.prisma.chatEnrichment.count({
+          where: { roomId: m.roomId },
+        });
+        counts[m.roomId.toString()] = total;
+      } else {
+        // Count enrichments after last read
+        const total = await this.prisma.chatEnrichment.count({
+          where: {
+            roomId: m.roomId,
+            createdAt: { gt: receipt.lastReadAt },
+          },
+        });
+        counts[m.roomId.toString()] = total;
+      }
+    }
+    return counts;
+  }
+
+  // ─── Real-time Push ────────────────────────────────────────
+
+  async publishChatEvent(roomId: bigint, event: any) {
+    try {
+      await this.redisPub.publish(`chat:${roomId}`, JSON.stringify(event));
+    } catch (err) {
+      this.logger.warn(`Redis publish failed: ${err}`);
+    }
+  }
+
   // ─── Voice Notes ───────────────────────────────────────────
 
   /**
@@ -394,7 +466,113 @@ export class ChatService {
     return Buffer.concat(chunks);
   }
 
-    // ─── Matrix Token + Messages ───────────────────────────────
+  
+  // ─── File Sharing ──────────────────────────────────────────
+
+  async uploadFile(
+    userId: bigint,
+    roomId: bigint,
+    fileBuffer: Buffer,
+    mimeType: string,
+    filename: string,
+  ) {
+    const member = await this.prisma.chatRoomMember.findUnique({
+      where: { roomId_userId: { roomId, userId } },
+    });
+    if (!member) throw new NotFoundException('Not a member of this room');
+
+    const roomMap = await this.prisma.chatRoomMap.findUnique({ where: { roomId } });
+    if (!roomMap) throw new NotFoundException('Room not mapped');
+
+    // Upload to MinIO
+    const ext = filename.split('.').pop() || 'bin';
+    const key = `files/${roomId}/${Date.now()}_${userId}_${filename}`;
+    await this.s3.send(new PutObjectCommand({
+      Bucket: 'chat-media',
+      Key: key,
+      Body: fileBuffer,
+      ContentType: mimeType,
+    }));
+    const mediaUrl = `minio://chat-media/${key}`;
+    this.logger.log(`File uploaded: ${key} (${mimeType}, ${fileBuffer.length} bytes)`);
+
+    // Send to Matrix
+    const userMatrixToken = await this.getMatrixToken(userId);
+    const isImage = mimeType.startsWith('image/');
+    const txnId = `file_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    let eventId = `!pending_file_${Date.now()}`;
+    try {
+      const sendRes = await fetch(
+        `${SYNAPSE_URL}/_matrix/client/v3/rooms/${encodeURIComponent(roomMap.matrixRoomId)}/send/m.room.message/${txnId}`,
+        {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${userMatrixToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            msgtype: isImage ? 'm.image' : 'm.file',
+            body: filename,
+            info: { mimetype: mimeType, size: fileBuffer.length },
+            url: mediaUrl,
+          }),
+        }
+      );
+      if (sendRes.ok) {
+        const data = await sendRes.json() as any;
+        eventId = data.event_id || eventId;
+      }
+    } catch (err) {
+      this.logger.warn(`Matrix file send failed: ${err}`);
+    }
+
+    // Create enrichment
+    let enrichment;
+    try {
+      enrichment = await this.prisma.chatEnrichment.create({
+        data: {
+          roomId,
+          matrixEventId: eventId,
+          messageType: isImage ? 'IMAGE' : 'FILE',
+          originalMediaUrl: mediaUrl,
+        },
+      });
+    } catch (err: any) {
+      enrichment = await this.prisma.chatEnrichment.findUnique({
+        where: { matrixEventId: eventId },
+      });
+      if (!enrichment) throw err;
+    }
+
+    this.logger.log(`File enrichment created: ${enrichment!.id} (${isImage ? 'IMAGE' : 'FILE'})`);
+
+    return {
+      enrichment_id: enrichment!.id.toString(),
+      event_id: eventId,
+      media_url: mediaUrl,
+      filename,
+      mimetype: mimeType,
+      size: fileBuffer.length,
+    };
+  }
+
+  /**
+   * Stream a file from MinIO.
+   */
+  async getFileBuffer(mediaUrl: string): Promise<{ buffer: Buffer; contentType: string }> {
+    const match = mediaUrl.match(/^minio:\/\/([^/]+)\/(.+)$/);
+    if (!match) throw new BadRequestException('Invalid media URL');
+    const [, bucket, key] = match;
+    const res = await this.s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of res.Body as any) {
+      chunks.push(chunk);
+    }
+    return {
+      buffer: Buffer.concat(chunks),
+      contentType: res.ContentType || 'application/octet-stream',
+    };
+  }
+
+  // ─── Matrix Token + Messages ───────────────────────────────
 
   /**
    * Get a Matrix access token for a user (reset password + login).
@@ -548,6 +726,17 @@ export class ChatService {
       });
 
       this.logger.log(`Processed event ${eventId}: ${messageType}, translations queued for [${targetLangs.join(',')}]`);
+
+      // Push to realtime via Redis
+      await this.publishChatEvent(roomMap.roomId, {
+        type: 'new_message',
+        event_id: eventId,
+        room_id: roomMap.roomId.toString(),
+        sender: senderId,
+        content: content,
+        timestamp: event.origin_server_ts,
+        enrichment_id: enrichment.id.toString(),
+      });
     }
 
     return results;

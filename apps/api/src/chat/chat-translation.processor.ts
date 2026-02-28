@@ -2,6 +2,7 @@ import { Processor, WorkerHost, InjectQueue } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job, Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
+import Redis from 'ioredis';
 
 export interface ChatTranslationJob {
   enrichmentId: string;
@@ -13,12 +14,18 @@ export interface ChatTranslationJob {
 @Processor('chat-translation')
 export class ChatTranslationProcessor extends WorkerHost {
   private readonly logger = new Logger(ChatTranslationProcessor.name);
+  private redisPub: Redis;
 
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue('chat-translation') private readonly chatQueue: Queue,
   ) {
     super();
+    this.redisPub = new Redis({
+      host: process.env.REDIS_HOST || '127.0.0.1',
+      port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      password: process.env.REDIS_PASSWORD || undefined,
+    });
   }
 
   async process(job: Job<ChatTranslationJob | any>): Promise<any> {

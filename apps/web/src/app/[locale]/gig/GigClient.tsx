@@ -41,6 +41,35 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
+
+// ── Chat Helper ─────────────────────────────────
+function getCookieVal(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function startChat(targetUserId: string) {
+  const token = getCookieVal('saubh_token');
+  if (!token) { alert('Please log in to chat'); return; }
+  try {
+    const res = await fetch('/api/chat/dm', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_b: targetUserId }),
+    });
+    const data = await res.json();
+    if (data.conversation_id) {
+      const locale = window.location.pathname.split('/')[1] || 'en-in';
+      window.location.href = `/${locale}/chat`;
+    } else {
+      alert(data.message || 'Could not start chat');
+    }
+  } catch (err) {
+    alert('Chat unavailable');
+  }
+}
+
 // ── Styles ──────────────────────────────────────
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -346,7 +375,10 @@ export default function GigMarketplace() {
             <div className="gig-field"><div className="gig-field-label">Bid Date</div><div className="gig-date">{fmtDate(item.bidate)}</div></div>
             <div className="gig-field"><div className="gig-field-label">Delivery</div><div className="gig-date">{fmtDate(item.delivdate)}</div></div>
           </div>
-          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)' }}>User: {item.userid} · Market: {item.marketid} · Bids: {item.bids?.length || 0}</div>
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>User: {item.userid} · Market: {item.marketid} · Bids: {item.bids?.length || 0}</span>
+            <button className="gig-btn gig-btn-sm" onClick={() => startChat(item.userid)} style={{ background: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', cursor: 'pointer' }}>💬 Chat</button>
+          </div>
         </div>
       );
       case 'offerings': return (
@@ -362,7 +394,10 @@ export default function GigMarketplace() {
             </div>
           </div>
           {item.offerings && <div className="gig-field"><div className="gig-field-label">Offerings</div><div className="gig-field-value">{item.offerings}</div></div>}
-          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)' }}>User: {item.userid} · Market: {item.marketid}</div>
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>User: {item.userid} · Market: {item.marketid}</span>
+            <button className="gig-btn gig-btn-sm" onClick={() => startChat(item.userid)} style={{ background: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', cursor: 'pointer' }}>💬 Chat</button>
+          </div>
         </div>
       );
       case 'bids': return (
@@ -383,7 +418,10 @@ export default function GigMarketplace() {
             <div className="gig-field"><div className="gig-field-label">Amount</div><div className="gig-money">{fmtMoney(item.amount)}</div></div>
             <div className="gig-field"><div className="gig-field-label">Escrow</div><div className="gig-money">{fmtMoney(item.escrow)}</div></div>
           </div>
-          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)' }}>Req: #{item.requirid} · User: {item.userid}</div>
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Req: #{item.requirid} · User: {item.userid}</span>
+            <button className="gig-btn gig-btn-sm" onClick={() => startChat(item.userid)} style={{ background: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', cursor: 'pointer' }}>💬 Chat</button>
+          </div>
         </div>
       );
       case 'agreements': return (

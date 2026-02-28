@@ -81,6 +81,49 @@ export class ChatController {
   }
 
 
+
+
+  @Post('read')
+  @UseGuards(JwtAuthGuard)
+  async markRead(@Req() req: any, @Body() body: { room_id: string; event_id: string }) {
+    return this.chatService.markRead(BigInt(req.user.sub), BigInt(body.room_id), body.event_id);
+  }
+
+  @Get('unread')
+  @UseGuards(JwtAuthGuard)
+  async getUnread(@Req() req: any) {
+    return this.chatService.getUnreadCounts(BigInt(req.user.sub));
+  }
+
+  @Post('file/upload')
+  @UseGuards(JwtAuthGuard)
+  @UseNestInterceptors(FileInterceptor('file'))
+  async uploadFile(
+    @Req() req: any,
+    @UploadedFile() file: any,
+    @Body() body: { room_id: string },
+  ) {
+    if (!file) throw new Error('File required');
+    const userId = BigInt(req.user.sub);
+    const roomId = BigInt(body.room_id);
+    return this.chatService.uploadFile(
+      userId, roomId, file.buffer, file.mimetype, file.originalname || 'file',
+    );
+  }
+
+  @Get('file/download')
+  @UseGuards(JwtAuthGuard)
+  async downloadFile(@Req() req: any, @Query('url') url: string, @Res() res: Response) {
+    const { buffer, contentType } = await this.chatService.getFileBuffer(url);
+    const filename = url.split('/').pop() || 'file';
+    res.set({
+      'Content-Type': contentType,
+      'Content-Length': buffer.length.toString(),
+      'Content-Disposition': `inline; filename="${filename}"`,
+    });
+    res.send(buffer);
+  }
+
   @Post('voice/upload')
   @UseGuards(JwtAuthGuard)
   @UseNestInterceptors(FileInterceptor('audio'))

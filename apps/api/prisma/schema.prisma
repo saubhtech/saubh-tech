@@ -853,6 +853,8 @@ enum ChatRoomType {
 enum ChatMessageType {
   TEXT
   VOICE
+  IMAGE
+  FILE
 
   @@schema("public")
 }
@@ -865,6 +867,7 @@ model ChatRoom {
   createdAt DateTime     @default(now()) @map("created_at")
 
   members     ChatRoomMember[]
+  readReceipts  ChatReadReceipt[]
   roomMap     ChatRoomMap?
   enrichments ChatEnrichment[]
   reports     ChatReport[]
@@ -964,5 +967,18 @@ model ChatReport {
 
   @@index([roomId, createdAt(sort: Desc)])
   @@map("chat_report")
+  @@schema("public")
+}
+
+model ChatReadReceipt {
+  id          BigInt   @id @default(autoincrement())
+  roomId      BigInt   @map("room_id")
+  userId      BigInt   @map("user_id")
+  lastEventId String   @map("last_event_id") @db.VarChar(255)
+  lastReadAt  DateTime @default(now()) @map("last_read_at")
+  room        ChatRoom @relation(fields: [roomId], references: [id])
+
+  @@unique([roomId, userId])
+  @@map("chat_read_receipt")
   @@schema("public")
 }
