@@ -95,7 +95,6 @@ export default function ChatPage() {
   const [callToken, setCallToken] = useState('');
   const [callLkUrl, setCallLkUrl] = useState('');
   const [callType, setCallType] = useState<'video' | 'audio'>('video');
-  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [incomingCall, setIncomingCall] = useState<{
     conversationId: string; callerId: string; callerName: string; callType: string;
   } | null>(null);
@@ -390,25 +389,6 @@ export default function ChatPage() {
     } catch (err) { console.error('File upload failed', err); }
   };
 
-  /* ─── Change language preference ────────────────────── */
-  const changeLang = async (langCode: string) => {
-    if (!activeRoom || !token) return;
-    setLangDropdownOpen(false);
-    try {
-      await fetch('/api/chat/prefs', {
-        method: 'PUT',
-        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room_id: String(activeRoom.id), preferred_lang: langCode }),
-      });
-      // Refresh rooms to get updated lang
-      const res = await fetch('/api/chat/rooms', { headers: { Authorization: 'Bearer ' + token } });
-      const updatedRooms = await res.json();
-      setRooms(updatedRooms);
-      const updated = updatedRooms.find((r: any) => r.id === activeRoom.id);
-      if (updated) setActiveRoom(updated);
-    } catch (err) { console.error('Failed to change language:', err); }
-  };
-
   /* ─── Auto-open from query params (dashboard integration) ── */
   useEffect(() => {
     if (!rooms.length || !token) return;
@@ -643,45 +623,9 @@ export default function ChatPage() {
                     background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8,
                     padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
                   }}>📹</button>
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-                    style={{
-                      fontSize: 12, color: '#888', padding: '4px 10px', background: '#161b22',
-                      borderRadius: 12, border: '1px solid transparent', cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.borderColor = '#3b82f6')}
-                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}
-                    title="Change your chat language"
-                  >
-                    🌐 {LANG_NAMES[activeRoom.my_lang] || activeRoom.my_lang} ▾
-                  </button>
-                  {langDropdownOpen && (
-                    <div style={{
-                      position: 'absolute', top: '100%', right: 0, marginTop: 4,
-                      background: '#1a1f2e', border: '1px solid #2a2f3e', borderRadius: 12,
-                      padding: '6px 0', maxHeight: 280, overflowY: 'auto', width: 180,
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 100,
-                    }}>
-                      {Object.entries(LANG_NAMES).map(([code, name]) => (
-                        <button
-                          key={code}
-                          onClick={() => changeLang(code)}
-                          style={{
-                            display: 'block', width: '100%', padding: '8px 14px',
-                            background: code === activeRoom.my_lang ? 'rgba(59,130,246,0.15)' : 'transparent',
-                            border: 'none', color: code === activeRoom.my_lang ? '#3b82f6' : '#ccc',
-                            fontWeight: code === activeRoom.my_lang ? 700 : 400,
-                            fontSize: 13, cursor: 'pointer', textAlign: 'left',
-                          }}
-                        >
-                          {name} ({code})
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <span style={{ fontSize: 12, color: '#888', padding: '4px 10px', background: '#161b22', borderRadius: 12 }}>
+                  🌐 {LANG_NAMES[activeRoom.my_lang] || activeRoom.my_lang}
+                </span>
               </div>
             </div>
 
