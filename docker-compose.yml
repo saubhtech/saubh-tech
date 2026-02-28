@@ -99,6 +99,22 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: saubh-livekit
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /data/livekit/livekit.yaml:/etc/livekit.yaml
+    command: --config /etc/livekit.yaml
+    depends_on:
+      - redis
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   redis-data:
     driver: local
