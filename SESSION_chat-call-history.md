@@ -75,3 +75,41 @@ Nothing broken. All changes complete and tested.
 
 ## 💡 NOTES
 
+
+---
+
+## ✅ SESSION CLOSED: 2026-02-28 07:57:04
+
+### Final State:
+- **Commit:** fcbf14e
+- **Branch:** main
+- **End tag:** session-end/chat-call-history/20260228_075704
+- **Backup:** /data/backups/sessions/chat-call-history_end_20260228_075644
+- **Offsite:** Google Drive ✓
+
+### Git Log (last 10):
+```
+fcbf14e autosave: 20260228_075555
+35c5a06 autosave: 20260228_074554
+59551bf autosave: 20260228_074053
+3ab58a4 session-close: updated SESSION_chat-audio-only.md
+bfe2669 session-end: [chat-audio-only] 20260228_070634
+aa86214 session-close: updated SESSION_chat-call-notifications.md
+9c67a2f autosave: 20260228_070107
+d3fed05 session-close: updated SESSION_chat-turn-fix.md
+eeb2963 autosave: 20260228_064437
+d7c4c81 session-close: updated SESSION_chat-phase3-livekit.md
+```
+
+### Files Changed:
+```
+SESSION_chat-audio-only.md
+SESSION_chat-call-history.md
+apps/api/src/chat/call.controller.ts
+apps/api/src/chat/call.service.ts
+apps/api/src/chat/call.service.ts.bak.20260228_073650
+apps/web/src/app/[locale]/chat/page.tsx
+apps/web/src/app/[locale]/chat/page.tsx.bak.20260228_070541
+apps/web/src/components/CallView.tsx
+apps/web/src/components/CallView.tsx.bak.20260228_070541
+```
