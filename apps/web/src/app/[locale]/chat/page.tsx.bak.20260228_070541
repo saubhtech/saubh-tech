@@ -93,7 +93,6 @@ export default function ChatPage() {
   const [inCall, setInCall] = useState(false);
   const [callToken, setCallToken] = useState('');
   const [callLkUrl, setCallLkUrl] = useState('');
-  const [callType, setCallType] = useState<'video' | 'audio'>('video');
   const [incomingCall, setIncomingCall] = useState<{
     conversationId: string; callerId: string; callerName: string; callType: string;
   } | null>(null);
@@ -446,7 +445,7 @@ export default function ChatPage() {
     </div>
   );
 
-  const startCall = async (callType: 'video' | 'audio' = 'video') => {
+  const startCall = async () => {
     if (!activeRoom || !token) return;
     try {
       const res = await fetch('/api/chat/call/token', {
@@ -458,13 +457,12 @@ export default function ChatPage() {
       const data = await res.json();
       setCallToken(data.token);
       setCallLkUrl(data.livekitUrl);
-      setCallType(callType);
       setInCall(true);
       // Notify other room members
       socketRef.current?.emit('call:start', {
         conversationId: activeRoom.conversation_id,
         callerName: user?.name || 'Someone',
-        callType,
+        callType: 'video',
       });
     } catch (err) { console.error('Call error:', err); alert('Could not start call'); }
   };
@@ -573,14 +571,11 @@ export default function ChatPage() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button onClick={() => startCall('audio')} title="Voice Call" style={{
-                    background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
-                    padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  }}>🎤</button>
-                <button onClick={() => startCall('video')} title="Video Call" style={{
+                <button onClick={startCall} title="Start Call" style={{
                     background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8,
-                    padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  }}>📹</button>
+                    padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}>📞 Call</button>
                 <span style={{ fontSize: 12, color: '#888', padding: '4px 10px', background: '#161b22', borderRadius: 12 }}>
                   🌐 {LANG_NAMES[activeRoom.my_lang] || activeRoom.my_lang}
                 </span>
@@ -826,7 +821,6 @@ export default function ChatPage() {
                     const data = await res.json();
                     setCallToken(data.token);
                     setCallLkUrl(data.livekitUrl);
-                    setCallType(incomingCall.callType === 'audio' ? 'audio' : 'video');
                     setInCall(true);
                   } catch (err) { console.error('Accept call error:', err); }
                 }}
@@ -844,7 +838,6 @@ export default function ChatPage() {
           roomId={Number(activeRoom.conversation_id)}
           token={callToken}
           livekitUrl={callLkUrl}
-          callType={callType}
           onClose={() => {
             setInCall(false); setCallToken(''); setCallLkUrl('');
             if (activeRoom) socketRef.current?.emit('call:end', { conversationId: activeRoom.conversation_id });

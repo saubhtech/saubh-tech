@@ -18,11 +18,10 @@ interface CallViewProps {
   roomId: number;
   token: string;
   livekitUrl: string;
-  callType?: 'video' | 'audio';
   onClose: () => void;
 }
 
-export default function CallView({ roomId, token, livekitUrl, callType = 'video', onClose }: CallViewProps) {
+export default function CallView({ roomId, token, livekitUrl, onClose }: CallViewProps) {
   const [isConnecting, setIsConnecting] = useState(true);
 
   if (!token || !livekitUrl) return null;
@@ -51,7 +50,7 @@ export default function CallView({ roomId, token, livekitUrl, callType = 'video'
           serverUrl={livekitUrl}
           token={token}
           connect={true}
-          video={callType === 'video'}
+          video={true}
           audio={true}
           onConnected={() => setIsConnecting(false)}
           onDisconnected={() => { setIsConnecting(false); onClose(); }}
