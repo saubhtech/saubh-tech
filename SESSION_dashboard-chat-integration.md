@@ -75,3 +75,39 @@ Nothing broken. All changes complete and tested.
 
 ## 💡 NOTES
 
+
+---
+
+## ✅ SESSION CLOSED: 2026-02-28 08:25:18
+
+### Final State:
+- **Commit:** 9f3676c
+- **Branch:** main
+- **End tag:** session-end/dashboard-chat-integration/20260228_082518
+- **Backup:** /data/backups/sessions/dashboard-chat-integration_end_20260228_082417
+- **Offsite:** Google Drive ✓
+
+### Git Log (last 10):
+```
+9f3676c session-end: [dashboard-chat-integration] 20260228_082417
+35a6473 autosave: 20260228_082204
+51a6a17 session-close: updated SESSION_chat-call-history.md
+fcbf14e autosave: 20260228_075555
+35c5a06 autosave: 20260228_074554
+59551bf autosave: 20260228_074053
+3ab58a4 session-close: updated SESSION_chat-audio-only.md
+bfe2669 session-end: [chat-audio-only] 20260228_070634
+aa86214 session-close: updated SESSION_chat-call-notifications.md
+9c67a2f autosave: 20260228_070107
+```
+
+### Files Changed:
+```
+SESSION_chat-call-history.md
+SESSION_dashboard-chat-integration.md
+apps/api/src/chat/call.service.ts
+apps/web/src/app/[locale]/chat/page.tsx
+apps/web/src/app/[locale]/chat/page.tsx.bak.20260228_082317
+apps/web/src/app/[locale]/dashboard/page.tsx
+apps/web/src/app/[locale]/dashboard/page.tsx.bak.20260228_081855
+```
