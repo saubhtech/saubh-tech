@@ -75,3 +75,42 @@ Nothing broken. All changes complete and tested.
 
 ## 💡 NOTES
 
+
+---
+
+## ✅ SESSION CLOSED: 2026-02-28 07:01:45
+
+### Final State:
+- **Commit:** 9c67a2f
+- **Branch:** main
+- **End tag:** session-end/chat-call-notifications/20260228_070145
+- **Backup:** /data/backups/sessions/chat-call-notifications_end_20260228_070123
+- **Offsite:** Google Drive ✓
+
+### Git Log (last 10):
+```
+9c67a2f autosave: 20260228_070107
+d3fed05 session-close: updated SESSION_chat-turn-fix.md
+eeb2963 autosave: 20260228_064437
+d7c4c81 session-close: updated SESSION_chat-phase3-livekit.md
+0fd2b9b autosave: 20260228_062421
+b26f82c autosave: 20260228_061420
+7fd1f23 autosave: 20260228_060918
+507e6d5 autosave: 20260228_060417
+07e54c6 autosave: 20260228_055416
+ac16250 checkpoint: before livekit phase 3
+```
+
+### Files Changed:
+```
+SESSION_chat-call-notifications.md
+SESSION_chat-phase3-livekit.md
+SESSION_chat-turn-fix.md
+apps/realtime/src/chat/chat.gateway.ts
+apps/realtime/src/chat/chat.gateway.ts.bak.20260228_065606
+apps/web/public/sounds/ring.mp3
+apps/web/src/app/[locale]/chat/page.tsx
+apps/web/src/app/[locale]/chat/page.tsx.bak.20260228_062150
+apps/web/src/app/[locale]/chat/page.tsx.bak.20260228_065914
+docker-compose.yml
+```
