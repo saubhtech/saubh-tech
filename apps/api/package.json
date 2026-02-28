@@ -39,6 +39,7 @@
     "ioredis": "^5.4.2",
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "^3.2.2",
+    "livekit-server-sdk": "^2.15.0",
     "multer": "^2.0.2",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.0",
