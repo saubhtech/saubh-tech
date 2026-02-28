@@ -131,21 +131,17 @@ export class ChatGateway
             this.server.to(roomKey).emit('chat-event', event);
             // Also send to personal channels for global notifications
             if (event.type === 'new_message') {
-              const roomMembers = this.server.sockets.adapter.rooms.get(roomKey);
-              if (roomMembers) {
-                for (const socketId of roomMembers) {
-                  const s = this.server.sockets.sockets.get(socketId);
-                  const uid = (s as any)?.userId;
-                  if (uid && String(uid) !== String(event.sender_id)) {
-                    this.server.to(`user:${uid}`).emit('global:new_message', {
-                      conversationId,
-                      senderId: event.sender_id,
-                      senderName: event.sender_name || 'Someone',
-                      content: event.content?.substring(0, 100) || '',
-                      type: event.content_type || 'text',
-                      timestamp: event.timestamp || new Date().toISOString(),
-                    });
-                  }
+              // Notify all connected users via personal channel
+              for (const [uid, sockets] of this.userSockets.entries()) {
+                if (sockets.size > 0 && String(uid) !== String(event.sender_id)) {
+                  this.server.to(`user:${uid}`).emit('global:new_message', {
+                    conversationId,
+                    senderId: event.sender_id,
+                    senderName: event.sender_name || 'Someone',
+                    content: event.content?.body?.substring(0, 100) || '',
+                    type: event.content_type || 'text',
+                    timestamp: event.timestamp || new Date().toISOString(),
+                  });
                 }
               }
             }
@@ -210,21 +206,16 @@ export class ChatGateway
               const event = JSON.parse(message);
               this.server.to(roomKey).emit('chat-event', event);
               if (event.type === 'new_message') {
-                const roomMembers = this.server.sockets.adapter.rooms.get(roomKey);
-                if (roomMembers) {
-                  for (const socketId of roomMembers) {
-                    const s = this.server.sockets.sockets.get(socketId);
-                    const uid = (s as any)?.userId;
-                    if (uid && String(uid) !== String(event.sender_id)) {
-                      this.server.to(`user:${uid}`).emit('global:new_message', {
-                        conversationId: rid,
-                        senderId: event.sender_id,
-                        senderName: event.sender_name || 'Someone',
-                        content: event.content?.substring(0, 100) || '',
-                        type: event.content_type || 'text',
-                        timestamp: event.timestamp || new Date().toISOString(),
-                      });
-                    }
+                for (const [uid, sockets] of this.userSockets.entries()) {
+                  if (sockets.size > 0 && String(uid) !== String(event.sender_id)) {
+                    this.server.to(`user:${uid}`).emit('global:new_message', {
+                      conversationId: rid,
+                      senderId: event.sender_id,
+                      senderName: event.sender_name || 'Someone',
+                      content: event.content?.body?.substring(0, 100) || '',
+                      type: event.content_type || 'text',
+                      timestamp: event.timestamp || new Date().toISOString(),
+                    });
                   }
                 }
               }
@@ -255,21 +246,15 @@ export class ChatGateway
     });
 
     // Also notify via personal channels (for users not on chat page)
-    // Get all members of this conversation from joined sockets
-    const roomSockets = this.server.sockets.adapter.rooms.get(roomKey);
-    if (roomSockets) {
-      for (const socketId of roomSockets) {
-        const s = this.server.sockets.sockets.get(socketId);
-        const targetUserId = (s as any)?.userId;
-        if (targetUserId && targetUserId !== userId) {
-          this.server.to(`user:${targetUserId}`).emit('global:call:incoming', {
-            conversationId: data.conversationId,
-            callerId: userId,
-            callerName: data.callerName || `User ${userId}`,
-            callType: data.callType || 'video',
-            timestamp: new Date().toISOString(),
-          });
-        }
+    for (const [uid, sockets] of this.userSockets.entries()) {
+      if (uid !== userId && sockets.size > 0) {
+        this.server.to(`user:${uid}`).emit('global:call:incoming', {
+          conversationId: data.conversationId,
+          callerId: userId,
+          callerName: data.callerName || `User ${userId}`,
+          callType: data.callType || 'video',
+          timestamp: new Date().toISOString(),
+        });
       }
     }
   }

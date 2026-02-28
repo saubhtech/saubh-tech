@@ -92,29 +92,6 @@ export class ChatTranslationProcessor extends WorkerHost {
 
       this.logger.log(`STT complete: "${sttResult.text.slice(0, 50)}..." (${sttResult.language})`);
 
-      // Push stt_ready event to realtime
-      const enrichmentData = await this.prisma.chatEnrichment.findUnique({
-        where: { id: BigInt(enrichmentId) },
-      });
-      if (enrichmentData) {
-        const sttEvent = {
-          type: 'stt_ready',
-          enrichment_id: enrichmentId,
-          event_id: enrichmentData.matrixEventId,
-          room_id: roomId.toString(),
-          transcript: sttResult.text,
-          language: sttResult.language || senderLang,
-          confidence: sttResult.confidence || null,
-          timestamp: new Date().toISOString(),
-        };
-        try {
-          await this.redisPub.publish(`chat:${roomId}`, JSON.stringify(sttEvent));
-          this.logger.log(`Published stt_ready for room ${roomId}`);
-        } catch (err: any) {
-          this.logger.warn(`Redis publish stt_ready failed: ${err.message}`);
-        }
-      }
-
       // Queue translations for other members
       const members = await this.prisma.chatRoomMember.findMany({
         where: { roomId: BigInt(roomId) },
@@ -183,29 +160,6 @@ export class ChatTranslationProcessor extends WorkerHost {
       });
 
       this.logger.log(`Translation stored: ${sourceLang}->${targetLang} (${result.engines?.[0]})`);
-
-      // Push translation_ready event to realtime via Redis
-      const enrichment = await this.prisma.chatEnrichment.findUnique({
-        where: { id: BigInt(enrichmentId) },
-      });
-      if (enrichment) {
-        const event = {
-          type: 'translation_ready',
-          enrichment_id: enrichmentId,
-          event_id: enrichment.matrixEventId,
-          room_id: enrichment.roomId.toString(),
-          target_lang: targetLang,
-          translated_text: translatedText,
-          timestamp: new Date().toISOString(),
-        };
-        try {
-          await this.redisPub.publish(`chat:${enrichment.roomId}`, JSON.stringify(event));
-          this.logger.log(`Published translation_ready for room ${enrichment.roomId}`);
-        } catch (err: any) {
-          this.logger.warn(`Redis publish failed: ${err.message}`);
-        }
-      }
-
       return { success: true, targetLang, translatedText };
     } catch (err: any) {
       this.logger.error(`Translation failed: ${err.message}`);

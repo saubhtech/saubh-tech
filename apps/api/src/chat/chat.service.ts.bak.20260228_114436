@@ -144,9 +144,6 @@ export class ChatService {
     let matrixRoomId: string;
     try {
       matrixRoomId = await this.createMatrixRoom(`DM ${room.id}`, [matrixUserA, matrixUserB]);
-      // Auto-join both users (invite alone is not enough)
-      await this.autoJoinMatrixRoom(matrixUserA, matrixRoomId);
-      await this.autoJoinMatrixRoom(matrixUserB, matrixRoomId);
     } catch (err) {
       this.logger.error(`Matrix room creation failed: ${err}`);
       matrixRoomId = `!pending_${room.id}:${SYNAPSE_DOMAIN}`;
@@ -767,23 +764,6 @@ export class ChatService {
    * Extract numeric user ID from Matrix user ID.
    * @u_123:saubh.tech -> "123"
    */
-  /**
-   * Force-join a user to a Matrix room using admin API
-   */
-  private async autoJoinMatrixRoom(matrixUserId: string, roomId: string) {
-    const token = await this.getAdminToken();
-    try {
-      await this.synapsePost(
-        `/_synapse/admin/v1/join/${encodeURIComponent(roomId)}`,
-        { user_id: matrixUserId },
-        token,
-      );
-      this.logger.log(`Auto-joined ${matrixUserId} to ${roomId}`);
-    } catch (err: any) {
-      this.logger.warn(`Auto-join failed for ${matrixUserId}: ${err?.message || err}`);
-    }
-  }
-
   private extractUserId(matrixUserId: string): string {
     const match = matrixUserId.match(/@u_(\d+):/);
     return match ? match[1] : '';
