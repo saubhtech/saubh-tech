@@ -85,8 +85,6 @@ export class ChatGateway
       this.userSockets.get(userId)!.add(client.id);
 
       client.emit('authenticated', { userId });
-      // Auto-join personal notification channel so user receives calls/messages from ANY page
-      client.join(`user:${userId}`);
       this.logger.log(`Connected: ${client.id} (user ${userId})`);
     } catch {
       client.emit('error', { message: 'Invalid token' });
@@ -127,28 +125,7 @@ export class ChatGateway
         (message: string) => {
           try {
             const event = JSON.parse(message);
-            // Send to room (for chat page)
             this.server.to(roomKey).emit('chat-event', event);
-            // Also send to personal channels for global notifications
-            if (event.type === 'new_message') {
-              const roomMembers = this.server.sockets.adapter.rooms.get(roomKey);
-              if (roomMembers) {
-                for (const socketId of roomMembers) {
-                  const s = this.server.sockets.sockets.get(socketId);
-                  const uid = (s as any)?.userId;
-                  if (uid && String(uid) !== String(event.sender_id)) {
-                    this.server.to(`user:${uid}`).emit('global:new_message', {
-                      conversationId,
-                      senderId: event.sender_id,
-                      senderName: event.sender_name || 'Someone',
-                      content: event.content?.substring(0, 100) || '',
-                      type: event.content_type || 'text',
-                      timestamp: event.timestamp || new Date().toISOString(),
-                    });
-                  }
-                }
-              }
-            }
           } catch {}
         },
       );
@@ -189,54 +166,6 @@ export class ChatGateway
 
   // ─── Call signaling ─────────────────────────────────────────
 
-  @SubscribeMessage('subscribe-notifications')
-  handleSubscribeNotifications(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomIds: string[] },
-  ) {
-    const userId = (client as any).userId;
-    if (!userId || !data?.roomIds) return;
-    // Join all room channels so user gets notifications
-    for (const rid of data.roomIds) {
-      const roomKey = `room:${rid}`;
-      client.join(roomKey);
-      // Subscribe to Redis if not already
-      if (!this.subscribedRooms.has(rid)) {
-        this.subscribedRooms.add(rid);
-        this.redisService.subscribe(
-          `chat:${rid}`,
-          (message: string) => {
-            try {
-              const event = JSON.parse(message);
-              this.server.to(roomKey).emit('chat-event', event);
-              if (event.type === 'new_message') {
-                const roomMembers = this.server.sockets.adapter.rooms.get(roomKey);
-                if (roomMembers) {
-                  for (const socketId of roomMembers) {
-                    const s = this.server.sockets.sockets.get(socketId);
-                    const uid = (s as any)?.userId;
-                    if (uid && String(uid) !== String(event.sender_id)) {
-                      this.server.to(`user:${uid}`).emit('global:new_message', {
-                        conversationId: rid,
-                        senderId: event.sender_id,
-                        senderName: event.sender_name || 'Someone',
-                        content: event.content?.substring(0, 100) || '',
-                        type: event.content_type || 'text',
-                        timestamp: event.timestamp || new Date().toISOString(),
-                      });
-                    }
-                  }
-                }
-              }
-            } catch {}
-          },
-        );
-      }
-    }
-    this.logger.log(`User ${userId} subscribed to ${data.roomIds.length} rooms for notifications`);
-    client.emit('notifications-subscribed', { count: data.roomIds.length });
-  }
-
   @SubscribeMessage('call:start')
   handleCallStart(
     @MessageBody() data: { conversationId: string; callerName: string; callType: string },
@@ -253,25 +182,6 @@ export class ChatGateway
       callType: data.callType || 'video',
       timestamp: new Date().toISOString(),
     });
-
-    // Also notify via personal channels (for users not on chat page)
-    // Get all members of this conversation from joined sockets
-    const roomSockets = this.server.sockets.adapter.rooms.get(roomKey);
-    if (roomSockets) {
-      for (const socketId of roomSockets) {
-        const s = this.server.sockets.sockets.get(socketId);
-        const targetUserId = (s as any)?.userId;
-        if (targetUserId && targetUserId !== userId) {
-          this.server.to(`user:${targetUserId}`).emit('global:call:incoming', {
-            conversationId: data.conversationId,
-            callerId: userId,
-            callerName: data.callerName || `User ${userId}`,
-            callType: data.callType || 'video',
-            timestamp: new Date().toISOString(),
-          });
-        }
-      }
-    }
   }
 
   @SubscribeMessage('call:decline')
