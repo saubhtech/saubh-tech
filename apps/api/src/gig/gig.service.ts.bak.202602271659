@@ -275,7 +275,9 @@ export class GigService {
       ORDER BY place
     `;
   }
-  // ─── Call Service (Tata Smartflo Click to Call) ────────────────
+
+
+  // ─── Call Service (Tata Smartflo + API Dialplan) ────────────────
   async initiateCall(callerId: bigint, receiverId: bigint, requirid?: bigint, offerid?: bigint) {
     const caller: any[] = await this.prisma.$queryRaw`
       SELECT userid, phone, whatsapp FROM public."user" WHERE userid = ${callerId}
@@ -289,27 +291,32 @@ export class GigService {
     const receiverPhone = receiver[0].phone || receiver[0].whatsapp;
     if (!callerPhone || !receiverPhone) throw new Error('Phone number missing');
 
-    const fullCaller = callerPhone.startsWith('91') ? callerPhone : '91' + callerPhone;
-    const fullReceiver = receiverPhone.startsWith('91') ? receiverPhone : '91' + receiverPhone;
+    // Store destination in Redis (caller→receiver mapping, 5 min TTL)
+    const Redis = require('ioredis');
+    const redis = new Redis({ host: '127.0.0.1', port: 6379, password: 'Red1sSecure2026' });
 
-    // Tata Smartflo Click to Call API — calls caller first, then bridges to destination
-    const TATA_API = 'https://api-smartflo.tatateleservices.com/v1/click_to_call';
-    const TATA_JWT = process.env.TATA_SMARTFLO_JWT;
+    // Store with multiple key formats to handle number variations
+    const cleanCaller = callerPhone.replace(/^91/, '');
+    const fullCaller = callerPhone.startsWith('91') ? callerPhone : '91' + callerPhone;
+    await redis.setex('call_dest:' + callerPhone, 300, receiverPhone);
+    await redis.setex('call_dest:' + cleanCaller, 300, receiverPhone);
+    await redis.setex('call_dest:' + fullCaller, 300, receiverPhone);
+    await redis.disconnect();
+
+    // Call Smartflo click_to_call_support (calls the caller first)
+    const TATA_API = 'https://api-smartflo.tatateleservices.com/v1/click_to_call_support';
+    const TATA_TOKEN = process.env.TATA_SMARTFLO_TOKEN || 'd0e215dd-883e-4f83-ab7e-50a34fee61cf';
+
+    const params = new URLSearchParams();
+    params.append('api_key', TATA_TOKEN);
+    params.append('customer_number', fullCaller);
 
     const response = await fetch(TATA_API, {
       method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + TATA_JWT,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        agent_number: fullCaller,
-        destination_number: fullReceiver,
-      }),
+      body: params,
     });
 
     const result = await response.json();
-    this.logger.log('[CALL] ' + fullCaller + ' -> ' + fullReceiver + ' | Result: ' + JSON.stringify(result));
 
     // Log the call
     await this.prisma.$queryRaw`
@@ -317,8 +324,9 @@ export class GigService {
       VALUES (${callerId}, ${receiverId}, ${requirid || null}, ${offerid || null}, ${callerPhone}, ${receiverPhone}, 'initiated', ${JSON.stringify(result)})
     `;
 
-    return { success: result.success !== false, callerPhone, receiverPhone, provider_response: result };
+    return { success: response.ok, callerPhone, receiverPhone, provider_response: result };
   }
+
   async handleDialplan(body: any, query: any) {
     // Smartflo sends caller info - find the destination from Redis
     const from = body.call_t_number || body.call_to_number || body.caller_id_number || body.from || query.from || '';

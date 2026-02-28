@@ -52,53 +52,6 @@ services:
         max-size: "5m"
         max-file: "2"
 
-  synapse:
-    image: matrixdotorg/synapse:latest
-    container_name: saubh-synapse
-    restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - "127.0.0.1:8008:8008"
-    volumes:
-      - /data/synapse/data:/data
-    environment:
-      - SYNAPSE_CONFIG_DIR=/data
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8008/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  minio:
-    image: minio/minio:latest
-    container_name: saubh-minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
-    volumes:
-      - /data/minio/data:/data
-    environment:
-      - MINIO_ROOT_USER=saubh_minio
-      - MINIO_ROOT_PASSWORD=MinIOSecure2026Saubh
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 volumes:
   redis-data:
     driver: local

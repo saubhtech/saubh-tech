@@ -1,5 +1,5 @@
-import { Logger,
-  Controller, Get, Post, Put, Delete, Req, HttpCode, Res, Header,
+import {
+  Controller, Get, Post, Put, Delete,
   Body, Param, Query, UseInterceptors, UploadedFiles,
   ParseIntPipe, BadRequestException,
 } from '@nestjs/common';
@@ -26,7 +26,6 @@ function makeStorage(subfolder: string) {
 @Controller('gig')
 @UseInterceptors(BigIntInterceptor)
 export class GigController {
-  private readonly logger = new Logger(GigController.name);
   constructor(private readonly gigService: GigService) {}
 
   // ── Upload endpoint ──
@@ -98,57 +97,13 @@ export class GigController {
     @Query('fieldid', ParseIntPipe) fieldid: number,
   ) { return this.gigService.getProductServiceOptions(sectorid, fieldid); }
 
-
-  @Get("market-by-id/:id")
-  async getMarketById(@Param("id", ParseIntPipe) id: number) {
-    return this.gigService.getMarketById(id);
-  }
-
-  @Get("market-items")
-
+  @Get('market-items')
   async getMarketItems(
     @Query('sectorid', ParseIntPipe) sectorid: number,
     @Query('fieldid', ParseIntPipe) fieldid: number,
     @Query('p_s_ps') p_s_ps?: string,
   ) { return this.gigService.getMarketItems(sectorid, fieldid, p_s_ps); }
 
-
-  // ── Dashboard Enriched Endpoints ──
-  @Get("dashboard/requirements")
-  async getDashboardRequirements() {
-    return this.gigService.getRequirementsEnriched();
-  }
-
-  @Get("dashboard/offerings")
-  async getDashboardOfferings() {
-    return this.gigService.getOfferingsEnriched();
-  }
-
-  // ── Location Endpoints ──
-  @Get("locations/countries")
-  async getCountries() {
-    return this.gigService.getCountries();
-  }
-
-  @Get("locations/states/:country_code")
-  async getStatesByCountry(@Param("country_code") country_code: string) {
-    return this.gigService.getStatesByCountry(country_code);
-  }
-
-  @Get("locations/districts/:stateid")
-  async getDistrictsByState(@Param("stateid", ParseIntPipe) stateid: number) {
-    return this.gigService.getDistrictsByState(stateid);
-  }
-
-  @Get("locations/postals/:districtid")
-  async getPostalsByDistrict(@Param("districtid", ParseIntPipe) districtid: number) {
-    return this.gigService.getPostalsByDistrict(districtid);
-  }
-
-  @Get("locations/places/:pincode")
-  async getPlacesByPincode(@Param("pincode") pincode: string) {
-    return this.gigService.getPlacesByPincode(pincode);
-  }
   // ── Requirements CRUD ──
   @Get('requirements')
   async getRequirements(@Query('userid') userid?: string) {
@@ -272,37 +227,5 @@ export class GigController {
   @Delete('agreements/:id')
   async deleteAgreement(@Param('id') id: string) {
     return this.gigService.deleteAgreement(BigInt(id));
-  }
-
-  // ── Call Endpoints ──
-  @Post('call/initiate')
-  async initiateCall(@Body() body: any) {
-    if (!body.callerId || !body.receiverId) {
-      throw new BadRequestException('callerId and receiverId are required');
-    }
-    return this.gigService.initiateCall(
-      BigInt(body.callerId),
-      BigInt(body.receiverId),
-      body.requirid ? BigInt(body.requirid) : undefined,
-      body.offerid ? BigInt(body.offerid) : undefined,
-    );
-  }
-
-  @Get('call/logs')
-  async getCallLogs(@Query('userid') userid: string) {
-    if (!userid) throw new BadRequestException('userid is required');
-    return this.gigService.getCallLogs(BigInt(userid));
-  }
-
-  @Post('call/dialplan')
-  @HttpCode(200)
-  @Header('Content-Type', 'text/plain')
-  async callDialplan(@Body() body: any, @Req() req: any, @Res() res: any) {
-    this.logger.log('[DIALPLAN] Body: ' + JSON.stringify(body));
-    this.logger.log('[DIALPLAN] Query: ' + JSON.stringify(req.query));
-    const result = await this.gigService.handleDialplan(body, req.query);
-    const responseStr = JSON.stringify(result);
-    this.logger.log('[DIALPLAN] Response: ' + responseStr);
-    res.status(200).type('text/plain').send(responseStr);
   }
 }

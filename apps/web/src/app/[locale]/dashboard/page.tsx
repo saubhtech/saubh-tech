@@ -12,6 +12,7 @@ interface SaubhUser {
   email?: string;
   usertype: string;
   status: string;
+  pic?: string;
 }
 
 function getCookie(name: string): string | null {
@@ -32,6 +33,160 @@ export default function DashboardPage() {
   const [checking, setChecking] = useState(true);
   const [tab, setTab] = useState<Tab>('requirements');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // ── Dashboard data ──
+  const [requirements, setRequirements] = useState<any[]>([]);
+  const [offerings, setOfferings] = useState<any[]>([]);
+
+  // ── Helpers ──
+  const parseDecimal = (v: any): number | null => {
+    if (!v) return null;
+    if (typeof v === 'number') return v;
+    if (typeof v === 'string') { const n = Number(v); return isNaN(n) ? null : n; }
+    if (typeof v === 'object' && v.d) {
+      const digits = v.d.join('');
+      const e = v.e ?? 0;
+      const sign = v.s === -1 ? -1 : 1;
+      if (e + 1 >= digits.length) return sign * Number(digits + '0'.repeat(e + 1 - digits.length));
+      return sign * Number(digits.slice(0, e + 1) + '.' + digits.slice(e + 1));
+    }
+    return null;
+  };
+  const fmtBudget = (b: any) => {
+    const n = parseDecimal(b);
+    return n === null ? "—" : "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  };
+
+  const [calling, setCalling] = useState<string | null>(null);
+  const handleCall = async (receiverUserId: string, requirid?: string, offerid?: string) => {
+    if (!user) { alert('Please log in first'); return; }
+    if (String(user.userid) === String(receiverUserId)) { alert('You cannot call yourself'); return; }
+    if (calling) return;
+    setCalling(requirid || offerid || 'call');
+    try {
+      const res = await fetch('/api/gig/call/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          callerId: user.userid,
+          receiverId: receiverUserId,
+          requirid: requirid || undefined,
+          offerid: offerid || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('📞 Call initiated! You will receive a call shortly on your phone.');
+      } else {
+        alert('Call failed: ' + (data.message || JSON.stringify(data.provider_response)));
+      }
+    } catch (e: any) {
+      alert('Call error: ' + e.message);
+    } finally {
+      setCalling(null);
+    }
+  };
+  const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+  const delivLabel = (m: string | null) => ({ PH: "🏢 Physical", DG: "💻 Digital", PD: "🔀 Phygital" }[m || ""] || m || "—");
+  const psLabel = (p: string | null) => ({ P: "📦 Product", S: "🧰 Service", B: "📦🧰 Both" }[p || ""] || "—");
+  const initials = (f: string | null, l: string | null) => ((f?.[0] || "") + (l?.[0] || "") || "?").toUpperCase();
+  const [loading, setLoading] = useState(true);
+  // ── Filter states ──
+  const [sectors, setSectors] = useState<any[]>([]);
+  const [fields, setFields] = useState<any[]>([]);
+  const [countries, setCountries] = useState<any[]>([]);
+  const [states, setStates] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [postals, setPostals] = useState<any[]>([]);
+  const [places, setPlaces] = useState<any[]>([]);
+
+  const [fSector, setFSector] = useState('');
+  const [fField, setFField] = useState('');
+  const [fPS, setFPS] = useState('');
+  const [fCountry, setFCountry] = useState('');
+  const [fState, setFState] = useState('');
+  const [fDistrict, setFDistrict] = useState('');
+  const [fPincode, setFPincode] = useState('');
+  const [fPlace, setFPlace] = useState('');
+  const [fSearch, setFSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const perPage = 6;
+
+  // ── Fetch filter dropdowns ──
+  useEffect(() => {
+    fetch("/api/gig/sectors").then(r => r.json()).then(setSectors).catch(() => {});
+    fetch("/api/gig/locations/countries").then(r => r.json()).then(setCountries).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (fSector) {
+      fetch(`/api/gig/fields/${fSector}`).then(r => r.json()).then(setFields).catch(() => {});
+    } else { setFields([]); setFField(''); }
+  }, [fSector]);
+
+  useEffect(() => {
+    if (fCountry) {
+      fetch(`/api/gig/locations/states/${fCountry}`).then(r => r.json()).then(setStates).catch(() => {});
+    } else { setStates([]); setFState(''); }
+  }, [fCountry]);
+
+  useEffect(() => {
+    if (fState) {
+      fetch(`/api/gig/locations/districts/${fState}`).then(r => r.json()).then(setDistricts).catch(() => {});
+    } else { setDistricts([]); setFDistrict(''); }
+  }, [fState]);
+
+  useEffect(() => {
+    if (fDistrict) {
+      fetch(`/api/gig/locations/postals/${fDistrict}`).then(r => r.json()).then(setPostals).catch(() => {});
+    } else { setPostals([]); setFPincode(''); }
+  }, [fDistrict]);
+
+  useEffect(() => {
+    if (fPincode) {
+      fetch(`/api/gig/locations/places/${fPincode}`).then(r => r.json()).then(setPlaces).catch(() => {});
+    } else { setPlaces([]); setFPlace(''); }
+  }, [fPincode]);
+
+  // ── Apply filters ──
+  const filtered = (tab === 'requirements' ? requirements : offerings).filter((item: any) => {
+    if (fSector && String(item.sector_name) !== sectors.find((s: any) => String(s.sectorid) === fSector)?.sector) return false;
+    if (fField && String(item.field_name) !== fields.find((f: any) => String(f.fieldid) === fField)?.field) return false;
+    if (fPS && item.p_s_ps !== fPS) return false;
+    if (fCountry && item.country_name !== countries.find((c: any) => c.country_code === fCountry)?.country) return false;
+    if (fState && item.state_name !== states.find((s: any) => String(s.stateid) === fState)?.state) return false;
+    if (fDistrict && item.district_name !== districts.find((d: any) => String(d.districtid) === fDistrict)?.district) return false;
+    if (fPincode && item.pincode !== fPincode) return false;
+    if (fPlace && item.place_name !== places.find((p: any) => String(p.placeid) === fPlace)?.place) return false;
+    if (fSearch) {
+      const q = fSearch.toLowerCase();
+      const searchable = [item.requirements, item.offerings, item.market_item, item.sector_name, item.field_name, item.eligibility, item.fname, item.lname].filter(Boolean).join(' ').toLowerCase();
+      if (!searchable.includes(q)) return false;
+    }
+    return true;
+  });
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+
+
+  useEffect(() => {
+    async function fetchDashboard() {
+      try {
+        setLoading(true);
+        const [reqRes, offRes] = await Promise.all([
+          fetch("/api/gig/dashboard/requirements"),
+          fetch("/api/gig/dashboard/offerings"),
+        ]);
+        if (reqRes.ok) setRequirements(await reqRes.json());
+        if (offRes.ok) setOfferings(await offRes.json());
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDashboard();
+  }, []);
 
   useEffect(() => {
     const token = getCookie('saubh_token');
@@ -350,7 +505,15 @@ export default function DashboardPage() {
 .mode-row{display:flex;gap:6px;flex-wrap:wrap}
 
 /* ═══ PAGINATION & LEGEND ═══ */
-.db-pagination{margin-top:10px;display:flex;justify-content:center}
+.db-pagination{margin-top:10px;display:flex;justify-content:center;gap:4px;flex-wrap:wrap}
+.db-page-chip{
+  border:1px solid var(--line);background:var(--glass);color:var(--text);
+  border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;
+  cursor:pointer;transition:.2s;font-family:inherit;
+}
+.db-page-chip:hover:not(:disabled){background:var(--glass2);border-color:rgba(255,255,255,.2)}
+.db-page-chip.active{background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(6,182,212,.2));border-color:rgba(124,58,237,.5)}
+.db-page-chip:disabled{opacity:.3;cursor:default}
 .db-page-chip{
   border:1px dashed var(--line);border-radius:10px;padding:7px 12px;
   color:var(--muted);font-size:11px;background:rgba(255,255,255,.015);
@@ -431,7 +594,7 @@ export default function DashboardPage() {
 
           {/* User card */}
           <div className="db-user-card">
-            <div className="db-user-av">{user.fname.charAt(0).toUpperCase()}</div>
+            {user.pic ? <img src={user.pic} alt="" className="db-user-av" style={{objectFit:"cover"}} /> : <div className="db-user-av">{user.fname.charAt(0).toUpperCase()}</div>}
             <div>
               <div className="db-user-name">{user.fname}</div>
               <div className="db-user-type">{user.usertype === 'BO' ? 'Business Owner' : user.usertype === 'CL' ? 'Client' : 'Gig Worker'}</div>
@@ -453,15 +616,14 @@ export default function DashboardPage() {
           <div className="db-block">
             <p className="db-block-title">🔎 Filter</p>
             <div className="db-filters">
-              <div className="db-fchip"><label><span>🏷️</span><span>Sector</span></label><select><option> Sector</option></select></div>
-              <div className="db-fchip"><label><span>🧩</span><span>Field</span></label><select><option> Field</option></select></div>
-              <div className="db-fchip"><label><span>📦</span><span>Product</span></label><select><option> Product</option></select></div>
-              <div className="db-fchip"><label><span>🧰</span><span>Service</span></label><select><option> Service</option></select></div>
-              <div className="db-fchip"><label><span>🌍</span><span>Country</span></label><select><option> Country</option></select></div>
-              <div className="db-fchip"><label><span>🗺️</span><span>State</span></label><select><option> State</option></select></div>
-              <div className="db-fchip"><label><span>📍</span><span>District</span></label><select><option> District</option></select></div>
-              <div className="db-fchip"><label><span>🏤</span><span>Post code</span></label><select><option> Post code</option></select></div>
-              <div className="db-fchip"><label><span>📌</span><span>Place</span></label><select><option> Place</option></select></div>
+              <div className="db-fchip"><label><span>🏷️</span><span>Sector</span></label><select value={fSector} onChange={e => { setFSector(e.target.value); setFField(''); }}><option value="">All Sectors</option>{sectors.map((s: any) => <option key={s.sectorid} value={s.sectorid}>{s.sector}</option>)}</select></div>
+              <div className="db-fchip"><label><span>🧩</span><span>Field</span></label><select value={fField} onChange={e => setFField(e.target.value)} disabled={!fSector}><option value="">All Fields</option>{fields.map((f: any) => <option key={f.fieldid} value={f.fieldid}>{f.field}</option>)}</select></div>
+              <div className="db-fchip"><label><span>📦🧰</span><span>Type</span></label><select value={fPS} onChange={e => setFPS(e.target.value)}><option value="">All Types</option><option value="P">📦 Product</option><option value="S">🧰 Service</option><option value="B">📦🧰 Both</option></select></div>
+              <div className="db-fchip"><label><span>🌍</span><span>Country</span></label><select value={fCountry} onChange={e => { setFCountry(e.target.value); setFState(''); setFDistrict(''); setFPincode(''); setFPlace(''); }}><option value="">All Countries</option>{countries.map((c: any) => <option key={c.country_code} value={c.country_code}>{c.flag} {c.country}</option>)}</select></div>
+              <div className="db-fchip"><label><span>🗺️</span><span>State</span></label><select value={fState} onChange={e => { setFState(e.target.value); setFDistrict(''); setFPincode(''); setFPlace(''); }} disabled={!fCountry}><option value="">All States</option>{states.map((s: any) => <option key={s.stateid} value={s.stateid}>{s.state}</option>)}</select></div>
+              <div className="db-fchip"><label><span>📍</span><span>District</span></label><select value={fDistrict} onChange={e => { setFDistrict(e.target.value); setFPincode(''); setFPlace(''); }} disabled={!fState}><option value="">All Districts</option>{districts.map((d: any) => <option key={d.districtid} value={d.districtid}>{d.district}</option>)}</select></div>
+              <div className="db-fchip"><label><span>🏤</span><span>Post Code</span></label><select value={fPincode} onChange={e => { setFPincode(e.target.value); setFPlace(''); }} disabled={!fDistrict}><option value="">All Pincodes</option>{postals.map((p: any) => <option key={p.postid} value={p.pincode}>{p.pincode} - {p.postoffice}</option>)}</select></div>
+              <div className="db-fchip"><label><span>📌</span><span>Place</span></label><select value={fPlace} onChange={e => setFPlace(e.target.value)} disabled={!fPincode}><option value="">All Places</option>{places.map((p: any) => <option key={p.placeid} value={p.placeid}>{p.place}</option>)}</select></div>
 
               <div className="db-checks">
                 <label className="db-check"><input type="checkbox" defaultChecked /> ✅ Verified</label>
@@ -517,18 +679,17 @@ export default function DashboardPage() {
             </div>
 
             <div className="db-search">
-              <div className="ctrl"><label>🏷️ Sector</label><select><option> Sector</option></select></div>
-              <div className="ctrl"><label>🧩 Field</label><select><option> Field</option></select></div>
-              <div className="ctrl"><label>📦 Product</label><select><option> Product</option></select></div>
-              <div className="ctrl"><label>🧰 Service</label><select><option> Service</option></select></div>
-              <div className="ctrl"><label>🌍 Country</label><select><option> Country</option></select></div>
-              <div className="ctrl"><label>🗺️ State</label><select><option> State</option></select></div>
-              <div className="ctrl"><label>📍 District</label><select><option> District</option></select></div>
-              <div className="ctrl"><label>🏤 Post Code</label><select><option> Post Code</option></select></div>
-              <div className="ctrl"><label>📌 Place</label><select><option> Place</option></select></div>
-              <div className="ctrl"><label>🔑 Search</label><input defaultValue="Key Word" /></div>
-              <button className="db-search-btn">🔍 Search</button>
-              <div className="db-hero-label">🪄 {tab === 'requirements' ? 'Requirements' : 'Offerings'}</div>
+              <div className="ctrl"><label>🏷️ Sector</label><select value={fSector} onChange={e => { setFSector(e.target.value); setFField(''); }}><option value="">All Sectors</option>{sectors.map((s: any) => <option key={s.sectorid} value={s.sectorid}>{s.sector}</option>)}</select></div>
+              <div className="ctrl"><label>🧩 Field</label><select value={fField} onChange={e => setFField(e.target.value)} disabled={!fSector}><option value="">All Fields</option>{fields.map((f: any) => <option key={f.fieldid} value={f.fieldid}>{f.field}</option>)}</select></div>
+              <div className="ctrl"><label>📦🧰 Type</label><select value={fPS} onChange={e => setFPS(e.target.value)}><option value="">All Types</option><option value="P">📦 Product</option><option value="S">🧰 Service</option><option value="B">📦🧰 Both</option></select></div>
+              <div className="ctrl"><label>🌍 Country</label><select value={fCountry} onChange={e => { setFCountry(e.target.value); setFState(''); setFDistrict(''); setFPincode(''); setFPlace(''); }}><option value="">All Countries</option>{countries.map((c: any) => <option key={c.country_code} value={c.country_code}>{c.flag} {c.country}</option>)}</select></div>
+              <div className="ctrl"><label>🗺️ State</label><select value={fState} onChange={e => { setFState(e.target.value); setFDistrict(''); setFPincode(''); setFPlace(''); }} disabled={!fCountry}><option value="">All States</option>{states.map((s: any) => <option key={s.stateid} value={s.stateid}>{s.state}</option>)}</select></div>
+              <div className="ctrl"><label>📍 District</label><select value={fDistrict} onChange={e => { setFDistrict(e.target.value); setFPincode(''); setFPlace(''); }} disabled={!fState}><option value="">All Districts</option>{districts.map((d: any) => <option key={d.districtid} value={d.districtid}>{d.district}</option>)}</select></div>
+              <div className="ctrl"><label>🏤 Post Code</label><select value={fPincode} onChange={e => { setFPincode(e.target.value); setFPlace(''); }} disabled={!fDistrict}><option value="">All Pincodes</option>{postals.map((p: any) => <option key={p.postid} value={p.pincode}>{p.pincode} - {p.postoffice}</option>)}</select></div>
+              <div className="ctrl"><label>📌 Place</label><select value={fPlace} onChange={e => setFPlace(e.target.value)} disabled={!fPincode}><option value="">All Places</option>{places.map((p: any) => <option key={p.placeid} value={p.placeid}>{p.place}</option>)}</select></div>
+              <div className="ctrl"><label>🔑 Search</label><input placeholder="Keyword..." value={fSearch} onChange={e => setFSearch(e.target.value)} /></div>
+              <button className="db-search-btn" onClick={() => { setFSector(''); setFField(''); setFPS(''); setFCountry(''); setFState(''); setFDistrict(''); setFPincode(''); setFPlace(''); setFSearch(''); setPage(1); }}>✖ Clear</button>
+              <div className="db-hero-label">🪄 {tab === 'requirements' ? 'Requirements' : 'Offerings'} ({filtered.length})</div>
             </div>
           </section>
 
@@ -538,222 +699,162 @@ export default function DashboardPage() {
             {/* ═══ REQUIREMENTS TAB ═══ */}
             {tab === 'requirements' && (
               <>
-                <article className="req-card">
-                  <div className="req-head">
-                    <div>
-                      <div className="req-rating">⭐ 4.8 <span style={{color:'var(--muted)',fontWeight:600}}>(56)</span></div>
-                      <div className="req-provider">
-                        <div className="req-av">CN</div>
-                        <div className="req-cname">👤 Client Name</div>
-                        <div className="req-badges">
-                          <span className="badge badge-dv">🛡️ DV</span>
-                          <span className="badge badge-pv">✅ PV</span>
+                {loading && <div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>Loading requirements...</div>}
+                {!loading && filtered.length === 0 && <div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>No requirements found.</div>}
+                {!loading && paginated.map((r: any) => (
+                  <article className="req-card" key={r.requirid}>
+                    <div className="req-head">
+                      <div>
+                        <div className="req-provider">
+                          {r.pic ? <img src={r.pic} alt="" className="req-av" style={{objectFit:"cover"}} /> : <div className="req-av">{initials(r.fname, r.lname)}</div>}
+                          <div>
+                            <div className="req-cname">👤 {[r.fname, r.lname].filter(Boolean).join(' ') || 'Anonymous'}</div>
+                            <div className="req-badges">
+                              {r.verified === 'DV' && <span className="badge badge-dv">🛡️ DV</span>}
+                              {r.verified === 'PV' && <span className="badge badge-pv">✅ PV</span>}
+                              {r.verified === 'BOTH' && <><span className="badge badge-dv">🛡️ DV</span><span className="badge badge-pv">✅ PV</span></>}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="req-title">Required Web Developer</div>
+                    <div className="req-title">Required: {r.market_item || '—'}</div>
 
-                  <div className="req-meta">
-                    <span className="meta-pill">🧰 Service</span>
-                    <span className="meta-pill">📄 read</span>
-                    <span className="meta-pill">🎬 view</span>
-                  </div>
+                    <div className="req-meta">
+                      <span className="meta-pill">{psLabel(r.p_s_ps)}</span>
+                      {r.doc_url && <a href={r.doc_url} target="_blank" rel="noreferrer" className="meta-pill">📄 read</a>}
+                      {r.audio_url && <span className="meta-pill" onClick={() => { const a = new Audio(r.audio_url); a.play(); }} style={{cursor:'pointer'}}>🎧 listen</span>}
+                      {r.video_url && <a href={r.video_url} target="_blank" rel="noreferrer" className="meta-pill">🎬 view</a>}
+                    </div>
 
-                  <div className="req-subtitle">E-Commerce Website for Fashion Brand</div>
-                  <p className="req-desc">
-                    Need experienced developer for Shopify custom e-commerce with …
-                    <a href="#" className="view-more">&lt;view more&gt;</a>
-                  </p>
+                    <div className="req-subtitle">{r.sector_name || '—'} → {r.field_name || '—'}</div>
+                    {r.requirements && (
+                      <p className="req-desc">{r.requirements}</p>
+                    )}
 
-                  <div className="req-grid">
-                    <div className="req-col">
-                      <h5>🚚 Delivery</h5>
-                      <div className="req-col-stack">
-                        <div>🏢 Physical</div>
-                        <div>💻 Digital</div>
+                    <div className="req-grid">
+                      <div className="req-col">
+                        <h5>🚚 Delivery</h5>
+                        <div className="req-col-stack">
+                          <div>{delivLabel(r.delivery_mode)}</div>
+                        </div>
+                      </div>
+
+                      <div className="req-col">
+                        <h5>📍 Location</h5>
+                        <div className="req-col-stack">
+                          {r.country_name && <div>{r.country_name}</div>}
+                          {r.state_name && <div>{r.state_name}</div>}
+                          {r.district_name && <div>{r.district_name}</div>}
+                          {r.pincode && <div>{r.pincode}</div>}
+                          {r.place_name && <div>{r.place_name}</div>}
+                          {!r.country_name && !r.state_name && <div style={{color:'var(--muted)'}}>Not specified</div>}
+                        </div>
+                      </div>
+
+                      <div className="req-col">
+                        <h5>✅ Eligibility</h5>
+                        <div className="req-col-stack">
+                          <div>{r.eligibility || '—'}</div>
+                        </div>
+                      </div>
+
+                      <div className="req-col">
+                        <h5>💰 Budget</h5>
+                        <div className="req-col-stack">
+                          <div>{fmtBudget(r.budget)}</div>
+                          <div>Escrow: {fmtBudget(r.escrow)}</div>
+                          <div>Bid by: {fmtDate(r.bidate)}</div>
+                          <div>Deliver: {fmtDate(r.delivdate)}</div>
+                        </div>
+                      </div>
+
+                      <div className="req-col">
+                        <h5>🧾 Bids</h5>
+                        <div className="req-col-stack">
+                          <div>Total</div>
+                          <div style={{fontSize:'18px',lineHeight:1}}>{r.bid_count || 0}</div>
+                          <button className="bid-btn">Bid now</button>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="req-col">
-                      <h5>📍 Location</h5>
-                      <div className="req-col-stack">
-                        <div>Country</div>
-                        <div>State</div>
-                        <div>District</div>
-                        <div>Postal code</div>
-                        <div>Place</div>
-                      </div>
+                    <div className="actions-row">
+                      <button className="icon-btn icon-btn-pri" disabled={calling === r.requirid} onClick={() => handleCall(r.userid, r.requirid)}>{calling === r.requirid ? '📞 Calling...' : '📞 Call'}</button>
+                      <button className="icon-btn icon-btn-pri">💬 Chat</button>
+                      <button className="icon-btn icon-btn-pri">🎥 Video</button>
                     </div>
-
-                    <div className="req-col">
-                      <h5>✅ Eligibility</h5>
-                      <div className="req-col-stack">
-                        <div>Experience &gt;1 yr</div>
-                        <div className="muted">Must be resident</div>
-                        <div className="muted">of</div>
-                        <div>Patna</div>
-                      </div>
-                    </div>
-
-                    <div className="req-col">
-                      <h5>💰 Budget</h5>
-                      <div className="req-col-stack">
-                        <div>₹50K approx.</div>
-                        <div>Escrow</div>
-                        <div>₹20K paid</div>
-                        <div>Deadline</div>
-                        <div>26.02.2026</div>
-                      </div>
-                    </div>
-
-                    <div className="req-col">
-                      <h5>🧾 Bids</h5>
-                      <div className="req-col-stack">
-                        <div>Total</div>
-                        <div style={{fontSize:'18px',lineHeight:1}}>12</div>
-                        <button className="bid-btn">&lt;Bid now&gt;</button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="actions-row">
-                    <button className="icon-btn icon-btn-pri">📞 Call</button>
-                    <button className="icon-btn icon-btn-pri">💬 Chat</button>
-                    <button className="icon-btn icon-btn-pri">🎥 Video</button>
-                    <span className="live-badge live-on"><span className="blink" />Live</span>
-                  </div>
-                </article>
+                  </article>
+                ))}
               </>
             )}
 
             {/* ═══ OFFERINGS TAB ═══ */}
             {tab === 'offerings' && (
               <div className="off-grid">
-                {/* Card 1 */}
-                <article className="off-card">
-                  <div className="off-provider">
-                    <div className="off-av" style={{background:'linear-gradient(135deg,#f472b6,#60a5fa)'}}>AS</div>
-                    <div className="off-meta">
-                      <div className="req-rating">⭐ 4.8 <span style={{color:'var(--muted)',fontWeight:600}}>(156)</span></div>
-                      <div className="off-name">👤 Ananya Sharma</div>
-                      <div className="req-badges">
-                        <span className="badge badge-dv">🛡️ DV</span>
-                        <span className="badge badge-pv">✅ PV</span>
+                {loading && <div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>Loading offerings...</div>}
+                {!loading && filtered.length === 0 && <div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>No offerings found.</div>}
+                {!loading && paginated.map((o: any) => (
+                  <article className="off-card" key={o.offerid}>
+                    <div className="off-provider">
+                      {o.pic ? <img src={o.pic} alt="" className="off-av" style={{objectFit:'cover'}} /> : <div className="off-av" style={{background:'linear-gradient(135deg,#f472b6,#60a5fa)'}}>{initials(o.fname, o.lname)}</div>}
+                      <div className="off-meta">
+                        <div className="off-name">👤 {[o.fname, o.lname].filter(Boolean).join(' ') || 'Anonymous'}</div>
+                        <div className="req-badges">
+                          {o.verified === 'DV' && <span className="badge badge-dv">🛡️ DV</span>}
+                          {o.verified === 'PV' && <span className="badge badge-pv">✅ PV</span>}
+                          {o.verified === 'BOTH' && <><span className="badge badge-dv">🛡️ DV</span><span className="badge badge-pv">✅ PV</span></>}
+                        </div>
+                        <div className="off-sub">{o.sector_name || '—'} → {o.field_name || '—'}</div>
                       </div>
-                      <div className="off-sub">Full-Stack Developer</div>
                     </div>
-                  </div>
-                  <div className="req-meta">
-                    <span className="meta-pill">🧰 Service</span>
-                    <span className="meta-pill">📄 read</span>
-                    <span className="meta-pill">🎬 view</span>
-                  </div>
-                  <div>
-                    <h4 className="off-title">Offered Custom Web App &amp; SaaS Development</h4>
-                    <p className="off-desc">
-                      Full-stack web applications using Next.js, React, Node.js.
-                      <a href="#" className="view-more">&lt;more...&gt;</a>
-                    </p>
-                  </div>
-                  <div className="mode-row">
-                    <span className="meta-pill">🚚 Delivery:</span>
-                    <span className="meta-pill">🏢 Physical</span>
-                    <span className="meta-pill">💻 Digital</span>
-                  </div>
-                  <div className="actions-row">
-                    <button className="icon-btn icon-btn-pri">📞 Call</button>
-                    <button className="icon-btn icon-btn-pri">💬 Chat</button>
-                    <button className="icon-btn icon-btn-pri">🎥 Video</button>
-                    <span className="live-badge live-on"><span className="blink" />Live</span>
-                  </div>
-                </article>
-
-                {/* Card 2 */}
-                <article className="off-card">
-                  <div className="off-provider">
-                    <div className="off-av" style={{background:'linear-gradient(135deg,#34d399,#3b82f6)'}}>AK</div>
-                    <div className="off-meta">
-                      <div className="req-rating">⭐ 4.8 <span style={{color:'var(--muted)',fontWeight:600}}>(156)</span></div>
-                      <div className="off-name">👤 Ananya Sharma</div>
-                      <div className="req-badges">
-                        <span className="badge badge-dv">🛡️ DV</span>
-                        <span className="badge badge-pv">✅ PV</span>
-                      </div>
-                      <div className="off-sub">Full-Stack Developer</div>
+                    <div className="req-meta">
+                      <span className="meta-pill">{psLabel(o.p_s_ps)}</span>
+                      {o.doc_url && <a href={o.doc_url} target="_blank" rel="noreferrer" className="meta-pill">📄 read</a>}
+                      {o.audio_url && <span className="meta-pill" onClick={() => { const a = new Audio(o.audio_url); a.play(); }} style={{cursor:'pointer'}}>🎧 listen</span>}
+                      {o.video_url && <a href={o.video_url} target="_blank" rel="noreferrer" className="meta-pill">🎬 view</a>}
                     </div>
-                  </div>
-                  <div className="req-meta">
-                    <span className="meta-pill">🧰 Service</span>
-                    <span className="meta-pill">📄 read</span>
-                    <span className="meta-pill">🎬 view</span>
-                  </div>
-                  <div>
-                    <h4 className="off-title">Offered Custom Web App &amp; SaaS Development</h4>
-                    <p className="off-desc">
-                      Full-stack web applications using Next.js, React, Node.js.
-                      <a href="#" className="view-more">&lt;more...&gt;</a>
-                    </p>
-                  </div>
-                  <div className="mode-row">
-                    <span className="meta-pill">🚚 Delivery:</span>
-                    <span className="meta-pill">🏢 Physical</span>
-                    <span className="meta-pill">💻 Digital</span>
-                  </div>
-                  <div className="actions-row">
-                    <button className="icon-btn icon-btn-pri">📞 Call</button>
-                    <button className="icon-btn icon-btn-pri">💬 Chat</button>
-                    <button className="icon-btn icon-btn-pri">🎥 Video</button>
-                    <span className="live-badge live-off">🔴 Off/Away</span>
-                  </div>
-                </article>
-
-                {/* Card 3 */}
-                <article className="off-card">
-                  <div className="off-provider">
-                    <div className="off-av" style={{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>NS</div>
-                    <div className="off-meta">
-                      <div className="req-rating">⭐ 4.8 <span style={{color:'var(--muted)',fontWeight:600}}>(156)</span></div>
-                      <div className="off-name">👤 Ananya Sharma</div>
-                      <div className="req-badges">
-                        <span className="badge badge-dv">🛡️ DV</span>
-                        <span className="badge badge-pv">✅ PV</span>
-                      </div>
-                      <div className="off-sub">Full-Stack Developer</div>
+                    <div>
+                      <h4 className="off-title">Offered: {o.market_item || '—'}</h4>
+                      {o.offerings && <p className="off-desc">{o.offerings}</p>}
                     </div>
-                  </div>
-                  <div className="req-meta">
-                    <span className="meta-pill">🧰 Service</span>
-                    <span className="meta-pill">📄 read</span>
-                    <span className="meta-pill">🎬 view</span>
-                  </div>
-                  <div>
-                    <h4 className="off-title">Offered Custom Web App &amp; SaaS Development</h4>
-                    <p className="off-desc">
-                      Full-stack web applications using Next.js, React, Node.js.
-                      <a href="#" className="view-more">&lt;more...&gt;</a>
-                    </p>
-                  </div>
-                  <div className="mode-row">
-                    <span className="meta-pill">🚚 Delivery:</span>
-                    <span className="meta-pill">🏢 Physical</span>
-                    <span className="meta-pill">💻 Digital</span>
-                  </div>
-                  <div className="actions-row">
-                    <button className="icon-btn icon-btn-pri">📞 Call</button>
-                    <button className="icon-btn icon-btn-pri">💬 Chat</button>
-                    <button className="icon-btn icon-btn-pri">🎥 Video</button>
-                    <span className="live-badge live-on"><span className="blink" />Live</span>
-                  </div>
-                </article>
+                    <div className="mode-row">
+                      <span className="meta-pill">🚚 Delivery:</span>
+                      <span className="meta-pill">{delivLabel(o.delivery_mode)}</span>
+                    </div>
+                    <div className="actions-row">
+                      <button className="icon-btn icon-btn-pri" disabled={calling === o.offerid} onClick={() => handleCall(o.userid, undefined, o.offerid)}>{calling === o.offerid ? '📞 Calling...' : '📞 Call'}</button>
+                      <button className="icon-btn icon-btn-pri">💬 Chat</button>
+                      <button className="icon-btn icon-btn-pri">🎥 Video</button>
+                    </div>
+                  </article>
+                ))}
               </div>
             )}
 
             {/* Pagination */}
-            <div className="db-pagination">
-              <div className="db-page-chip">&lt;Pagination&gt;</div>
-            </div>
+            {totalPages > 1 && (
+              <div className="db-pagination">
+                <button className="db-page-chip" onClick={() => setPage(1)} disabled={page === 1}>«</button>
+                <button className="db-page-chip" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>‹</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+                  .reduce((acc: (number | string)[], p, i, arr) => {
+                    if (i > 0 && typeof arr[i-1] === 'number' && (p as number) - (arr[i-1] as number) > 1) acc.push('...');
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) =>
+                    typeof p === 'string'
+                      ? <span key={`dot-${i}`} className="db-page-chip" style={{cursor:'default',opacity:.5}}>…</span>
+                      : <button key={p} className={`db-page-chip${p === page ? ' active' : ''}`} onClick={() => setPage(p as number)}>{p}</button>
+                  )
+                }
+                <button className="db-page-chip" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>›</button>
+                <button className="db-page-chip" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>
+              </div>
+            )}
 
             {/* Legend */}
             <div className="db-legend">

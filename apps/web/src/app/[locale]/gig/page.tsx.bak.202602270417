@@ -13,19 +13,6 @@ const API = '/api/gig';
 const DM: Record<string, string> = { PH: 'Physical', DG: 'Digital', PD: 'Phygital' };
 const PS: Record<string, string> = { P: 'Product', S: 'Service', B: 'Both' };
 
-function getCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-function getLoggedUserId(): string {
-  try {
-    const raw = getCookie('saubh_user');
-    if (raw) { const u = JSON.parse(raw); return u.userid || '0'; }
-  } catch {}
-  return '0';
-}
-
 function getAudioMime(): string {
   if (typeof MediaRecorder === 'undefined') return 'audio/webm';
   if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
@@ -490,7 +477,7 @@ export default function GigPage() {
         bidate: bidate || undefined,
         delivdate: delivdate || undefined,
       };
-      if (!editingId) payload.userid = getLoggedUserId();
+      if (!editingId) payload.userid = '0';
       const res = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -515,51 +502,21 @@ export default function GigPage() {
     setDeletingId(null);
   };
 
-  const parseDecimal = (v: any): number | null => {
-    if (!v) return null;
-    if (typeof v === 'number') return v;
-    if (typeof v === 'string') { const n = Number(v); return isNaN(n) ? null : n; }
-    if (typeof v === 'object' && v.d) {
-      const digits = v.d.join('');
-      const e = v.e ?? 0;
-      const sign = v.s === -1 ? -1 : 1;
-      if (e + 1 >= digits.length) return sign * Number(digits + '0'.repeat(e + 1 - digits.length));
-      return sign * Number(digits.slice(0, e + 1) + '.' + digits.slice(e + 1));
-    }
-    return null;
-  };
-
-  const handleEdit = async (req: Requirement) => {
+  const handleEdit = (req: Requirement) => {
     setEditingId(req.requirid);
+    setMarketid(req.marketid);
     setDeliveryMode((req.delivery_mode || '').trim());
     setRequirements(req.requirements || '');
     setEligibility(req.eligibility || '');
     setDocUrl(req.doc_url || '');
     setAudioUrl(req.audio_url || '');
     setVideoUrl(req.video_url || '');
-    setDocName(req.doc_url ? '📎 Existing file' : '');
-    setAudioName(req.audio_url ? '🎧 Existing audio' : '');
-    setVideoName(req.video_url ? '🎬 Existing video' : '');
-    setBudget(req.budget ? String(parseDecimal(req.budget) ?? '') : '');
+    setBudget(req.budget || '');
     setEscrow(req.escrow || '');
     setBidate(req.bidate ? req.bidate.substring(0, 10) : '');
     setDelivdate(req.delivdate ? req.delivdate.substring(0, 10) : '');
     setSuccess(false); setError('');
     clearAudioRec(); clearVideoRec();
-    // Pre-fill cascading dropdowns from marketid
-    try {
-      const mkt = await fetch(API + '/market-by-id/' + req.marketid).then(r => r.json());
-      if (mkt && mkt.sectorid) {
-        setSectorid(mkt.sectorid);
-        const flds = await fetch(API + '/fields/' + mkt.sectorid).then(r => r.json());
-        if (Array.isArray(flds)) setFields(flds);
-        setFieldid(mkt.fieldid);
-        setPsType(mkt.p_s_ps || '');
-        const itms = await fetch(API + '/market-items?sectorid=' + mkt.sectorid + '&fieldid=' + mkt.fieldid + (mkt.p_s_ps ? '&p_s_ps=' + mkt.p_s_ps : '')).then(r => r.json());
-        if (Array.isArray(itms)) setItems(itms);
-        setMarketid(req.marketid);
-      }
-    } catch (e) { console.error('Edit prefill error:', e); setMarketid(req.marketid); }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -594,7 +551,7 @@ export default function GigPage() {
         audio_url: uploadedUrls.audio_url || (audioUrl && !audioUrl.startsWith('pending://') ? audioUrl : undefined),
         video_url: uploadedUrls.video_url || (videoUrl && !videoUrl.startsWith('pending://') ? videoUrl : undefined),
       };
-      if (!editingOfferId) payload.userid = getLoggedUserId();
+      if (!editingOfferId) payload.userid = '0';
       const res = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -619,32 +576,16 @@ export default function GigPage() {
     setDeletingOfferId(null);
   };
 
-  const handleOfferingEdit = async (o: Offering) => {
+  const handleOfferingEdit = (o: Offering) => {
     setEditingOfferId(o.offerid);
+    setMarketid(o.marketid);
     setDeliveryMode((o.delivery_mode || '').trim());
     setOfferingText(o.offerings || '');
     setDocUrl(o.doc_url || '');
     setAudioUrl(o.audio_url || '');
     setVideoUrl(o.video_url || '');
-    setDocName(o.doc_url ? '📎 Existing file' : '');
-    setAudioName(o.audio_url ? '🎧 Existing audio' : '');
-    setVideoName(o.video_url ? '🎬 Existing video' : '');
     setSuccess(false); setError('');
     clearAudioRec(); clearVideoRec();
-    // Pre-fill cascading dropdowns from marketid
-    try {
-      const mkt = await fetch(API + '/market-by-id/' + o.marketid).then(r => r.json());
-      if (mkt && mkt.sectorid) {
-        setSectorid(mkt.sectorid);
-        const flds = await fetch(API + '/fields/' + mkt.sectorid).then(r => r.json());
-        if (Array.isArray(flds)) setFields(flds);
-        setFieldid(mkt.fieldid);
-        setPsType(mkt.p_s_ps || '');
-        const itms = await fetch(API + '/market-items?sectorid=' + mkt.sectorid + '&fieldid=' + mkt.fieldid + (mkt.p_s_ps ? '&p_s_ps=' + mkt.p_s_ps : '')).then(r => r.json());
-        if (Array.isArray(itms)) setItems(itms);
-        setMarketid(o.marketid);
-      }
-    } catch (e) { console.error('Edit prefill error:', e); setMarketid(o.marketid); }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -658,7 +599,7 @@ export default function GigPage() {
   };
 
   const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  const fmtMoney = (v: any) => { const n = parseDecimal(v); return n === null ? '—' : '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2 }); };
+  const fmtMoney = (v: string | null) => { if (!v) return '—'; const n = Number(v); return isNaN(n) ? '—' : '\u20B9' + n.toLocaleString('en-IN', { minimumFractionDigits: 2 }); };
 
   return (
     <>
