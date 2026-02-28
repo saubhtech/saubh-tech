@@ -2,8 +2,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
-import dynamic from 'next/dynamic';
-const CallView = dynamic(() => import('@/components/CallView'), { ssr: false });
 
 /* ─── Types ──────────────────────────────────────────────── */
 interface ChatRoom {
@@ -90,9 +88,6 @@ export default function ChatPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [inCall, setInCall] = useState(false);
-  const [callToken, setCallToken] = useState('');
-  const [callLkUrl, setCallLkUrl] = useState('');
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRoomRef = useRef<ChatRoom | null>(null);
@@ -417,22 +412,6 @@ export default function ChatPage() {
     </div>
   );
 
-  const startCall = async () => {
-    if (!activeRoom || !token) return;
-    try {
-      const res = await fetch('/api/chat/call/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({ room_id: Number(activeRoom.conversation_id) }),
-      });
-      if (!res.ok) throw new Error('Failed to get call token');
-      const data = await res.json();
-      setCallToken(data.token);
-      setCallLkUrl(data.livekitUrl);
-      setInCall(true);
-    } catch (err) { console.error('Call error:', err); alert('Could not start call'); }
-  };
-
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'Outfit, sans-serif', background: '#080b12', color: '#e0e0e0' }}>
       {/* ─── Sidebar ──────────────────────────────────────── */}
@@ -537,11 +516,6 @@ export default function ChatPage() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button onClick={startCall} title="Start Call" style={{
-                    background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8,
-                    padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                  }}>📞 Call</button>
                 <span style={{ fontSize: 12, color: '#888', padding: '4px 10px', background: '#161b22', borderRadius: 12 }}>
                   🌐 {LANG_NAMES[activeRoom.my_lang] || activeRoom.my_lang}
                 </span>
@@ -742,14 +716,6 @@ export default function ChatPage() {
         )}
       </div>
 
-      {inCall && activeRoom && (
-        <CallView
-          roomId={Number(activeRoom.conversation_id)}
-          token={callToken}
-          livekitUrl={callLkUrl}
-          onClose={() => { setInCall(false); setCallToken(''); setCallLkUrl(''); }}
-        />
-      )}
       <style>{`
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
         ::-webkit-scrollbar { width: 6px; }
