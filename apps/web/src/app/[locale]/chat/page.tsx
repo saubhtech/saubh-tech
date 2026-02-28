@@ -398,13 +398,13 @@ export default function ChatPage() {
       await fetch('/api/chat/prefs', {
         method: 'PUT',
         headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room_id: String(activeRoom.id), preferred_lang: langCode }),
+        body: JSON.stringify({ room_id: String(activeRoom.conversation_id), preferred_lang: langCode }),
       });
       // Refresh rooms to get updated lang
       const res = await fetch('/api/chat/rooms', { headers: { Authorization: 'Bearer ' + token } });
       const updatedRooms = await res.json();
       setRooms(updatedRooms);
-      const updated = updatedRooms.find((r: any) => r.id === activeRoom.id);
+      const updated = updatedRooms.find((r: any) => r.conversation_id === activeRoom.conversation_id);
       if (updated) setActiveRoom(updated);
     } catch (err) { console.error('Failed to change language:', err); }
   };

@@ -60,10 +60,7 @@ export default function CallView({ roomId, token, livekitUrl, callType = 'video'
   );
 }
 
-/* ─── Single video tile — renders camera OR screenshare ─── */
-function VideoTile({ participant, source, isLocal, isMain }: {
-  participant: Participant; source: Track.Source; isLocal: boolean; isMain?: boolean;
-}) {
+function VideoTile({ participant, isLocal }: { participant: Participant; isLocal: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasVideo, setHasVideo] = useState(false);
 
@@ -72,10 +69,12 @@ function VideoTile({ participant, source, isLocal, isMain }: {
     if (!el) return;
 
     const attach = () => {
-      const pub = participant.getTrackPublication(source);
+      const camPub = participant.getTrackPublication(Track.Source.Camera);
+      const screenPub = participant.getTrackPublication(Track.Source.ScreenShare);
+      const pub = camPub?.track ? camPub : screenPub?.track ? screenPub : null;
       if (pub?.track) {
         pub.track.attach(el);
-        el.muted = true; // always mute video element; audio handled by RoomAudioRenderer
+        el.muted = isLocal;
         el.play().catch(() => {});
         setHasVideo(true);
       } else {
@@ -87,48 +86,43 @@ function VideoTile({ participant, source, isLocal, isMain }: {
     const interval = setInterval(attach, 500);
     return () => {
       clearInterval(interval);
-      const pub = participant.getTrackPublication(source);
-      if (pub?.track && el) pub.track.detach(el);
+      const camPub = participant.getTrackPublication(Track.Source.Camera);
+      if (camPub?.track && el) camPub.track.detach(el);
     };
-  }, [participant, source]);
-
-  const isScreen = source === Track.Source.ScreenShare;
-  const label = isScreen
-    ? (isLocal ? '🖥 Your Screen' : `🖥 ${participant.name || participant.identity}'s Screen`)
-    : (isLocal ? 'You' : participant.name || participant.identity);
+  }, [participant, isLocal]);
 
   return (
     <div style={{
-      flex: isMain ? '1 1 100%' : '1 1 45%',
-      maxWidth: '100%',
-      position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#111',
-      minHeight: isMain ? 300 : 200,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      border: isScreen ? '2px solid #3b82f6' : 'none',
+      flex: '1 1 45%', maxWidth: '100%', position: 'relative',
+      borderRadius: 12, overflow: 'hidden', background: '#111',
+      minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <video
         ref={videoRef}
         autoPlay
         playsInline
-        muted
+        muted={isLocal}
         style={{
-          width: '100%', height: '100%',
-          objectFit: isScreen ? 'contain' : 'cover',
+          width: '100%', height: '100%', objectFit: 'cover',
           display: hasVideo ? 'block' : 'none',
-          transform: (isLocal && !isScreen) ? 'scaleX(-1)' : 'none',
+          transform: isLocal ? 'scaleX(-1)' : 'none',
         }}
       />
       {!hasVideo && (
         <div style={{ textAlign: 'center', color: '#555' }}>
-          <div style={{ fontSize: 40 }}>{isScreen ? '🖥' : '👤'}</div>
-          <div style={{ fontSize: 13, marginTop: 4 }}>{label}</div>
+          <div style={{ fontSize: 40 }}>👤</div>
+          <div style={{ fontSize: 13, marginTop: 4 }}>
+            {isLocal ? 'You' : participant.name || participant.identity}
+          </div>
         </div>
       )}
       <div style={{
         position: 'absolute', bottom: 8, left: 8,
         background: 'rgba(0,0,0,0.6)', color: '#fff',
         padding: '2px 8px', borderRadius: 6, fontSize: 12,
-      }}>{label}</div>
+      }}>
+        {isLocal ? 'You' : participant.name || participant.identity}
+      </div>
     </div>
   );
 }
@@ -137,34 +131,13 @@ function CallContent({ callType, onClose }: { callType: string; onClose: () => v
   const room = useRoomContext();
   const participants = useParticipants();
   const stableOnClose = useCallback(onClose, []);
-  const [, forceUpdate] = useState(0);
 
-  // Force re-render when tracks change
-  useEffect(() => {
-    if (!room) return;
-    const refresh = () => forceUpdate(n => n + 1);
-    room.on(RoomEvent.TrackSubscribed, refresh);
-    room.on(RoomEvent.TrackUnsubscribed, refresh);
-    room.on(RoomEvent.TrackPublished, refresh);
-    room.on(RoomEvent.TrackUnpublished, refresh);
-    room.on(RoomEvent.LocalTrackPublished, refresh);
-    room.on(RoomEvent.LocalTrackUnpublished, refresh);
-    return () => {
-      room.off(RoomEvent.TrackSubscribed, refresh);
-      room.off(RoomEvent.TrackUnsubscribed, refresh);
-      room.off(RoomEvent.TrackPublished, refresh);
-      room.off(RoomEvent.TrackUnpublished, refresh);
-      room.off(RoomEvent.LocalTrackPublished, refresh);
-      room.off(RoomEvent.LocalTrackUnpublished, refresh);
-    };
-  }, [room]);
-
-  // Enable devices after connect
   useEffect(() => {
     if (!room) return;
     let cancelled = false;
 
     const enableDevices = async () => {
+      // Enable mic
       try {
         await room.localParticipant.setMicrophoneEnabled(true);
         console.log('✅ Mic enabled');
@@ -172,18 +145,20 @@ function CallContent({ callType, onClose }: { callType: string; onClose: () => v
 
       if (callType === 'video' && !cancelled) {
         try {
+          // Same approach as gig page: enumerate devices, pick real camera
           const devices = await navigator.mediaDevices.enumerateDevices();
           const cameras = devices.filter(d => d.kind === 'videoinput');
           console.log('📷 Available cameras:', cameras.map(c => c.label));
           const realCam = cameras.find(c => !c.label.toLowerCase().includes('virtual'));
 
           if (realCam) {
-            console.log('📷 Using camera:', realCam.label);
+            console.log('📷 Using camera:', realCam.label, realCam.deviceId);
             await room.localParticipant.setCameraEnabled(true, {
               deviceId: realCam.deviceId,
               resolution: { width: 1280, height: 720, frameRate: 30 },
             } as any);
           } else {
+            console.log('📷 No specific camera found, using default');
             await room.localParticipant.setCameraEnabled(true, {
               facingMode: 'user',
               resolution: { width: 1280, height: 720, frameRate: 30 },
@@ -204,22 +179,6 @@ function CallContent({ callType, onClose }: { callType: string; onClose: () => v
     };
   }, [room, callType, stableOnClose]);
 
-  // Build tile list: cameras + screen shares
-  const tiles: { participant: Participant; source: Track.Source; isLocal: boolean }[] = [];
-  const hasScreenShare = participants.some(p =>
-    p.getTrackPublication(Track.Source.ScreenShare)?.track
-  );
-
-  participants.forEach(p => {
-    const isLocal = p instanceof LocalParticipant;
-    // Camera tile
-    tiles.push({ participant: p, source: Track.Source.Camera, isLocal });
-    // Screen share tile (if sharing)
-    if (p.getTrackPublication(Track.Source.ScreenShare)?.track) {
-      tiles.push({ participant: p, source: Track.Source.ScreenShare, isLocal });
-    }
-  });
-
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{
@@ -229,50 +188,14 @@ function CallContent({ callType, onClose }: { callType: string; onClose: () => v
       }}>
         {participants.length} in call
       </div>
-
-      {/* Main area: if screenshare active, show it large with cameras small */}
-      {hasScreenShare ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, padding: 8 }}>
-          {/* Screen share takes the main area */}
-          <div style={{ flex: 1 }}>
-            {tiles.filter(t => t.source === Track.Source.ScreenShare).map(t => (
-              <VideoTile
-                key={`${t.participant.identity}-screen`}
-                participant={t.participant}
-                source={t.source}
-                isLocal={t.isLocal}
-                isMain
-              />
-            ))}
-          </div>
-          {/* Camera feeds in a row at the bottom */}
-          <div style={{ display: 'flex', gap: 8, height: 120 }}>
-            {tiles.filter(t => t.source === Track.Source.Camera).map(t => (
-              <VideoTile
-                key={`${t.participant.identity}-cam`}
-                participant={t.participant}
-                source={t.source}
-                isLocal={t.isLocal}
-              />
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div style={{
-          flex: 1, display: 'flex', flexWrap: 'wrap', gap: 8, padding: 8,
-          alignItems: 'center', justifyContent: 'center',
-        }}>
-          {tiles.map(t => (
-            <VideoTile
-              key={`${t.participant.identity}-${t.source}`}
-              participant={t.participant}
-              source={t.source}
-              isLocal={t.isLocal}
-            />
-          ))}
-        </div>
-      )}
-
+      <div style={{
+        flex: 1, display: 'flex', flexWrap: 'wrap', gap: 8, padding: 8,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        {participants.map(p => (
+          <VideoTile key={p.identity} participant={p} isLocal={p instanceof LocalParticipant} />
+        ))}
+      </div>
       <ControlBar
         variation="minimal"
         controls={{ camera: callType === 'video', microphone: true, screenShare: true, leave: true }}

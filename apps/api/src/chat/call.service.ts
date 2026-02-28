@@ -25,7 +25,7 @@ export class CallService {
 
   async generateToken(userId: number, roomId: number) {
     const membership = await this.prisma.$queryRaw<any[]>`
-      SELECT crm.id, crm.preferred_lang
+      SELECT crm.room_id, crm.preferred_lang
       FROM chat_room_member crm
       WHERE crm.room_id = ${roomId} AND crm.user_id = ${userId}
     `;
@@ -34,7 +34,7 @@ export class CallService {
     }
 
     const user = await this.prisma.$queryRaw<any[]>`
-      SELECT userid as id, fname as name, whatsapp FROM public."user" WHERE id = ${userId}
+      SELECT userid as id, fname as name, whatsapp FROM public."user" WHERE userid = ${userId}
     `;
     if (!user || user.length === 0) {
       throw new BadRequestException('User not found');
@@ -167,7 +167,7 @@ export class CallService {
 
   async endCall(userId: number, roomId: number) {
     const membership = await this.prisma.$queryRaw<any[]>`
-      SELECT id FROM chat_room_member
+      SELECT room_id FROM chat_room_member
       WHERE room_id = ${roomId} AND user_id = ${userId}
     `;
     if (!membership || membership.length === 0) {
