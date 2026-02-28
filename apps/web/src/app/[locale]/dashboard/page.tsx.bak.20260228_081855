@@ -58,7 +58,6 @@ export default function DashboardPage() {
   };
 
   const [calling, setCalling] = useState<string | null>(null);
-  const [chatting, setChatting] = useState<string | null>(null);
   const handleCall = async (receiverUserId: string, requirid?: string, offerid?: string) => {
     if (!user) { alert('Please log in first'); return; }
     if (String(user.userid) === String(receiverUserId)) { alert('You cannot call yourself'); return; }
@@ -826,8 +825,8 @@ export default function DashboardPage() {
                     </div>
                     <div className="actions-row">
                       <button className="icon-btn icon-btn-pri" disabled={calling === o.offerid} onClick={() => handleCall(o.userid, undefined, o.offerid)}>{calling === o.offerid ? '📞 Calling...' : '📞 Call'}</button>
-                      <button className="icon-btn icon-btn-pri" disabled={chatting === o.offerid} onClick={() => handleChat(o.userid, o.offerid)}>{chatting === o.offerid ? '💬 Opening...' : '💬 Chat'}</button>
-                      <button className="icon-btn icon-btn-pri" onClick={() => handleVideo(o.userid, o.offerid)}>🎥 Video</button>
+                      <button className="icon-btn icon-btn-pri">💬 Chat</button>
+                      <button className="icon-btn icon-btn-pri">🎥 Video</button>
                     </div>
                   </article>
                 ))}
