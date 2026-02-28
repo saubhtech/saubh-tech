@@ -64,15 +64,14 @@ export class CallService {
     });
 
     const token = await at.toJwt();
-    this.logger.log(\`Generated call token for user \${userId} in room \${roomName}\`);
+    this.logger.log(`Generated call token for user ${userId} in room ${roomName}`);
 
     // Log call initiation
     try {
-      await this.prisma.$executeRaw\`
+      await this.prisma.$executeRaw`
         INSERT INTO chat_call_log (room_id, caller_id, call_type, status, livekit_room)
-        VALUES (\${roomId}, \${userId}, 'video', 'initiated', \${roomName})
-        ON CONFLICT DO NOTHING
-      \`;
+        VALUES (${roomId}, ${userId}, 'video', 'initiated', ${roomName})
+      `;
     } catch (e) { this.logger.warn('Failed to log call: ' + e.message); }
 
     return { token, livekitUrl: this.livekitUrl, roomName };
@@ -119,32 +118,32 @@ export class CallService {
   }
 
   async getCallHistory(roomId: number, limit = 20) {
-    return this.prisma.$queryRaw<any[]>\`
+    return this.prisma.$queryRaw<any[]>`
       SELECT cl.*, u.name as caller_name
       FROM chat_call_log cl
       LEFT JOIN "User" u ON u.id = cl.caller_id
-      WHERE cl.room_id = \${roomId}
+      WHERE cl.room_id = ${roomId}
       ORDER BY cl.started_at DESC
-      LIMIT \${limit}
-    \`;
+      LIMIT ${limit}
+    `;
   }
 
   async getUserCallHistory(userId: number, limit = 30) {
-    return this.prisma.$queryRaw<any[]>\`
+    return this.prisma.$queryRaw<any[]>`
       SELECT cl.*, u.name as caller_name, cr.type as room_type
       FROM chat_call_log cl
       LEFT JOIN "User" u ON u.id = cl.caller_id
       LEFT JOIN chat_room cr ON cr.id = cl.room_id
       WHERE cl.room_id IN (
-        SELECT room_id FROM chat_room_member WHERE user_id = \${userId}
+        SELECT room_id FROM chat_room_member WHERE user_id = ${userId}
       )
       ORDER BY cl.started_at DESC
-      LIMIT \${limit}
-    \`;
+      LIMIT ${limit}
+    `;
   }
 
   async updateCallStatus(roomId: number, status: string, endReason?: string) {
-    const roomName = \`saubh_call_\${roomId}\`;
+    const roomName = `saubh_call_${roomId}`;
     let participants = 0;
     try {
       const ps = await this.roomService.listParticipants(roomName);
@@ -152,17 +151,17 @@ export class CallService {
     } catch {}
 
     if (status === 'answered') {
-      await this.prisma.$executeRaw\`
-        UPDATE chat_call_log SET status = 'answered', answered_at = now(), participants = \${participants}
-        WHERE livekit_room = \${roomName} AND ended_at IS NULL
-      \`;
+      await this.prisma.$executeRaw`
+        UPDATE chat_call_log SET status = 'answered', answered_at = now(), participants = ${participants}
+        WHERE livekit_room = ${roomName} AND ended_at IS NULL
+      `;
     } else if (status === 'ended') {
-      await this.prisma.$executeRaw\`
-        UPDATE chat_call_log SET status = \${endReason || 'ended'}, ended_at = now(),
-          participants = \${participants},
+      await this.prisma.$executeRaw`
+        UPDATE chat_call_log SET status = ${endReason || 'ended'}, ended_at = now(),
+          participants = ${participants},
           duration = EXTRACT(EPOCH FROM (now() - COALESCE(answered_at, started_at)))::int
-        WHERE livekit_room = \${roomName} AND ended_at IS NULL
-      \`;
+        WHERE livekit_room = ${roomName} AND ended_at IS NULL
+      `;
     }
   }
 
@@ -175,7 +174,7 @@ export class CallService {
       throw new ForbiddenException('Not a member of this room');
     }
 
-    const roomName = \`saubh_call_\${roomId}\`;
+    const roomName = `saubh_call_${roomId}`;
     await this.updateCallStatus(roomId, 'ended', 'user_ended');
     try {
       await this.roomService.deleteRoom(roomName);
