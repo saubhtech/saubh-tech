@@ -93,10 +93,6 @@ export default function ChatPage() {
   const [inCall, setInCall] = useState(false);
   const [callToken, setCallToken] = useState('');
   const [callLkUrl, setCallLkUrl] = useState('');
-  const [incomingCall, setIncomingCall] = useState<{
-    conversationId: string; callerId: string; callerName: string; callType: string;
-  } | null>(null);
-  const incomingAudioRef = useRef<HTMLAudioElement | null>(null);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRoomRef = useRef<ChatRoom | null>(null);
@@ -171,30 +167,6 @@ export default function ChatPage() {
         });
       }
     });
-
-    socket.on('call:incoming', (data: any) => {
-      setIncomingCall(data);
-      // Play ring sound
-      try {
-        const audio = new Audio('/sounds/ring.mp3');
-        audio.loop = true;
-        audio.play().catch(() => {});
-        incomingAudioRef.current = audio;
-      } catch {}
-      // Auto-dismiss after 30s
-      setTimeout(() => {
-        setIncomingCall(prev => prev?.conversationId === data.conversationId ? null : prev);
-        incomingAudioRef.current?.pause();
-      }, 30000);
-    });
-
-    socket.on('call:ended', (data: any) => {
-      setIncomingCall(prev => prev?.conversationId === data.conversationId ? null : prev);
-      incomingAudioRef.current?.pause();
-      if (inCall) { setInCall(false); setCallToken(''); setCallLkUrl(''); }
-    });
-
-    socket.on('call:declined', () => {});
 
     socket.on('user-typing', (data: { conversationId: string; userId: string }) => {
       setTypingUsers(prev => new Set(prev).add(data.userId));
@@ -458,12 +430,6 @@ export default function ChatPage() {
       setCallToken(data.token);
       setCallLkUrl(data.livekitUrl);
       setInCall(true);
-      // Notify other room members
-      socketRef.current?.emit('call:start', {
-        conversationId: activeRoom.conversation_id,
-        callerName: user?.name || 'Someone',
-        callType: 'video',
-      });
     } catch (err) { console.error('Call error:', err); alert('Could not start call'); }
   };
 
@@ -776,72 +742,12 @@ export default function ChatPage() {
         )}
       </div>
 
-      {incomingCall && !inCall && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9998,
-          background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <div style={{
-            background: '#1a1f2e', borderRadius: 20, padding: '40px 48px', textAlign: 'center',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.5)', maxWidth: 360,
-          }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📞</div>
-            <div style={{ color: '#fff', fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
-              {incomingCall.callerName}
-            </div>
-            <div style={{ color: '#888', fontSize: 14, marginBottom: 32 }}>
-              Incoming {incomingCall.callType} call...
-            </div>
-            <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-              <button
-                onClick={() => {
-                  incomingAudioRef.current?.pause();
-                  socketRef.current?.emit('call:decline', { conversationId: incomingCall.conversationId });
-                  setIncomingCall(null);
-                }}
-                style={{
-                  background: '#ef4444', color: '#fff', border: 'none', borderRadius: 50,
-                  width: 64, height: 64, fontSize: 24, cursor: 'pointer',
-                }}
-              >✕</button>
-              <button
-                onClick={async () => {
-                  incomingAudioRef.current?.pause();
-                  setIncomingCall(null);
-                  // Find the room and join the call
-                  const targetRoom = rooms.find(r => r.conversation_id === incomingCall.conversationId);
-                  if (targetRoom) setActiveRoom(targetRoom);
-                  try {
-                    const res = await fetch('/api/chat/call/token', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                      body: JSON.stringify({ room_id: Number(incomingCall.conversationId) }),
-                    });
-                    if (!res.ok) throw new Error('Failed');
-                    const data = await res.json();
-                    setCallToken(data.token);
-                    setCallLkUrl(data.livekitUrl);
-                    setInCall(true);
-                  } catch (err) { console.error('Accept call error:', err); }
-                }}
-                style={{
-                  background: '#22c55e', color: '#fff', border: 'none', borderRadius: 50,
-                  width: 64, height: 64, fontSize: 24, cursor: 'pointer',
-                }}
-              >✓</button>
-            </div>
-          </div>
-        </div>
-      )}
       {inCall && activeRoom && (
         <CallView
           roomId={Number(activeRoom.conversation_id)}
           token={callToken}
           livekitUrl={callLkUrl}
-          onClose={() => {
-            setInCall(false); setCallToken(''); setCallLkUrl('');
-            if (activeRoom) socketRef.current?.emit('call:end', { conversationId: activeRoom.conversation_id });
-          }}
+          onClose={() => { setInCall(false); setCallToken(''); setCallLkUrl(''); }}
         />
       )}
       <style>{`

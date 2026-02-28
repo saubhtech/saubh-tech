@@ -163,57 +163,6 @@ export class ChatGateway
     client.emit('pong', { timestamp: new Date().toISOString() });
   }
 
-
-  // ─── Call signaling ─────────────────────────────────────────
-
-  @SubscribeMessage('call:start')
-  handleCallStart(
-    @MessageBody() data: { conversationId: string; callerName: string; callType: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const userId = (client as any).userId;
-    if (!userId) return;
-    const roomKey = `room:${data.conversationId}`;
-    this.logger.log(`Call started by user ${userId} in ${roomKey} (${data.callType})`);
-    client.to(roomKey).emit('call:incoming', {
-      conversationId: data.conversationId,
-      callerId: userId,
-      callerName: data.callerName || `User ${userId}`,
-      callType: data.callType || 'video',
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  @SubscribeMessage('call:decline')
-  handleCallDecline(
-    @MessageBody() data: { conversationId: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const userId = (client as any).userId;
-    if (!userId) return;
-    const roomKey = `room:${data.conversationId}`;
-    this.logger.log(`Call declined by user ${userId} in ${roomKey}`);
-    client.to(roomKey).emit('call:declined', {
-      conversationId: data.conversationId,
-      userId,
-    });
-  }
-
-  @SubscribeMessage('call:end')
-  handleCallEnd(
-    @MessageBody() data: { conversationId: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const userId = (client as any).userId;
-    if (!userId) return;
-    const roomKey = `room:${data.conversationId}`;
-    this.logger.log(`Call ended by user ${userId} in ${roomKey}`);
-    this.server.to(roomKey).emit('call:ended', {
-      conversationId: data.conversationId,
-      endedBy: userId,
-    });
-  }
-
   // ─── Helpers ────────────────────────────────────────────────
 
   /** Get count of online users */
