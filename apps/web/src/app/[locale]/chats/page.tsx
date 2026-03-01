@@ -964,7 +964,7 @@ export default function ChatsPage() {
           <CallView
             roomId={Number(activeRoom?.conversation_id || 0)}
             myLang={activeRoom?.my_lang || 'en'}
-            otherLang={(() => { const o = activeRoom?.members?.find(m => m.user_id !== user?.userid?.toString()); return o?.lang || 'en'; })()}
+            otherLang={(() => { const o = activeRoom?.members?.find((m: any) => m.user_id !== user?.userid?.toString()); return o?.lang || 'en'; })()}
             authToken={token}
             token={callToken}
             livekitUrl={callLkUrl}

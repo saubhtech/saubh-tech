@@ -55,14 +55,7 @@ export default function CallView({ roomId, token, livekitUrl, callType = 'video'
           style={{ height: '100%' }}
           data-lk-theme="default"
         >
-          <CallContent
-            callType={callType}
-            onClose={onClose}
-            roomId={roomId}
-            myLang={myLang}
-            otherLang={otherLang}
-            authToken={authToken}
-          />
+          <CallContent callType={callType} onClose={onClose} myLang={myLang} otherLang={otherLang} authToken={authToken} />
           <RoomAudioRenderer />
         </LiveKitRoom>
       </div>
@@ -70,7 +63,7 @@ export default function CallView({ roomId, token, livekitUrl, callType = 'video'
   );
 }
 
-/* ─── Single video tile ─── */
+/* ─── Single video tile — renders camera OR screenshare ─── */
 function VideoTile({ participant, source, isLocal, isMain }: {
   participant: Participant; source: Track.Source; isLocal: boolean; isMain?: boolean;
 }) {
@@ -80,25 +73,25 @@ function VideoTile({ participant, source, isLocal, isMain }: {
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
+
     const attach = () => {
       const pub = participant.getTrackPublication(source);
       if (pub?.track) {
         pub.track.attach(el);
-        el.muted = true;
+        el.muted = true; // always mute video element; audio handled by RoomAudioRenderer
         el.play().catch(() => {});
         setHasVideo(true);
       } else {
         setHasVideo(false);
       }
     };
+
     attach();
     const interval = setInterval(attach, 500);
     return () => {
       clearInterval(interval);
-      try {
-        const pub = participant.getTrackPublication(source);
-        if (pub?.track && el) pub.track.detach(el);
-      } catch {}
+      const pub = participant.getTrackPublication(source);
+      if (pub?.track && el) pub.track.detach(el);
     };
   }, [participant, source]);
 
@@ -118,7 +111,9 @@ function VideoTile({ participant, source, isLocal, isMain }: {
     }}>
       <video
         ref={videoRef}
-        autoPlay playsInline muted
+        autoPlay
+        playsInline
+        muted
         style={{
           width: '100%', height: '100%',
           objectFit: isScreen ? 'contain' : 'cover',
@@ -141,229 +136,19 @@ function VideoTile({ participant, source, isLocal, isMain }: {
   );
 }
 
-/* ─── Subtitle overlay component ─── */
-function SubtitleOverlay({ subtitles }: { subtitles: { original: string; translated: string; timestamp: number }[] }) {
-  const now = Date.now();
-  const visible = subtitles.filter(s => now - s.timestamp < 8000).slice(-3);
-  if (visible.length === 0) return null;
-
-  return (
-    <div style={{
-      position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-      width: '80%', maxWidth: 700, zIndex: 50,
-      display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center',
-    }}>
-      {visible.map((s, i) => {
-        const age = now - s.timestamp;
-        const opacity = age > 6000 ? Math.max(0, 1 - (age - 6000) / 2000) : 1;
-        return (
-          <div key={i} style={{
-            background: 'rgba(0,0,0,0.75)', borderRadius: 10,
-            padding: '8px 16px', textAlign: 'center', opacity,
-            transition: 'opacity 0.5s',
-            backdropFilter: 'blur(8px)',
-          }}>
-            {s.translated && s.translated !== s.original && (
-              <div style={{ color: '#60a5fa', fontSize: 15, fontWeight: 600, lineHeight: 1.4 }}>
-                {s.translated}
-              </div>
-            )}
-            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, lineHeight: 1.3, marginTop: s.translated ? 2 : 0 }}>
-              {s.original}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ─── Safe audio capture hook (never crashes the call) ─── */
-function useAudioCapture(
-  room: any,
-  enabled: boolean,
-  onAudioChunk: (base64: string) => void,
-  intervalMs: number = 3000,
-) {
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  useEffect(() => {
-    if (!room || !enabled) return;
-    let cancelled = false;
-
-    const startCapture = async () => {
-      try {
-        // Check if MediaRecorder is supported
-        if (typeof MediaRecorder === 'undefined') {
-          console.warn('MediaRecorder not supported — subtitles disabled');
-          return;
-        }
-
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
-        if (!stream || cancelled) {
-          if (stream) stream.getTracks().forEach(t => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-
-        // Check if webm/opus is supported, fallback to default
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-          ? 'audio/webm;codecs=opus'
-          : '';
-        const options = mimeType ? { mimeType } : {};
-
-        const createRecorder = () => {
-          try {
-            if (!streamRef.current?.active || cancelled) return;
-            const recorder = new MediaRecorder(streamRef.current, options);
-            mediaRecorderRef.current = recorder;
-            chunksRef.current = [];
-
-            recorder.ondataavailable = (event) => {
-              try { if (event.data.size > 0) chunksRef.current.push(event.data); } catch {}
-            };
-
-            recorder.onstop = () => {
-              try {
-                if (chunksRef.current.length === 0 || cancelled) return;
-                const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
-                chunksRef.current = [];
-                if (blob.size < 1000) return; // Skip silence
-
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  try {
-                    const base64 = (reader.result as string).split(',')[1];
-                    if (base64) onAudioChunk(base64);
-                  } catch {}
-                };
-                reader.readAsDataURL(blob);
-              } catch {}
-            };
-
-            recorder.onerror = () => {}; // Silently handle recorder errors
-            recorder.start();
-          } catch (err) {
-            console.warn('MediaRecorder creation failed:', err);
-          }
-        };
-
-        createRecorder();
-
-        intervalRef.current = setInterval(() => {
-          try {
-            if (mediaRecorderRef.current?.state === 'recording') {
-              mediaRecorderRef.current.stop();
-              setTimeout(createRecorder, 100);
-            }
-          } catch {}
-        }, intervalMs);
-
-      } catch (err) {
-        console.warn('Audio capture setup failed (call continues normally):', err);
-      }
-    };
-
-    const timer = setTimeout(startCapture, 2000);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      try { if (intervalRef.current) clearInterval(intervalRef.current); } catch {}
-      try { mediaRecorderRef.current?.stop(); } catch {}
-      try { streamRef.current?.getTracks().forEach(t => t.stop()); } catch {}
-    };
-  }, [room, enabled, onAudioChunk, intervalMs]);
-}
-
-/* ─── Main call content with subtitles ─── */
-function CallContent({ callType, onClose, roomId, myLang, otherLang, authToken }: {
-  callType: string; onClose: () => void; roomId: number;
-  myLang?: string; otherLang?: string; authToken?: string;
-}) {
+function CallContent({ callType, onClose, myLang, otherLang, authToken }: { callType: string; onClose: () => void; myLang?: string; otherLang?: string; authToken?: string }) {
   const room = useRoomContext();
   const participants = useParticipants();
   const stableOnClose = useCallback(onClose, []);
   const [, forceUpdate] = useState(0);
-  const [subtitlesEnabled, setSubtitlesEnabled] = useState(false); // Start OFF, enable after check
+  const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
   const [subtitlesAvailable, setSubtitlesAvailable] = useState(false);
-  const [subtitles, setSubtitles] = useState<{ original: string; translated: string; timestamp: number }[]>([]);
+  const [subtitles, setSubtitles] = useState<{orig: string; trans: string; ts: number}[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const consecutiveFailsRef = useRef(0);
-
-  // Check if subtitle service is available on mount
-  useEffect(() => {
-    if (!authToken) return;
-    fetch('/api/chat/call/subtitles/status', {
-      headers: { Authorization: `Bearer ${authToken}` },
-    })
-      .then(r => r.ok ? r.json() : { available: false })
-      .then(data => {
-        if (data.available) {
-          setSubtitlesAvailable(true);
-          setSubtitlesEnabled(true); // Auto-enable if available
-        }
-      })
-      .catch(() => {
-        // Service check failed — subtitles not available, call works fine
-        setSubtitlesAvailable(false);
-      });
-  }, [authToken]);
-
-  // Handle audio chunk — send to backend
-  const handleAudioChunk = useCallback(async (base64: string) => {
-    if (!authToken || !myLang || consecutiveFailsRef.current >= 5) return;
-    setIsTranscribing(true);
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000); // 15s frontend timeout
-
-      const res = await fetch('/api/chat/call/transcribe', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          audio: base64,
-          source_lang: myLang,
-          target_lang: otherLang || 'en',
-          room_id: roomId,
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-
-      if (res.ok) {
-        const data = await res.json();
-        consecutiveFailsRef.current = 0; // Reset on success
-        if (data.originalText && data.originalText.trim()) {
-          setSubtitles(prev => [...prev.slice(-10), {
-            original: data.originalText,
-            translated: data.translatedText,
-            timestamp: Date.now(),
-          }]);
-        }
-      } else {
-        consecutiveFailsRef.current++;
-      }
-    } catch {
-      consecutiveFailsRef.current++;
-      // After 5 consecutive fails, auto-disable subtitles
-      if (consecutiveFailsRef.current >= 5) {
-        console.warn('Subtitles auto-disabled after 5 consecutive failures');
-        setSubtitlesEnabled(false);
-      }
-    } finally {
-      setIsTranscribing(false);
-    }
-  }, [authToken, myLang, otherLang, roomId]);
-
-  // Capture audio when subtitles enabled
-  useAudioCapture(room, subtitlesEnabled && subtitlesAvailable && !!authToken, handleAudioChunk, 3000);
+  const failCountRef = useRef(0);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Force re-render when tracks change
   useEffect(() => {
@@ -389,16 +174,22 @@ function CallContent({ callType, onClose, roomId, myLang, otherLang, authToken }
   useEffect(() => {
     if (!room) return;
     let cancelled = false;
+
     const enableDevices = async () => {
       try {
         await room.localParticipant.setMicrophoneEnabled(true);
+        console.log('✅ Mic enabled');
       } catch (err) { console.warn('Mic failed:', err); }
+
       if (callType === 'video' && !cancelled) {
         try {
           const devices = await navigator.mediaDevices.enumerateDevices();
           const cameras = devices.filter(d => d.kind === 'videoinput');
+          console.log('📷 Available cameras:', cameras.map(c => c.label));
           const realCam = cameras.find(c => !c.label.toLowerCase().includes('virtual'));
+
           if (realCam) {
+            console.log('📷 Using camera:', realCam.label);
             await room.localParticipant.setCameraEnabled(true, {
               deviceId: realCam.deviceId,
               resolution: { width: 1280, height: 720, frameRate: 30 },
@@ -409,9 +200,11 @@ function CallContent({ callType, onClose, roomId, myLang, otherLang, authToken }
               resolution: { width: 1280, height: 720, frameRate: 30 },
             } as any);
           }
+          console.log('✅ Camera enabled');
         } catch (err) { console.warn('Camera failed:', err); }
       }
     };
+
     const timer = setTimeout(enableDevices, 800);
     const handleDisconnect = () => stableOnClose();
     room.on(RoomEvent.Disconnected, handleDisconnect);
@@ -422,65 +215,145 @@ function CallContent({ callType, onClose, roomId, myLang, otherLang, authToken }
     };
   }, [room, callType, stableOnClose]);
 
-  // Build tile list
+  // Check subtitle availability
+  useEffect(() => {
+    if (!authToken) return;
+    fetch('/api/chat/call/subtitles/status', { headers: { Authorization: 'Bearer ' + authToken } })
+      .then(r => r.ok ? r.json() : { available: false })
+      .then(d => { if (d.available) { setSubtitlesAvailable(true); setSubtitlesEnabled(true); } })
+      .catch(() => {});
+  }, [authToken]);
+
+  // Audio capture from LiveKit mic track (NO getUserMedia)
+  useEffect(() => {
+    if (!room || !subtitlesEnabled || !subtitlesAvailable || !authToken || !myLang) return;
+    let cancelled = false;
+
+    const start = () => {
+      try {
+        const micPub = room.localParticipant?.getTrackPublication?.(Track.Source.Microphone);
+        const mst = micPub?.track?.mediaStreamTrack;
+        if (!mst) { if (!cancelled) setTimeout(start, 2000); return; }
+
+        const ctx = new AudioContext({ sampleRate: 48000 });
+        audioCtxRef.current = ctx;
+        const src = ctx.createMediaStreamSource(new MediaStream([mst]));
+        const dest = ctx.createMediaStreamDestination();
+        src.connect(dest);
+
+        const mime = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
+        let chunks: Blob[] = [];
+
+        const record = () => {
+          if (cancelled) return;
+          try {
+            const rec = new MediaRecorder(dest.stream, mime ? { mimeType: mime } : {});
+            recorderRef.current = rec;
+            chunks = [];
+            rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+            rec.onstop = () => {
+              if (cancelled || chunks.length === 0) return;
+              const blob = new Blob(chunks, { type: mime || 'audio/webm' });
+              chunks = [];
+              if (blob.size < 1000) return;
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const b64 = (reader.result as string)?.split(',')?.[1];
+                if (!b64 || cancelled || failCountRef.current >= 5) return;
+                setIsTranscribing(true);
+                const ctrl = new AbortController();
+                const to = setTimeout(() => ctrl.abort(), 15000);
+                fetch('/api/chat/call/transcribe', {
+                  method: 'POST', signal: ctrl.signal,
+                  headers: { Authorization: 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ audio: b64, source_lang: myLang, target_lang: otherLang || 'en', room_id: 0 }),
+                }).then(r => { clearTimeout(to); return r.ok ? r.json() : null; })
+                  .then(d => { if (d?.originalText?.trim()) { failCountRef.current = 0; setSubtitles(p => [...p.slice(-10), { orig: d.originalText, trans: d.translatedText, ts: Date.now() }]); } })
+                  .catch(() => { failCountRef.current++; if (failCountRef.current >= 5) setSubtitlesEnabled(false); })
+                  .finally(() => setIsTranscribing(false));
+              };
+              reader.readAsDataURL(blob);
+            };
+            rec.onerror = () => {};
+            rec.start();
+          } catch {}
+        };
+
+        record();
+        intervalRef.current = setInterval(() => {
+          try { if (recorderRef.current?.state === 'recording') { recorderRef.current.stop(); setTimeout(record, 100); } } catch {}
+        }, 3000);
+      } catch {}
+    };
+
+    const timer = setTimeout(start, 3000);
+    return () => {
+      cancelled = true; clearTimeout(timer);
+      try { if (intervalRef.current) clearInterval(intervalRef.current); } catch {}
+      try { recorderRef.current?.stop(); } catch {}
+      try { audioCtxRef.current?.close(); } catch {}
+    };
+  }, [room, subtitlesEnabled, subtitlesAvailable, authToken, myLang, otherLang]);
+
+  // Build tile list: cameras + screen shares
   const tiles: { participant: Participant; source: Track.Source; isLocal: boolean }[] = [];
   const hasScreenShare = participants.some(p =>
     p.getTrackPublication(Track.Source.ScreenShare)?.track
   );
+
   participants.forEach(p => {
     const isLocal = p instanceof LocalParticipant;
+    // Camera tile
     tiles.push({ participant: p, source: Track.Source.Camera, isLocal });
+    // Screen share tile (if sharing)
     if (p.getTrackPublication(Track.Source.ScreenShare)?.track) {
       tiles.push({ participant: p, source: Track.Source.ScreenShare, isLocal });
     }
   });
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-      {/* Top bar info */}
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{
-        position: 'absolute', top: 8, right: 16, display: 'flex', gap: 8, zIndex: 10,
+        position: 'absolute', top: 60, right: 16,
+        background: 'rgba(0,0,0,0.7)', color: '#fff',
+        padding: '4px 10px', borderRadius: 12, fontSize: 12, zIndex: 10,
       }}>
-        <div style={{
-          background: 'rgba(0,0,0,0.7)', color: '#fff',
-          padding: '4px 10px', borderRadius: 12, fontSize: 12,
-        }}>
-          {participants.length} in call
-        </div>
-
-        {/* Subtitle toggle — only show if service is available */}
-        {subtitlesAvailable && (
-          <button
-            onClick={() => {
-              setSubtitlesEnabled(!subtitlesEnabled);
-              if (!subtitlesEnabled) consecutiveFailsRef.current = 0; // Reset failures on re-enable
-            }}
-            style={{
-              background: subtitlesEnabled ? 'rgba(59,130,246,0.8)' : 'rgba(0,0,0,0.7)',
-              color: '#fff', border: 'none', borderRadius: 12,
-              padding: '4px 10px', fontSize: 12, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}
-          >
-            {subtitlesEnabled ? '🔤 CC ON' : '🔤 CC OFF'}
-            {isTranscribing && subtitlesEnabled && (
-              <span style={{ animation: 'pulse 1s infinite', fontSize: 8 }}>●</span>
-            )}
-          </button>
-        )}
+        {participants.length} in call
       </div>
+      {subtitlesAvailable && (
+        <button onClick={() => { setSubtitlesEnabled(!subtitlesEnabled); if (!subtitlesEnabled) failCountRef.current = 0; }} style={{
+          position: 'absolute', top: 60, right: 120, background: subtitlesEnabled ? 'rgba(59,130,246,0.8)' : 'rgba(0,0,0,0.7)',
+          color: '#fff', border: 'none', borderRadius: 12, padding: '4px 10px', fontSize: 12, cursor: 'pointer', zIndex: 10,
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}>
+          {subtitlesEnabled ? '🔤 CC' : '🔤 OFF'}{isTranscribing && subtitlesEnabled && <span style={{animation:'pulse 1s infinite',fontSize:8}}>●</span>}
+        </button>
+      )}
 
-      {/* Video tiles */}
+      {/* Main area: if screenshare active, show it large with cameras small */}
       {hasScreenShare ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, padding: 8 }}>
+          {/* Screen share takes the main area */}
           <div style={{ flex: 1 }}>
             {tiles.filter(t => t.source === Track.Source.ScreenShare).map(t => (
-              <VideoTile key={`${t.participant.identity}-screen`} participant={t.participant} source={t.source} isLocal={t.isLocal} isMain />
+              <VideoTile
+                key={`${t.participant.identity}-screen`}
+                participant={t.participant}
+                source={t.source}
+                isLocal={t.isLocal}
+                isMain
+              />
             ))}
           </div>
+          {/* Camera feeds in a row at the bottom */}
           <div style={{ display: 'flex', gap: 8, height: 120 }}>
             {tiles.filter(t => t.source === Track.Source.Camera).map(t => (
-              <VideoTile key={`${t.participant.identity}-cam`} participant={t.participant} source={t.source} isLocal={t.isLocal} />
+              <VideoTile
+                key={`${t.participant.identity}-cam`}
+                participant={t.participant}
+                source={t.source}
+                isLocal={t.isLocal}
+              />
             ))}
           </div>
         </div>
@@ -490,16 +363,28 @@ function CallContent({ callType, onClose, roomId, myLang, otherLang, authToken }
           alignItems: 'center', justifyContent: 'center',
         }}>
           {tiles.map(t => (
-            <VideoTile key={`${t.participant.identity}-${t.source}`} participant={t.participant} source={t.source} isLocal={t.isLocal} />
+            <VideoTile
+              key={`${t.participant.identity}-${t.source}`}
+              participant={t.participant}
+              source={t.source}
+              isLocal={t.isLocal}
+            />
           ))}
         </div>
       )}
 
-      {/* Subtitle overlay — only when enabled and available */}
-      {subtitlesEnabled && subtitlesAvailable && <SubtitleOverlay subtitles={subtitles} />}
-
-      <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
-
+      {subtitlesEnabled && subtitlesAvailable && subtitles.filter(s => Date.now() - s.ts < 8000).length > 0 && (
+        <div style={{ position:'absolute', bottom:80, left:'50%', transform:'translateX(-50%)', width:'80%', maxWidth:700, zIndex:50, display:'flex', flexDirection:'column', gap:4, alignItems:'center' }}>
+          {subtitles.filter(s => Date.now() - s.ts < 8000).slice(-3).map((s, i) => {
+            const age = Date.now() - s.ts; const opacity = age > 6000 ? Math.max(0, 1-(age-6000)/2000) : 1;
+            return (<div key={i} style={{ background:'rgba(0,0,0,0.75)', borderRadius:10, padding:'8px 16px', textAlign:'center', opacity, backdropFilter:'blur(8px)' }}>
+              {s.trans && s.trans !== s.orig && <div style={{color:'#60a5fa',fontSize:15,fontWeight:600,lineHeight:1.4}}>{s.trans}</div>}
+              <div style={{color:'rgba(255,255,255,0.6)',fontSize:12,lineHeight:1.3,marginTop:s.trans?2:0}}>{s.orig}</div>
+            </div>);
+          })}
+        </div>
+      )}
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
       <ControlBar
         variation="minimal"
         controls={{ camera: callType === 'video', microphone: true, screenShare: true, leave: true }}

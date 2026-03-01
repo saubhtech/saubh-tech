@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 import { createHash } from 'crypto';
+import { execSync } from 'child_process';
+import { writeFileSync, readFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 const EMPTY_RESULT = { originalText: '', translatedText: '', sourceLang: '', targetLang: '', cached: false, error: false };
 
@@ -26,89 +30,91 @@ export class CallSubtitleService {
         maxRetriesPerRequest: 1,
         retryStrategy: (times) => (times > 2 ? null : Math.min(times * 200, 1000)),
       });
-      this.redis.on('error', () => {}); // Silently handle Redis errors
+      this.redis.on('error', () => {});
     } catch {
-      this.logger.warn('Redis connection failed for subtitles — caching disabled');
       this.redis = null;
     }
   }
 
-  /** Check if subtitle service is available */
   isAvailable(): boolean {
     return this.available && !!this.gcpApiKey;
   }
 
-  /**
-   * Full pipeline: Audio (base64) -> STT -> Translate -> Return subtitle
-   * NEVER throws — always returns a result (empty on any failure)
-   */
   async transcribeAndTranslate(
     audioBase64: string,
     sourceLang: string,
     targetLang: string,
-    encoding: string = 'WEBM_OPUS',
-    sampleRateHertz: number = 48000,
   ) {
-    if (!this.available) {
-      return { ...EMPTY_RESULT, sourceLang, targetLang };
-    }
+    if (!this.available) return { ...EMPTY_RESULT, sourceLang, targetLang };
 
     try {
-      // Step 1: Speech-to-Text
-      const originalText = await this.speechToText(audioBase64, sourceLang, encoding, sampleRateHertz);
-      if (!originalText || originalText.trim().length === 0) {
-        return { ...EMPTY_RESULT, sourceLang, targetLang };
-      }
+      // Step 1: Convert to mono via ffmpeg (fixes stereo/mono mismatch)
+      const monoBase64 = this.convertToMono(audioBase64);
+      if (!monoBase64) return { ...EMPTY_RESULT, sourceLang, targetLang };
 
-      // Step 2: Skip translation if same language
+      // Step 2: Speech-to-Text
+      const originalText = await this.speechToText(monoBase64, sourceLang);
+      if (!originalText || !originalText.trim()) return { ...EMPTY_RESULT, sourceLang, targetLang };
+
+      // Step 3: Skip if same language
       if (sourceLang === targetLang) {
         return { originalText, translatedText: originalText, sourceLang, targetLang, cached: false, error: false };
       }
 
-      // Step 3: Check Redis cache
-      let cached: string | null = null;
+      // Step 4: Cache check
       const cacheKey = `trans:${sourceLang}:${targetLang}:${createHash('sha256').update(originalText).digest('hex').slice(0, 16)}`;
       try {
-        if (this.redis) cached = await this.redis.get(cacheKey);
-      } catch { /* Redis down — skip cache, continue */ }
+        if (this.redis) {
+          const cached = await this.redis.get(cacheKey);
+          if (cached) return { originalText, translatedText: cached, sourceLang, targetLang, cached: true, error: false };
+        }
+      } catch {}
 
-      if (cached) {
-        this.logger.debug(`Cache HIT: ${originalText.slice(0, 30)}`);
-        return { originalText, translatedText: cached, sourceLang, targetLang, cached: true, error: false };
-      }
-
-      // Step 4: Google Translate
+      // Step 5: Translate
       const translatedText = await this.translateText(originalText, sourceLang, targetLang);
 
-      // Step 5: Cache (best-effort)
-      if (translatedText && translatedText !== originalText) {
-        try {
-          if (this.redis) await this.redis.set(cacheKey, translatedText, 'EX', 604800);
-        } catch { /* Cache write failed — not critical */ }
-      }
+      // Step 6: Cache
+      try { if (this.redis && translatedText) await this.redis.set(cacheKey, translatedText, 'EX', 604800); } catch {}
 
       return { originalText, translatedText, sourceLang, targetLang, cached: false, error: false };
     } catch (err: any) {
-      this.logger.error(`Subtitle pipeline failed (non-fatal): ${err.message}`);
+      this.logger.error('Subtitle pipeline failed (non-fatal): ' + err.message);
       return { ...EMPTY_RESULT, sourceLang, targetLang, error: true };
     }
   }
 
-  private async speechToText(audioBase64: string, languageCode: string, encoding: string, sampleRateHertz: number): Promise<string> {
+  private convertToMono(audioBase64: string): string | null {
+    const id = Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const inFile = join(tmpdir(), `stt_in_${id}.webm`);
+    const outFile = join(tmpdir(), `stt_out_${id}.webm`);
     try {
-      const sttLangCode = this.mapToSttLang(languageCode);
+      writeFileSync(inFile, Buffer.from(audioBase64, 'base64'));
+      execSync(`ffmpeg -i ${inFile} -ac 1 -c:a libopus ${outFile} -y 2>/dev/null`, { timeout: 5000 });
+      const mono = readFileSync(outFile);
+      return mono.toString('base64');
+    } catch (err: any) {
+      this.logger.warn('FFmpeg mono conversion failed: ' + err.message);
+      return null;
+    } finally {
+      try { unlinkSync(inFile); } catch {}
+      try { unlinkSync(outFile); } catch {}
+    }
+  }
+
+  private async speechToText(audioBase64: string, languageCode: string): Promise<string> {
+    try {
+      const sttLang = this.mapToSttLang(languageCode);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${this.gcpApiKey}`, {
+      const res = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${this.gcpApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           config: {
-            languageCode: sttLangCode,
+            languageCode: sttLang,
             enableAutomaticPunctuation: true,
-            model: 'default',
-            alternativeLanguageCodes: this.getAlternateLanguages(sttLangCode),
+            alternativeLanguageCodes: ['en-IN', 'hi-IN'].filter(l => l !== sttLang).slice(0, 3),
           },
           audio: { content: audioBase64 },
         }),
@@ -116,55 +122,37 @@ export class CallSubtitleService {
       });
       clearTimeout(timeout);
 
-      if (!response.ok) {
-        const errBody = await response.text().catch(() => 'no body');
-        this.logger.warn(`STT API returned ${response.status}: ${errBody.slice(0, 200)}`);
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        this.logger.warn(`STT ${res.status}: ${errText.slice(0, 150)}`);
         return '';
       }
-      const result = (await response.json()) as any;
-      if (!result.results || result.results.length === 0) return '';
-      return result.results.map((r: any) => r.alternatives?.[0]?.transcript || '').join(' ').trim();
+      const data = (await res.json()) as any;
+      if (!data.results?.length) return '';
+      return data.results.map((r: any) => r.alternatives?.[0]?.transcript || '').join(' ').trim();
     } catch (err: any) {
-      if (err.name === 'AbortError') {
-        this.logger.warn('STT API timeout (10s)');
-      } else {
-        this.logger.warn(`STT failed (non-fatal): ${err.message}`);
-      }
+      this.logger.warn('STT failed: ' + err.message);
       return '';
     }
   }
 
-  private async translateText(text: string, sourceLang: string, targetLang: string): Promise<string> {
+  private async translateText(text: string, source: string, target: string): Promise<string> {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
 
-      const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${this.gcpApiKey}`, {
+      const res = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${this.gcpApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          q: text,
-          source: this.mapToGoogleLang(sourceLang),
-          target: this.mapToGoogleLang(targetLang),
-          format: 'text',
-        }),
+        body: JSON.stringify({ q: text, source, target, format: 'text' }),
         signal: controller.signal,
       });
       clearTimeout(timeout);
 
-      if (!response.ok) {
-        const tErrBody = await response.text().catch(() => 'no body');
-        this.logger.warn(`Translation API returned ${response.status}: ${tErrBody.slice(0, 200)}`);
-        return text;
-      }
-      const result = (await response.json()) as any;
-      return result.data?.translations?.[0]?.translatedText || text;
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        this.logger.warn('Translation API timeout (5s)');
-      } else {
-        this.logger.warn(`Translation failed (non-fatal): ${err.message}`);
-      }
+      if (!res.ok) return text;
+      const data = (await res.json()) as any;
+      return data.data?.translations?.[0]?.translatedText || text;
+    } catch {
       return text;
     }
   }
@@ -176,14 +164,5 @@ export class CallSubtitleService {
       en: 'en-IN', ur: 'ur-IN', as: 'as-IN', ne: 'ne-NP',
     };
     return map[lang] || lang + '-IN';
-  }
-
-  private mapToGoogleLang(lang: string): string {
-    return lang;
-  }
-
-  private getAlternateLanguages(primary: string): string[] {
-    const alts = ['en-IN', 'hi-IN'];
-    return alts.filter(a => a !== primary).slice(0, 3);
   }
 }
