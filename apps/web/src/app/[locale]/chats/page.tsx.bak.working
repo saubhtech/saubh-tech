@@ -584,9 +584,7 @@ export default function ChatsPage() {
 
   /* ─── Render ───────────────────────────────────────────── */
   return (
-    <>
-    <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
-      <div style={{ display: 'flex', height: '100vh', fontFamily: 'Outfit, sans-serif', background: '#080b12', color: '#e0e0e0' }}>
+    <div style={{ display: 'flex', height: '100vh', fontFamily: 'Outfit, sans-serif', background: '#080b12', color: '#e0e0e0' }}>
       {/* ─── Sidebar ──────────────────────────────────────── */}
       <div style={{ width: 320, borderRight: '1px solid #1a1f2e', display: 'flex', flexDirection: 'column', background: '#0d1117' }}>
         <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid #1a1f2e', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -822,13 +820,6 @@ export default function ChatsPage() {
                         {translation && !showOrig ? translation.translated_text : msg.content?.body}
                       </div>
 
-                      {/* Translating indicator */}
-                      {!isMine && !translation && enrichment && (Date.now() - msg.origin_server_ts < 60000) && (
-                        <div style={{ fontSize: 11, color: '#eab308', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ animation: 'pulse 1.5s infinite' }}>🔄</span> Translating...
-                        </div>
-                      )}
-
                       {/* Translation toggle */}
                       {translation && (
                         <button
@@ -963,9 +954,6 @@ export default function ChatsPage() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: '#000' }}>
           <CallView
             roomId={Number(activeRoom?.conversation_id || 0)}
-            myLang={activeRoom?.my_lang || 'en'}
-            otherLang={(() => { const o = activeRoom?.members?.find(m => m.user_id !== user?.userid?.toString()); return o?.lang || 'en'; })()}
-            authToken={token}
             token={callToken}
             livekitUrl={callLkUrl}
             callType={callType}
@@ -974,6 +962,5 @@ export default function ChatsPage() {
         </div>
       )}
     </div>
-    </>
   );
 }

@@ -701,10 +701,7 @@ export class ChatService {
       });
 
       const senderMember = members.find(m => m.userId.toString() === senderUserId);
-      // Detect actual language: ASCII text = English, otherwise use member preference
-      const textBody = content?.body || '';
-      const isLikelyEnglish = /^[\x00-\x7F\s]+$/.test(textBody);
-      const senderLang = isLikelyEnglish ? 'en' : (senderMember?.preferredLang || 'hi');
+      const senderLang = senderMember?.preferredLang || 'en';
 
       // Unique target languages (excluding sender's language)
       const targetLangs = [...new Set(

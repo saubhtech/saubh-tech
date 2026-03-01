@@ -1,11 +1,15 @@
 import { Controller, Get, Post, Query, Body, Req, UseGuards, HttpCode } from '@nestjs/common';
 import { CallService } from './call.service';
+import { CallSubtitleService } from './call-subtitle.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('chat/call')
 @UseGuards(JwtAuthGuard)
 export class CallController {
-  constructor(private readonly callService: CallService) {}
+  constructor(
+    private readonly callService: CallService,
+    private readonly subtitleService: CallSubtitleService,
+  ) {}
 
   @Post('token')
   @HttpCode(200)
@@ -47,4 +51,38 @@ export class CallController {
     await this.callService.endCall(Number(userId), Number(body.room_id));
     return { success: true, message: 'Call ended' };
   }
+
+  @Get('subtitles/status')
+  async getSubtitleStatus() {
+    try {
+      return { available: this.subtitleService.isAvailable() };
+    } catch {
+      return { available: false };
+    }
+  }
+
+  @Post('transcribe')
+  @HttpCode(200)
+  async transcribeAudio(@Req() req: any, @Body() body: {
+    audio: string;
+    source_lang: string;
+    target_lang: string;
+    room_id: number;
+  }) {
+    try {
+      if (!this.subtitleService.isAvailable()) {
+        return { originalText: '', translatedText: '', error: false, available: false };
+      }
+      const result = await this.subtitleService.transcribeAndTranslate(
+        body.audio,
+        body.source_lang,
+        body.target_lang,
+      );
+      return result;
+    } catch (err: any) {
+      // NEVER let subtitle errors break the API
+      return { originalText: '', translatedText: '', error: true, message: 'Subtitle service temporarily unavailable' };
+    }
+  }
+
 }

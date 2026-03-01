@@ -1,5 +1,4 @@
 import { Processor, WorkerHost, InjectQueue } from '@nestjs/bullmq';
-import { createHash } from 'crypto';
 import { Logger } from '@nestjs/common';
 import { Job, Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
@@ -152,45 +151,40 @@ export class ChatTranslationProcessor extends WorkerHost {
     this.logger.log(`Processing translation: ${sourceLang}->${targetLang} for enrichment ${enrichmentId}`);
 
     try {
-      // Redis cache check
-      const cacheKey = `trans:${sourceLang}:${targetLang}:${createHash('sha256').update(text).digest('hex').slice(0, 16)}`;
-      const cached = await this.redisPub.get(cacheKey);
-      let translatedText: string;
-      let engine = 'cache';
+      const translationUrl = process.env.TRANSLATION_URL || 'http://localhost:5050';
+      const res = await fetch(`${translationUrl}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          texts: [text],
+          sourceLang,
+          targetLang,
+        }),
+      });
 
-      if (cached) {
-        translatedText = cached;
-        this.logger.log(`Cache HIT: ${sourceLang}->${targetLang} (${text.slice(0, 30)})`);
-      } else {
-        const translationUrl = process.env.TRANSLATION_URL || 'http://localhost:5050';
-        const res = await fetch(`${translationUrl}/translate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texts: [text], sourceLang, targetLang }),
-        });
-        if (!res.ok) throw new Error(`Translation API returned ${res.status}`);
-        const result = await res.json() as any;
-        translatedText = result.translations?.[0];
-        engine = result.engines?.[0] || 'indictrans2';
-        if (!translatedText) throw new Error('No translation returned');
-
-        // Store in Redis cache (7 days TTL)
-        await this.redisPub.set(cacheKey, translatedText, 'EX', 604800);
-        this.logger.log(`Cache SET: ${cacheKey}`);
+      if (!res.ok) {
+        throw new Error(`Translation API returned ${res.status}`);
       }
 
-      // Save to database
+      const result = await res.json() as any;
+      const translatedText = result.translations?.[0];
+
+      if (!translatedText) {
+        throw new Error('No translation returned');
+      }
+
       await this.prisma.chatTranslation.create({
         data: {
           enrichmentId: BigInt(enrichmentId),
           targetLang,
           translatedText,
-          engine,
+          engine: result.engines?.[0] || 'indictrans2',
         },
       });
-      this.logger.log(`Translation stored: ${sourceLang}->${targetLang} (${engine})`);
 
-      // Publish translation_ready via Redis
+      this.logger.log(`Translation stored: ${sourceLang}->${targetLang} (${result.engines?.[0]})`);
+
+      // Push translation_ready event to realtime via Redis
       const enrichment = await this.prisma.chatEnrichment.findUnique({
         where: { id: BigInt(enrichmentId) },
       });
@@ -211,10 +205,11 @@ export class ChatTranslationProcessor extends WorkerHost {
           this.logger.warn(`Redis publish failed: ${err.message}`);
         }
       }
+
       return { success: true, targetLang, translatedText };
     } catch (err: any) {
       this.logger.error(`Translation failed: ${err.message}`);
-      throw err;
+      throw err; // BullMQ will retry
     }
   }
 }
