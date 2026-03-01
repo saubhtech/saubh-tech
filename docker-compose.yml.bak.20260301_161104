@@ -99,7 +99,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
   livekit:
     image: livekit/livekit-server:latest
     container_name: saubh-livekit
@@ -117,49 +116,8 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: saubh-n8n
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:5678:5678"
-    environment:
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - N8N_HOST=localhost
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=host.docker.internal
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=saubh_n8n
-      - DB_POSTGRESDB_USER=saubh_admin
-      - DB_POSTGRESDB_PASSWORD=PgSecure2026Saubh
-      - N8N_ENCRYPTION_KEY=39f7b06c604fcc87347a92c656684376c1f957528bbd69002821620fdd912635
-      - N8N_USER_MANAGEMENT_DISABLED=false
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=saubhadmin
-      - N8N_BASIC_AUTH_PASSWORD=N8nSecure2026Saubh
-      - GENERIC_TIMEZONE=Asia/Kolkata
-      - TZ=Asia/Kolkata
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - n8n-data:/home/node/.n8n
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-
 volumes:
   redis-data:
-    driver: local
-  n8n-data:
     driver: local
 
 # ╔══════════════════════════════════════════════════════════════════╗
