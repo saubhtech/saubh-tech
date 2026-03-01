@@ -231,8 +231,14 @@ function CallContent({ callType, onClose, myLang, otherLang, authToken }: { call
 
     const start = () => {
       try {
-        const micPub = room.localParticipant?.getTrackPublication?.(Track.Source.Microphone);
-        const mst = micPub?.track?.mediaStreamTrack;
+        // Get REMOTE participant's mic (so we see THEIR speech translated)
+        const remotes = room.remoteParticipants;
+        let mst: MediaStreamTrack | undefined;
+        if (remotes && remotes.size > 0) {
+          const remote = Array.from(remotes.values())[0];
+          const micPub = remote?.getTrackPublication?.(Track.Source.Microphone);
+          mst = micPub?.track?.mediaStreamTrack;
+        }
         if (!mst) { if (!cancelled) setTimeout(start, 2000); return; }
 
         const ctx = new AudioContext({ sampleRate: 48000 });
@@ -266,7 +272,7 @@ function CallContent({ callType, onClose, myLang, otherLang, authToken }: { call
                 fetch('/api/chat/call/transcribe', {
                   method: 'POST', signal: ctrl.signal,
                   headers: { Authorization: 'Bearer ' + authToken, 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ audio: b64, source_lang: myLang, target_lang: otherLang || 'en', room_id: 0 }),
+                  body: JSON.stringify({ audio: b64, source_lang: otherLang || 'en', target_lang: myLang || 'en', room_id: 0 }),
                 }).then(r => { clearTimeout(to); return r.ok ? r.json() : null; })
                   .then(d => { if (d?.originalText?.trim()) { failCountRef.current = 0; setSubtitles(p => [...p.slice(-10), { orig: d.originalText, trans: d.translatedText, ts: Date.now() }]); } })
                   .catch(() => { failCountRef.current++; if (failCountRef.current >= 5) setSubtitlesEnabled(false); })
